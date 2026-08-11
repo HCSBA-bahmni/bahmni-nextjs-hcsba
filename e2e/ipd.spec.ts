@@ -360,7 +360,8 @@ test("adds a prescribed treatment to the drug chart with the legacy IPD contract
       drugChartStartTimeFrequencies: ["Every 8 hours"],
       drugChartScheduleFrequencies: [{ name: "Twice a day", frequencyPerDay: 2, scheduleTiming: ["06:00", "18:00"] }],
     },
-    sections: [{ title: "Treatments", componentKey: "TR", displayOrder: 1 }],
+    sections: [{ title: "Treatments", componentKey: "TR", displayOrder: 1 }, { title: "Drug Chart", componentKey: "DC", displayOrder: 2 }],
+    shiftDetails: { "1": { shiftStartTime: "00:00", shiftEndTime: "23:59" } },
     nursingTasks: { timeInMinutesFromNowToShowPastTaskAsLate: 60, timeInMinutesFromStartTimeToShowAdministeredTaskAsLate: 60 },
     drugChart: { timeInMinutesFromNowToShowPastTaskAsLate: 60, timeInMinutesFromStartTimeToShowAdministeredTaskAsLate: 60 },
     drugChartSlider: { timeInMinutesToDisableSlotPostScheduledTime: 60 },
@@ -379,7 +380,23 @@ test("adds a prescribed treatment to the drug chart with the legacy IPD contract
     },
     provider: { uuid: "provider", name: "Super Man" },
     ...(scheduled ? { drugOrderSchedule: { firstDaySlotsStartTime: [1785895200], dayWiseSlotsStartTime: [1785895200, 1785938400], remainingDaySlotsStartTime: [], medicationAdministrationStarted: false, pendingSlotsAvailable: true, allSlotsAttended: false } } : {}),
-  }], emergencyMedications: [] }) }));
+  }, ...(scheduled ? [{
+    drugOrder: {
+      uuid: "order-2", effectiveStartDate: "2026-08-04T12:00:00.000-04:00", scheduledDate: "2026-08-04T12:00:00.000-04:00",
+      visit: { uuid: "visit" }, drug: { display: "Ibuprofeno 400 mg" }, duration: 5, durationUnits: "Days",
+      dosingInstructions: { dose: 1, doseUnits: "Comprimido", route: "Oral", frequency: "Four times a day" },
+    },
+    provider: { uuid: "provider", name: "Super Man" },
+    drugOrderSchedule: { firstDaySlotsStartTime: [1785895200], dayWiseSlotsStartTime: [1785852000, 1785873600, 1785895200, 1785915900], remainingDaySlotsStartTime: [], medicationAdministrationStarted: false, pendingSlotsAvailable: false, allSlotsAttended: true },
+  }] : [])], emergencyMedications: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/ipd/schedule/type/medication?**", (route) => {
+    const url = new URL(route.request().url());
+    const start = Number(url.searchParams.get("startTime"));
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify(scheduled ? [{ slots: [{
+      uuid: "slot-1", startTime: start + 18 * 60 * 60, status: "SCHEDULED",
+      order: { uuid: "order-1", drug: { display: "Paracetamol 500 mg" }, dose: 1, doseUnits: { display: "Comprimido" }, route: { display: "Oral" } },
+    }] }] : []) });
+  });
   let schedulePayload: Record<string, unknown> | undefined;
   await page.route("**/openmrs/ws/rest/v1/ipd/schedule/type/medication", (route) => {
     schedulePayload = route.request().postDataJSON() as Record<string, unknown>;
@@ -401,7 +418,11 @@ test("adds a prescribed treatment to the drug chart with the legacy IPD contract
   expect(await page.locator(".p-calendar").count()).toBeGreaterThanOrEqual(4);
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(page.getByRole("dialog", { name: "Añadir al gráfico de medicamentos" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Editar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Editar" }).first()).toBeVisible();
+  await expect(page.locator(".ipd-drug-chart tbody")).toContainText("Paracetamol 500 mg");
+  await expect(page.locator(".ipd-drug-chart tbody")).toContainText("Ibuprofeno 400 mg");
+  await expect(page.locator(".ipd-drug-chart-no-slots")).toContainText("Sin dosis en el turno visible");
+  await expect(page.locator(".ipd-drug-chart thead time")).toHaveCount(48);
   expect(schedulePayload).toMatchObject({
     patientUuid: "patient", providerUuid: "provider", orderUuid: "order-1", serviceType: "MEDICATION_REQUEST", medicationFrequency: "FIXED_SCHEDULE_FREQUENCY",
   });

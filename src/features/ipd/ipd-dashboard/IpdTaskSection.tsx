@@ -18,7 +18,16 @@ import {
   updateNonMedicationTasks,
   updateScheduledMedicationAdministrations,
 } from "@/services/bahmni/careView";
+import { getIpdVisitMedications } from "@/services/bahmni/dashboard";
 import { currentIpdShift, type IpdShiftWindow } from "./domain";
+import {
+  buildDrugChartRows,
+  drugChartIntervals,
+  drugChartTaskTime,
+  normalizeDrugChartMedications,
+  tasksInDrugChartInterval,
+  type DrugChartRow,
+} from "./drugChart";
 import {
   adjacentIpdShift,
   buildMedicationAdministration,
@@ -110,14 +119,19 @@ function NursingTaskLegend() {
   </div>;
 }
 
-function DrugChart({ tasks, use24Hour }: { tasks: CareTask[]; use24Hour: boolean }) {
-  const times = [...new Set(tasks.map((task) => task.scheduledTime))].sort((left, right) => left - right);
-  const groups = [...new Set(tasks.map((task) => task.name))];
-  return <div className="ipd-task-table-scroll"><table className="ipd-task-table ipd-drug-chart">
-    <thead><tr><th>Medicamento</th>{times.map((time) => <th key={time}>{DateTime.fromMillis(time).toFormat(use24Hour ? "HH:mm" : "hh:mm a")}</th>)}</tr></thead>
-    <tbody>{groups.map((name) => <tr key={name}><th>{name}</th>{times.map((time) => {
-      const task = tasks.find((candidate) => candidate.name === name && candidate.scheduledTime === time);
-      return <td key={time}>{task ? <span className={`ipd-task-status ipd-task-status-${task.status}`} title={statusLabels[task.status]}><i className={task.status === "administered" ? "pi pi-check" : task.status === "missed" ? "pi pi-times" : task.status === "stopped" ? "pi pi-stop-circle" : task.status === "late" ? "pi pi-exclamation-triangle" : "pi pi-clock"} /><span>{statusLabels[task.status]}</span></span> : "—"}</td>;
+function DrugChart({ rows, shift, use24Hour }: { rows: DrugChartRow[]; shift: IpdShiftWindow; use24Hour: boolean }) {
+  const intervals = drugChartIntervals(shift);
+  const [now] = useState(() => Date.now());
+  const format = use24Hour ? "HH:mm" : "hh:mm a";
+  return <div className="ipd-task-table-scroll ipd-drug-chart-scroll"><table className="ipd-task-table ipd-drug-chart" style={{ minWidth: `${17 + intervals.length * 4.25}rem` }}>
+    <thead><tr><th>Medicamento</th>{intervals.map((interval) => <th className={now >= interval.start && now < interval.end ? "ipd-drug-chart-current" : undefined} key={interval.start}><time>{DateTime.fromMillis(interval.start).toFormat(format)}</time></th>)}</tr></thead>
+    <tbody>{rows.map((row) => <tr key={row.uuid}><th><strong>{row.name}</strong>{row.details && <small>{row.details}</small>}{row.tasks.length === 0 && <small className="ipd-drug-chart-no-slots">Sin dosis en el turno visible</small>}</th>{intervals.map((interval) => {
+      const slotTasks = tasksInDrugChartInterval(row.tasks, interval);
+      return <td className={now >= interval.start && now < interval.end ? "ipd-drug-chart-current" : undefined} key={interval.start}>{slotTasks.map((task) => {
+        const taskTime = drugChartTaskTime(task);
+        const label = `${statusLabels[task.status]} · ${DateTime.fromMillis(taskTime).toFormat(format)}`;
+        return <span className={`ipd-drug-chart-marker ipd-task-status-${task.status}`} title={label} key={task.uuid}><i className={statusIcons[task.status]} aria-hidden="true" /><span className="sr-only">{label}</span></span>;
+      })}</td>;
     })}</tr>)}</tbody>
   </table></div>;
 }
@@ -144,6 +158,11 @@ export function IpdTaskSection({ patientUuid, visitUuid, locationUuid, config, k
     queryKey: ["ipd", "patient-dashboard", kind, "medication", patientUuid, visitUuid, shift.start.toMillis(), shift.end.toMillis()],
     queryFn: () => getPatientMedicationTasks(patientUuid, visitUuid, shift.start.toMillis(), shift.end.toMillis(), thresholdContract, kind === "drug-chart" ? "drugChart" : undefined),
   });
+  const medicationOrders = useQuery({
+    queryKey: ["ipd", "patient-dashboard", kind, "medication-orders", visitUuid],
+    queryFn: () => getIpdVisitMedications(visitUuid),
+    enabled: kind === "drug-chart",
+  });
   const nonMedication = useQuery({
     queryKey: ["ipd", "patient-dashboard", kind, "non-medication", patientUuid, visitUuid, shift.start.toMillis(), shift.end.toMillis()],
     queryFn: () => getPatientNonMedicationTasks(patientUuid, visitUuid, shift.start.toMillis(), shift.end.toMillis(), thresholdContract),
@@ -154,8 +173,13 @@ export function IpdTaskSection({ patientUuid, visitUuid, locationUuid, config, k
     ...(kind === "nursing" ? nonMedication.data ?? [] : []),
   ].sort((left, right) => left.scheduledTime - right.scheduledTime || left.name.localeCompare(right.name)), [kind, medication.data, nonMedication.data]);
   const tasks = useMemo(() => kind === "nursing" ? allTasks.filter((task) => matchesNursingTaskFilter(task, filter)) : allTasks, [allTasks, filter, kind]);
-  const loading = medication.isLoading || (kind === "nursing" && nonMedication.isLoading);
-  const partialFailure = medication.isError || (kind === "nursing" && nonMedication.isError);
+  const chartMedications = useMemo(() => kind === "drug-chart" && medicationOrders.data
+    ? normalizeDrugChartMedications(medicationOrders.data, visitUuid)
+    : [], [kind, medicationOrders.data, visitUuid]);
+  const chartRows = useMemo(() => buildDrugChartRows(chartMedications, kind === "drug-chart" ? tasks : []), [chartMedications, kind, tasks]);
+  const loading = medication.isLoading || (kind === "nursing" && nonMedication.isLoading) || (kind === "drug-chart" && medicationOrders.isLoading);
+  const partialFailure = medication.isError || (kind === "nursing" && nonMedication.isError) || (kind === "drug-chart" && medicationOrders.isError);
+  const hasContent = kind === "drug-chart" ? chartRows.length > 0 : tasks.length > 0;
   const shiftIsCurrent = sameShift(shift, liveShift);
   const canAddTask = kind === "nursing" && canAddNursingTask({
     readOnly,
@@ -165,7 +189,11 @@ export function IpdTaskSection({ patientUuid, visitUuid, locationUuid, config, k
   });
 
   const reconcile = async () => {
-    await Promise.all([medication.refetch(), kind === "nursing" ? nonMedication.refetch() : Promise.resolve()]);
+    await Promise.all([
+      medication.refetch(),
+      kind === "nursing" ? nonMedication.refetch() : Promise.resolve(),
+      kind === "drug-chart" ? medicationOrders.refetch() : Promise.resolve(),
+    ]);
   };
 
   const updateTask = useMutation({
@@ -227,13 +255,13 @@ export function IpdTaskSection({ patientUuid, visitUuid, locationUuid, config, k
       <Button outlined icon="pi pi-chevron-right" aria-label="Turno siguiente" title="Ver turno siguiente (hasta dos dÃ­as)" disabled={!canNavigateToNextIpdShift(shift, liveShift)} onClick={() => setShift((current) => adjacentIpdShift(config.shiftDetails, current, 1))} />
       {kind === "nursing" && <Dropdown aria-label="Filtrar tareas" value={filter} options={filterOptions} onChange={(event) => setFilter(event.value as NursingTaskFilter)} />}
       {kind === "nursing" && <Button className="ipd-add-task-button" icon="pi pi-plus" label="Añadir tarea" disabled={!canAddTask} title={!canAddTask ? readOnly ? "La visita está cerrada y sólo permite consulta." : !shiftIsCurrent ? "Vuelva al turno vigente para crear tareas." : "Requiere Add Tasks o Edit adhoc medication tasks." : undefined} onClick={() => setAddingTask(true)} />}
-      <Button text icon="pi pi-refresh" label="Actualizar" loading={medication.isFetching || nonMedication.isFetching} onClick={() => void reconcile()} />
+      <Button text icon="pi pi-refresh" label="Actualizar" loading={medication.isFetching || nonMedication.isFetching || medicationOrders.isFetching} onClick={() => void reconcile()} />
     </div></header>
     {!shiftIsCurrent && <p className="ipd-task-readonly"><i className="pi pi-info-circle" /> Está revisando un turno distinto del vigente. Sus actividades se muestran en modo de consulta.</p>}
     {partialFailure && <p className="warning-banner" role="alert">La vista es parcial: OpenMRS no devolvió uno de los dominios de actividades.</p>}
     {loading && <p role="status" className="muted-text">Cargando actividades del turno…</p>}
-    {!loading && tasks.length === 0 && <p className="muted-text">No hay actividades para el turno y filtro seleccionados.</p>}
-    {!loading && tasks.length > 0 && (kind === "drug-chart" ? <DrugChart tasks={tasks} use24Hour={config.enable24HourTime} /> : <NursingTaskBoard tasks={tasks} use24Hour={config.enable24HourTime} canManage={canManage} onManage={openTask} />)}
+    {!loading && !hasContent && <p className="muted-text">No hay actividades para el turno y filtro seleccionados.</p>}
+    {!loading && hasContent && (kind === "drug-chart" ? <DrugChart rows={chartRows} shift={shift} use24Hour={config.enable24HourTime} /> : <NursingTaskBoard tasks={tasks} use24Hour={config.enable24HourTime} canManage={canManage} onManage={openTask} />)}
     <NursingTaskLegend />
 
     <Dialog header="Gestionar tarea de enfermería" visible={Boolean(selectedTask)} modal className="ipd-task-dialog" onHide={() => !updateTask.isPending && setSelectedTask(undefined)} footer={<><Button outlined label="Cancelar" disabled={updateTask.isPending} onClick={() => setSelectedTask(undefined)} /><Button label={action === "complete" ? "Completar" : "Omitir"} severity={action === "skip" ? "danger" : undefined} loading={updateTask.isPending} onClick={requestSave} /></>}>
