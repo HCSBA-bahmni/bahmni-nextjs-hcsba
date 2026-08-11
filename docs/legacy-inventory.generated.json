@@ -1,0 +1,4682 @@
+{
+  "schemaVersion": 2,
+  "precedence": [
+    "HCSBA development",
+    "HCSBA remote",
+    "local reference"
+  ],
+  "modules": [
+    {
+      "module": "admin",
+      "javascriptFiles": 16,
+      "templateFiles": 10,
+      "states": [
+        "admin",
+        "admin.auditLog",
+        "admin.csv",
+        "admin.csvExport",
+        "admin.dashboard",
+        "admin.fhirExport",
+        "admin.orderSet",
+        "admin.orderSetDashboard"
+      ]
+    },
+    {
+      "module": "adt",
+      "javascriptFiles": 22,
+      "templateFiles": 10,
+      "states": [
+        "careViewDashboard",
+        "home",
+        "patient",
+        "patient.adt",
+        "patient.adt.action",
+        "patient.adt.bedForExistingEncounter",
+        "patient.adt.bedForNewEncounter"
+      ]
+    },
+    {
+      "module": "bedmanagement",
+      "javascriptFiles": 28,
+      "templateFiles": 21,
+      "states": [
+        "bedManagement",
+        "bedManagement.bed",
+        "bedManagement.patient",
+        "careViewDashboard",
+        "dashboard",
+        "home"
+      ]
+    },
+    {
+      "module": "clinical",
+      "javascriptFiles": 129,
+      "templateFiles": 85,
+      "states": [
+        "patient",
+        "patient.dahsboard.visit.tab",
+        "patient.dashboard",
+        "patient.dashboard.ipdVisit",
+        "patient.dashboard.observation",
+        "patient.dashboard.show",
+        "patient.dashboard.show.bacteriology",
+        "patient.dashboard.show.diagnosis",
+        "patient.dashboard.show.disposition",
+        "patient.dashboard.show.investigation",
+        "patient.dashboard.show.observations",
+        "patient.dashboard.show.orders",
+        "patient.dashboard.show.summary",
+        "patient.dashboard.show.treatment",
+        "patient.dashboard.show.treatment.page",
+        "patient.dashboard.visit",
+        "patient.dashboard.visitPrint",
+        "patient.patientProgram",
+        "patient.patientProgram.show",
+        "patient.visit",
+        "patient.visit.summaryprint",
+        "search",
+        "search.patientsearch"
+      ]
+    },
+    {
+      "module": "common",
+      "javascriptFiles": 259,
+      "templateFiles": 86,
+      "states": []
+    },
+    {
+      "module": "document-upload",
+      "javascriptFiles": 8,
+      "templateFiles": 3,
+      "states": [
+        "error",
+        "search",
+        "upload"
+      ]
+    },
+    {
+      "module": "home",
+      "javascriptFiles": 8,
+      "templateFiles": 7,
+      "states": [
+        "changePassword",
+        "dashboard",
+        "errorLog",
+        "login",
+        "loginLocation"
+      ]
+    },
+    {
+      "module": "orders",
+      "javascriptFiles": 6,
+      "templateFiles": 4,
+      "states": [
+        "orderFulfillment",
+        "search"
+      ]
+    },
+    {
+      "module": "ot",
+      "javascriptFiles": 32,
+      "templateFiles": 20,
+      "states": [
+        "editSurgicalAppointment",
+        "home",
+        "newSurgicalAppointment",
+        "otScheduling"
+      ]
+    },
+    {
+      "module": "registration",
+      "javascriptFiles": 33,
+      "templateFiles": 20,
+      "states": [
+        "newpatient",
+        "patient",
+        "patient.edit",
+        "patient.printSticker",
+        "patient.visit",
+        "search"
+      ]
+    },
+    {
+      "module": "reports",
+      "javascriptFiles": 7,
+      "templateFiles": 5,
+      "states": [
+        "dashboard",
+        "dashboard.myReports",
+        "dashboard.reports"
+      ]
+    }
+  ],
+  "configuredApps": [
+    {
+      "app": "admin",
+      "configKeys": [],
+      "configuredUrls": [],
+      "extensions": [
+        {
+          "id": "auditLog",
+          "extensionPointId": "org.bahmni.admin.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": null,
+          "url": "#/auditLog",
+          "order": 1
+        },
+        {
+          "id": "beds",
+          "extensionPointId": "org.bahmni.admin.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": null,
+          "url": "/openmrs/owa/bedmanagement/admissionLocations.html",
+          "order": 1
+        },
+        {
+          "id": "csvExport",
+          "extensionPointId": "org.bahmni.admin.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": null,
+          "url": "#/csvExport",
+          "order": 1
+        },
+        {
+          "id": "csvUpload",
+          "extensionPointId": "org.bahmni.admin.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": null,
+          "url": "#/csv",
+          "order": 1
+        },
+        {
+          "id": "orderSet",
+          "extensionPointId": "org.bahmni.admin.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": null,
+          "url": "#/ordersetdashboard",
+          "order": 1
+        }
+      ]
+    },
+    {
+      "app": "adt",
+      "configKeys": [
+        "dashboard",
+        "defaultVisitType",
+        "diagnosisStatus",
+        "enableIPDFeature",
+        "identifierHeadings",
+        "ignoredTabularViewHeadings",
+        "maxPatientsPerBed",
+        "onAdmissionForwardTo",
+        "onDischargeForwardTo",
+        "onTransferForwardTo"
+      ],
+      "configuredUrls": [],
+      "extensions": [
+        {
+          "id": "bahmniAdtAdmitCancel",
+          "extensionPointId": "org.bahmni.adt.admit.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 3
+        },
+        {
+          "id": "bahmniAdtAdmitContinueVisit",
+          "extensionPointId": "org.bahmni.adt.admit.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        },
+        {
+          "id": "bahmniAdtDischargeCancel",
+          "extensionPointId": "org.bahmni.adt.discharge.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 3
+        },
+        {
+          "id": "bahmniAdtDischargeSave",
+          "extensionPointId": "org.bahmni.adt.discharge.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        },
+        {
+          "id": "bahmniAdtPatientsSearchAllPatients",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 4
+        },
+        {
+          "id": "bahmniAdtPatientsSearchPatientsAdmitted",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        },
+        {
+          "id": "bahmniAdtPatientsSearchPatientsToAdmit",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        },
+        {
+          "id": "bahmniAdtPatientsSearchPatientsToDischarge",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 3
+        },
+        {
+          "id": "bahmniAdtTransferCancel",
+          "extensionPointId": "org.bahmni.adt.transfer.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        },
+        {
+          "id": "bahmniAdtTransferSave",
+          "extensionPointId": "org.bahmni.adt.transfer.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        },
+        {
+          "id": "bahmniAdtUndoDischarge",
+          "extensionPointId": "org.bahmni.adt.undo.discharge.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        },
+        {
+          "id": "bahmniAdtUndoDischargeCancel",
+          "extensionPointId": "org.bahmni.adt.undo.discharge.action",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        }
+      ]
+    },
+    {
+      "app": "appointments",
+      "configKeys": [
+        "additionalInfoColumns",
+        "allowVirtualConsultation",
+        "allowedActions",
+        "allowedActionsByStatus",
+        "calendarSlotDuration",
+        "calendarSlotLabelInterval",
+        "colorsForAppointmentService",
+        "colorsForListView",
+        "enableAppointmentStatusOption",
+        "enableCalendarView",
+        "enableDetailedSummaryView",
+        "enableResetAppointmentStatuses",
+        "enableServiceTypes",
+        "enableSpecialities",
+        "endOfDay",
+        "isServiceOnAppointmentEditable",
+        "maxAppointmentProviders",
+        "minCharLengthToTriggerPatientSearch",
+        "printListViewTemplateUrl",
+        "recurrence",
+        "startOfDay",
+        "startOfWeek"
+      ],
+      "configuredUrls": [
+        {
+          "key": "printListViewTemplateUrl",
+          "value": "/bahmni_config/openmrs/apps/appointments/printListView.html"
+        }
+      ],
+      "extensions": [
+        {
+          "id": "adminPage",
+          "extensionPointId": "org.bahmni.appointments",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": null,
+          "url": null,
+          "order": null
+        }
+      ]
+    },
+    {
+      "app": "careViewDashboard",
+      "configKeys": [],
+      "configuredUrls": [],
+      "extensions": []
+    },
+    {
+      "app": "clinical",
+      "configKeys": [
+        "allMedicinesInPrescriptionAvailableForIPD",
+        "allergyControlConceptIdMap",
+        "allowAdhocTeleConsultation",
+        "allowConsultationWhenNoOpenVisit",
+        "allowOnlyCodedDiagnosis",
+        "conceptSetUI",
+        "configVersion",
+        "defaultVisitType",
+        "diagnosisStatus",
+        "enableIPDFeature",
+        "enableLabOrderOptions",
+        "enableRadiologyOrderOptions",
+        "hideConditions",
+        "hideFormName",
+        "identifierHeadings",
+        "ignoredTabularViewHeadings",
+        "ipsMediator",
+        "maxConceptSetLevels",
+        "networkConnectivity",
+        "obsIgnoreList",
+        "orderTypeClassMap",
+        "otherInvestigationsMap",
+        "patientContext",
+        "patientSearch",
+        "program",
+        "quickPrints",
+        "showTextAsAbnormal",
+        "teleConsultationDomain",
+        "visitPage",
+        "visitTypeForRetrospectiveEntries"
+      ],
+      "configuredUrls": [],
+      "extensions": [
+        {
+          "id": "activePatientsByLocation",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 4
+        },
+        {
+          "id": "bahmniClinicalBillingTreatment",
+          "extensionPointId": "org.bahmni.clinical.consultation.board",
+          "type": "link",
+          "requiredPrivilege": "app:clinical:treatmentTab",
+          "translationKey": "MEDICATIONS_BOARD_LABEL_KEY",
+          "url": "treatment",
+          "order": 7
+        },
+        {
+          "id": "bahmniClinicalConceptSetGroupObservationsDischargeSummary",
+          "extensionPointId": "org.bahmni.clinical.conceptSetGroup.observations",
+          "type": "config",
+          "requiredPrivilege": "Discharge Summary",
+          "translationKey": null,
+          "url": null,
+          "order": 5
+        },
+        {
+          "id": "bahmniClinicalConceptSetGroupObservationsHistory",
+          "extensionPointId": "org.bahmni.clinical.conceptSetGroup.observations",
+          "type": "config",
+          "requiredPrivilege": "app:clinical:history",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        },
+        {
+          "id": "bahmniClinicalConceptSetGroupObservationsObstetrics",
+          "extensionPointId": "org.bahmni.clinical.conceptSetGroup.observations",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 4
+        },
+        {
+          "id": "bahmniClinicalConceptSetGroupObservationsSecondVitals",
+          "extensionPointId": "org.bahmni.clinical.conceptSetGroup.observations",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 3
+        },
+        {
+          "id": "bahmniClinicalConceptSetGroupObservationsVitals",
+          "extensionPointId": "org.bahmni.clinical.conceptSetGroup.observations",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        },
+        {
+          "id": "bahmniClinicalConsultationBacteriology",
+          "extensionPointId": "org.bahmni.clinical.consultation.board",
+          "type": "link",
+          "requiredPrivilege": "app:clinical:bacteriologyTab",
+          "translationKey": "BACTERIOLOGY_BOARD_LABEL_KEY",
+          "url": "bacteriology",
+          "order": 7
+        },
+        {
+          "id": "bahmniClinicalConsultationOrders",
+          "extensionPointId": "org.bahmni.clinical.consultation.board",
+          "type": "link",
+          "requiredPrivilege": "app:clinical:ordersTab",
+          "translationKey": "ORDERS_BOARD_LABEL_KEY",
+          "url": "orders",
+          "order": 6
+        },
+        {
+          "id": "bahmniClinicalOrdersPending",
+          "extensionPointId": "org.bahmni.clinical.orders",
+          "type": "link",
+          "requiredPrivilege": "app:radiologyOrders",
+          "translationKey": null,
+          "url": "pendingOrders",
+          "order": 5
+        },
+        {
+          "id": "bahmniClinicalPatientsASearchActivePatientsByProvider",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        },
+        {
+          "id": "bahmniClinicalPatientsCustomNotifications",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 4
+        },
+        {
+          "id": "bahmniClinicalPatientsSearchActivePatientsForPrograms",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        },
+        {
+          "id": "bahmniClinicalPatientsSearchAllActivePatients",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        },
+        {
+          "id": "bahmniClinicalPatientsSearchAllPatients",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 5
+        },
+        {
+          "id": "bahmniClinicalPatientsSearchOPDActivePatientsByProvider",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": null,
+          "url": null,
+          "order": 3
+        },
+        {
+          "id": "consultationSummary",
+          "extensionPointId": "org.bahmni.clinical.consultation.board",
+          "type": "link",
+          "requiredPrivilege": "app:clinical:consultationTab",
+          "translationKey": "CONSULTATION_BOARD_LABEL_KEY",
+          "url": "consultation",
+          "order": 5
+        },
+        {
+          "id": "diagnosis",
+          "extensionPointId": "org.bahmni.clinical.consultation.board",
+          "type": "link",
+          "requiredPrivilege": "app:clinical:diagnosisTab",
+          "translationKey": "DIAGNOSIS_BOARD_LABEL_KEY",
+          "url": "diagnosis",
+          "order": 2
+        },
+        {
+          "id": "disposition",
+          "extensionPointId": "org.bahmni.clinical.consultation.board",
+          "type": "link",
+          "requiredPrivilege": "app:clinical:dispositionTab",
+          "translationKey": "DISPOSITION_BOARD_LABEL_KEY",
+          "url": "disposition",
+          "order": 3
+        },
+        {
+          "id": "observations",
+          "extensionPointId": "org.bahmni.clinical.consultation.board",
+          "type": "link",
+          "requiredPrivilege": "app:clinical:observationTab",
+          "translationKey": "OBSERVATIONS_BOARD_LABEL_KEY",
+          "url": "concept-set-group/observations",
+          "order": 1
+        }
+      ]
+    },
+    {
+      "app": "customDisplayControl",
+      "configKeys": [],
+      "configuredUrls": [],
+      "extensions": []
+    },
+    {
+      "app": "dbNameCondition",
+      "configKeys": [],
+      "configuredUrls": [],
+      "extensions": []
+    },
+    {
+      "app": "documentUpload",
+      "configKeys": [],
+      "configuredUrls": [],
+      "extensions": []
+    },
+    {
+      "app": "home",
+      "configKeys": [],
+      "configuredUrls": [],
+      "extensions": [
+        {
+          "id": "admin",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": "MODULE_LABEL_ADMIN_KEY",
+          "url": "../admin/#/dashboard/home",
+          "order": 7
+        },
+        {
+          "id": "appointmentScheduling",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:appointments",
+          "translationKey": "MODULE_LABEL_APPOINTMENT_SCHEDULING_KEY",
+          "url": "../../appointments",
+          "order": 14
+        },
+        {
+          "id": "atomfeedConsole",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:admin",
+          "translationKey": "MODULE_LABEL_ATOMFEED_CONSOLE_KEY",
+          "url": "/atomfeed-console",
+          "order": 13
+        },
+        {
+          "id": "bahmniIpd",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:adt",
+          "translationKey": "MODULE_LABEL_BED_MANAGEMENT_KEY",
+          "url": "../bedmanagement/#/home",
+          "order": 7
+        },
+        {
+          "id": "bahmniOT",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:ot",
+          "translationKey": "Operation Theatre",
+          "url": "../ot/",
+          "order": 9
+        },
+        {
+          "id": "clinical",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": "MODULE_LABEL_CLINICAL_KEY",
+          "url": "../clinical/index.html#/default/patient/search",
+          "order": 3
+        },
+        {
+          "id": "implementerInterface",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:implementer-interface",
+          "translationKey": "MODULE_LABEL_IMPLEMENTER_INTERFACE_KEY",
+          "url": "/implementer-interface",
+          "order": 12
+        },
+        {
+          "id": "labLite",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:lab-lite",
+          "translationKey": "MODULE_LABEL_LAB_ENTRY_KEY",
+          "url": "/lab",
+          "order": 15
+        },
+        {
+          "id": "orders",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:orders",
+          "translationKey": "MODULE_LABEL_ORDERS_KEY",
+          "url": "../orders/#/search",
+          "order": 10
+        },
+        {
+          "id": "patientDocumentUpload",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:patient-documents",
+          "translationKey": "MODULE_LABEL_PATIENT_DOCUMENTS_KEY",
+          "url": "../document-upload/?encounterType=Patient Document&topLevelConcept=Patient Document&defaultOption=Patient file",
+          "order": 6
+        },
+        {
+          "id": "programs",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:clinical",
+          "translationKey": "MODULE_LABEL_PROGRAMS_KEY",
+          "url": "../clinical/#/programs/patient/search",
+          "order": 2
+        },
+        {
+          "id": "radiologyDocumentUpload",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:radiology-upload",
+          "translationKey": "MODULE_LABEL_RADIOLOGY_UPLOAD_KEY",
+          "url": "../document-upload/?encounterType=RADIOLOGY&topLevelConcept=All Radiology orders",
+          "order": 5
+        },
+        {
+          "id": "registration",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:registration",
+          "translationKey": "MODULE_LABEL_REGISTRATION_KEY",
+          "url": "../registration/index.html",
+          "order": 1
+        },
+        {
+          "id": "reports",
+          "extensionPointId": "org.bahmni.home.dashboard",
+          "type": "link",
+          "requiredPrivilege": "app:reports",
+          "translationKey": "MODULE_LABEL_REPORTS_KEY",
+          "url": "../reports/#/dashboard",
+          "order": 8
+        }
+      ]
+    },
+    {
+      "app": "ipd",
+      "configKeys": [
+        "conceptSetUI",
+        "dashboard",
+        "defaultVisitType",
+        "diagnosisStatus",
+        "enableAutoConvertToIPDVisit",
+        "enableIPDFeature",
+        "expectedDateOfDischarge",
+        "hideStartNewVisitPopUp",
+        "identifierHeadings",
+        "ignoredTabularViewHeadings",
+        "oirsApiBaseUrl",
+        "onAdmissionForwardTo",
+        "onDischargeForwardTo",
+        "onTransferForwardTo",
+        "patientForwardUrl",
+        "wardListPrintAttributes",
+        "wardListPrintEnabled",
+        "wardListPrintViewTemplateUrl",
+        "wardListSqlSearchHandler"
+      ],
+      "configuredUrls": [
+        {
+          "key": "wardListPrintViewTemplateUrl",
+          "value": "/bahmni_config/openmrs/apps/ipd/wardListPrint.html"
+        },
+        {
+          "key": "oirsApiBaseUrl",
+          "value": "https://api.hcsba.cl/oirs_ped/1.0"
+        },
+        {
+          "key": "patientForwardUrl",
+          "value": "../bedmanagement/#/patient/{{patientUuid}}/visit/{{visitUuid}}/dashboard"
+        },
+        {
+          "key": "dashboard.sections.navigationLinksControl.customLinks[0].url",
+          "value": "../bedmanagement/#/bedManagement/patient/{{patientUuid}}"
+        }
+      ],
+      "extensions": [
+        {
+          "id": "bahmniAdtPatientsSearchAllPatients",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 4
+        },
+        {
+          "id": "bahmniAdtPatientsSearchPatientsAdmitted",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 2
+        },
+        {
+          "id": "bahmniAdtPatientsSearchPatientsToAdmit",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        },
+        {
+          "id": "bahmniAdtPatientsSearchPatientsToDischarge",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:adt",
+          "translationKey": null,
+          "url": null,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "app": "ipdDashboard",
+      "configKeys": [
+        "contactDetails",
+        "drugChartScheduleFrequencies",
+        "drugChartStartTimeFrequencies",
+        "enable24HourTimers"
+      ],
+      "configuredUrls": [],
+      "extensions": []
+    },
+    {
+      "app": "orders",
+      "configKeys": [
+        "conceptSetUI",
+        "identifierHeadings",
+        "ignoredTabularViewHeadings",
+        "maxConceptSetLevels",
+        "sections"
+      ],
+      "configuredUrls": [],
+      "extensions": [
+        {
+          "id": "bahmniClinicalPatientsSearchRadiologyOrderAllPatients",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:orders",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        }
+      ]
+    },
+    {
+      "app": "ot",
+      "configKeys": [
+        "calendarView",
+        "identifierHeadings",
+        "ignoredTabularViewHeadings",
+        "patientDashboardUrl",
+        "primarySurgeonsForOT",
+        "printListViewTemplateUrl",
+        "startOfWeek",
+        "surgeryAttributes"
+      ],
+      "configuredUrls": [
+        {
+          "key": "printListViewTemplateUrl",
+          "value": "/bahmni_config/openmrs/apps/ot/printListView.html"
+        }
+      ],
+      "extensions": [
+        {
+          "id": "bahmniOperationTheatreScheduledQueue",
+          "extensionPointId": "org.bahmni.patient.search",
+          "type": "config",
+          "requiredPrivilege": "app:ot",
+          "translationKey": null,
+          "url": null,
+          "order": 1
+        }
+      ]
+    },
+    {
+      "app": "registration",
+      "configKeys": [
+        "addressHierarchy",
+        "autoCompleteFields",
+        "conceptSetUI",
+        "defaultIdentifierPrefix",
+        "defaultVisitType",
+        "fieldValidation",
+        "hideFormName",
+        "isLastNameMandatory",
+        "patientInformation",
+        "patientNameDisplayOrder",
+        "patientSearch",
+        "printOptions",
+        "relationshipTypeMap",
+        "searchByIdForwardUrl",
+        "showBirthTime",
+        "showCasteSameAsLastNameCheckbox",
+        "showLastName",
+        "showMiddleName",
+        "showSaveConfirmDialog"
+      ],
+      "configuredUrls": [
+        {
+          "key": "searchByIdForwardUrl",
+          "value": "/patient/{{patientUuid}}"
+        },
+        {
+          "key": "printOptions[0].templateUrl",
+          "value": "/bahmni_config/openmrs/apps/registration/registrationCardLayout/print_local.html"
+        },
+        {
+          "key": "printOptions[1].templateUrl",
+          "value": "/bahmni_config/openmrs/apps/registration/registrationCardLayout/print.html"
+        },
+        {
+          "key": "printOptions[2].templateUrl",
+          "value": "/bahmni_config/openmrs/apps/registration/supplementalPaperLayout/print.html"
+        },
+        {
+          "key": "printOptions[3].templateUrl",
+          "value": "/bahmni_config/openmrs/apps/registration/registrationCardLayout/printWithBarcode.html"
+        }
+      ],
+      "extensions": [
+        {
+          "id": "createNew",
+          "extensionPointId": "org.bahmni.registration.navigation",
+          "type": "link",
+          "requiredPrivilege": "Add Patients",
+          "translationKey": "REGISTRATION_CREATE_NEW_CONFIG_KEY",
+          "url": "/patient/new",
+          "order": 2
+        },
+        {
+          "id": "registrationSecondPage",
+          "extensionPointId": "org.bahmni.registration.conceptSetGroup.observations",
+          "type": "forms",
+          "requiredPrivilege": "Edit Visits",
+          "translationKey": null,
+          "url": null,
+          "order": 3
+        },
+        {
+          "id": "search",
+          "extensionPointId": "org.bahmni.registration.navigation",
+          "type": "link",
+          "requiredPrivilege": "View Patients",
+          "translationKey": "REGISTRATION_SEARCH_CONFIG_KEY",
+          "url": "/search",
+          "order": 1
+        },
+        {
+          "id": "view",
+          "extensionPointId": "org.bahmni.registration.patient.search.result.action",
+          "type": "link",
+          "requiredPrivilege": "View Patients",
+          "translationKey": "REGISTRATION_VIEW_CONFIG_KEY",
+          "url": "/patient/{{patientUuid}}",
+          "order": 1
+        }
+      ]
+    },
+    {
+      "app": "reports",
+      "configKeys": [
+        "enableReportQueue",
+        "paperSize"
+      ],
+      "configuredUrls": [],
+      "extensions": []
+    }
+  ],
+  "configurableScripts": [
+    "JsBarcode.all.min.js",
+    "clinical/diagnosisServiceConfig.js",
+    "clinical/formConditions.js",
+    "customDisplayControl/js/customControl.js",
+    "dbNameCondition/dbNameCondition.js",
+    "registration/fieldValidation.js"
+  ],
+  "configuredTemplates": [
+    "appointments/printListView.html",
+    "clinical/customQueues/notifications.html",
+    "customDisplayControl/views/birthCertificate.html",
+    "customDisplayControl/views/customTreatmentChart.html",
+    "customDisplayControl/views/deathCertificate.html",
+    "customDisplayControl/views/ipsSection.html",
+    "customDisplayControl/views/notificacionGES.html",
+    "customDisplayControl/views/patientAppointmentsDashboard.html",
+    "ipd/wardListPrint.html",
+    "ot/printListView.html",
+    "registration/registrationCardLayout/print.html",
+    "registration/registrationCardLayout/printWithBarcode.html",
+    "registration/registrationCardLayout/print_local.html",
+    "registration/supplementalPaperLayout/print.html"
+  ],
+  "microFrontends": {
+    "sourceFiles": [
+      "micro-frontends/src/__mocks__/fileMock.js",
+      "micro-frontends/src/__mocks__/globalReact.js",
+      "micro-frontends/src/__mocks__/globalReactDom.js",
+      "micro-frontends/src/__mocks__/styleMock.js",
+      "micro-frontends/src/ipd/CareViewDashboard.jsx",
+      "micro-frontends/src/ipd/IpdDashboard.jsx",
+      "micro-frontends/src/ipd/index.js",
+      "micro-frontends/src/next-ui/Components/AddAllergy/AddAllergy.jsx",
+      "micro-frontends/src/next-ui/Components/AddAllergy/AddAllergy.spec.jsx",
+      "micro-frontends/src/next-ui/Components/EditObservationForm/EditObservationForm.jsx",
+      "micro-frontends/src/next-ui/Components/EditObservationForm/EditObservationForm.spec.jsx",
+      "micro-frontends/src/next-ui/Components/EditObservationForm/EditObservationFormUtils.js",
+      "micro-frontends/src/next-ui/Components/EditObservationForm/EditObservationFormUtils.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ErrorNotification/ErrorNotification.jsx",
+      "micro-frontends/src/next-ui/Components/ErrorNotification/ErrorNotification.spec.jsx",
+      "micro-frontends/src/next-ui/Components/Loader/Loader.jsx",
+      "micro-frontends/src/next-ui/Components/Loader/Loader.spec.jsx",
+      "micro-frontends/src/next-ui/Components/OtNotes/DeletePopup.jsx",
+      "micro-frontends/src/next-ui/Components/OtNotes/DeletePopup.spec.jsx",
+      "micro-frontends/src/next-ui/Components/OtNotes/SavePopup.jsx",
+      "micro-frontends/src/next-ui/Components/OtNotes/SavePopup.spec.jsx",
+      "micro-frontends/src/next-ui/Components/OtNotes/utils.js",
+      "micro-frontends/src/next-ui/Components/ProviderNotificationPatients/PatientListContent.jsx",
+      "micro-frontends/src/next-ui/Components/ProviderNotificationPatients/PatientListContent.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ProviderNotificationPatients/PatientListMockData.js",
+      "micro-frontends/src/next-ui/Components/ProviderNotificationPatients/PatientListTitle.jsx",
+      "micro-frontends/src/next-ui/Components/ProviderNotificationPatients/PatientListTitle.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ProviderNotificationPatients/PatientsList.jsx",
+      "micro-frontends/src/next-ui/Components/ProviderNotificationPatients/PatientsList.spec.jsx",
+      "micro-frontends/src/next-ui/Components/SaveAndCloseButtons/SaveAndCloseButtons.jsx",
+      "micro-frontends/src/next-ui/Components/SaveAndCloseButtons/SaveAndCloseButtons.spec.jsx",
+      "micro-frontends/src/next-ui/Components/SearchAllergen/SearchAllergen.jsx",
+      "micro-frontends/src/next-ui/Components/SearchAllergen/SearchAllergen.spec.jsx",
+      "micro-frontends/src/next-ui/Components/SelectReactions/SelectReactions.jsx",
+      "micro-frontends/src/next-ui/Components/SelectReactions/SelectReactions.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ViewAllergiesAndReactions/ViewAllergiesAndReactions.jsx",
+      "micro-frontends/src/next-ui/Components/ViewAllergiesAndReactions/ViewAllergiesAndReactions.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/FileViewer/BuildFileViewer/BuildFileViewer.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/FileViewer/BuildFileViewer/BuildFileViewer.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/FileViewer/FileViewer.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/FileViewer/FileViewerMockData.js",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/FileViewer/FileViewerModal/FileViewerModal.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/FileViewer/FileViewerModal/FileViewerModal.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/TileItem/TileItem.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/TileItem/TileItem.spec.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/ViewObservationForm.jsx",
+      "micro-frontends/src/next-ui/Components/ViewObservationForm/ViewObservationForm.spec.jsx",
+      "micro-frontends/src/next-ui/Components/i18n/I18nProvider.jsx",
+      "micro-frontends/src/next-ui/Components/i18n/__mocks__/utils.js",
+      "micro-frontends/src/next-ui/Components/i18n/utils.js",
+      "micro-frontends/src/next-ui/Containers/AllOrders/AllOrdersDashboard.jsx",
+      "micro-frontends/src/next-ui/Containers/Certificates/CertificatesControl.jsx",
+      "micro-frontends/src/next-ui/Containers/ImagingOrders/ImagingOrdersControl.jsx",
+      "micro-frontends/src/next-ui/Containers/LaboratoryOrders/LaboratoryOrdersControl.jsx",
+      "micro-frontends/src/next-ui/Containers/MedicationOrders/MedicationOrdersControl.jsx",
+      "micro-frontends/src/next-ui/Containers/ProcedureOrders/ProcedureOrdersControl.jsx",
+      "micro-frontends/src/next-ui/Containers/ReferralOrders/ReferralOrdersControl.jsx",
+      "micro-frontends/src/next-ui/Containers/formDisplayControl/FormDisplayControl.jsx",
+      "micro-frontends/src/next-ui/Containers/formDisplayControl/FormDisplayControl.spec.jsx",
+      "micro-frontends/src/next-ui/Containers/formDisplayControl/FormDisplayControlMockData.js",
+      "micro-frontends/src/next-ui/Containers/ips/ipsDisplayControl copy.jsx",
+      "micro-frontends/src/next-ui/Containers/ips/ipsDisplayControl.jsx",
+      "micro-frontends/src/next-ui/Containers/ips/ips_fhir_react_visual_interpreter.jsx",
+      "micro-frontends/src/next-ui/Containers/ipsIcvp/ipsICVPDisplayControl copy.jsx",
+      "micro-frontends/src/next-ui/Containers/ipsIcvp/ipsICVPDisplayControl.jsx",
+      "micro-frontends/src/next-ui/Containers/ipsIcvp/ips_fhir_react_visual_interpreter.jsx",
+      "micro-frontends/src/next-ui/Containers/otNotes/OtNotes.jsx",
+      "micro-frontends/src/next-ui/Containers/patientAlergies/PatientAlergiesControl.jsx",
+      "micro-frontends/src/next-ui/Containers/patientAlergies/PatientAlergiesControl.spec.jsx",
+      "micro-frontends/src/next-ui/Containers/providerNotifications/ProviderNotifications.jsx",
+      "micro-frontends/src/next-ui/Containers/providerNotifications/ProviderNotifications.spec.jsx",
+      "micro-frontends/src/next-ui/Containers/vacunasDisplayControl/VacunasDisplayControl.jsx",
+      "micro-frontends/src/next-ui/config/dashboardConfig.js",
+      "micro-frontends/src/next-ui/config/icvpConfig.js",
+      "micro-frontends/src/next-ui/constants.js",
+      "micro-frontends/src/next-ui/index.js",
+      "micro-frontends/src/next-ui/utils/FormDisplayControl/BuildFormView.js",
+      "micro-frontends/src/next-ui/utils/FormDisplayControl/BuildFormView.spec.js",
+      "micro-frontends/src/next-ui/utils/FormDisplayControl/FormUtils.js",
+      "micro-frontends/src/next-ui/utils/FormDisplayControl/FormUtils.spec.js",
+      "micro-frontends/src/next-ui/utils/FormDisplayControl/FormView.js",
+      "micro-frontends/src/next-ui/utils/FormDisplayControl/FormView.spec.js",
+      "micro-frontends/src/next-ui/utils/PatientAllergiesControl/AllergyControlUtils.js",
+      "micro-frontends/src/next-ui/utils/PatientAllergiesControl/AllergyControlUtils.spec.js",
+      "micro-frontends/src/next-ui/utils/cookieHandler/cookieHandler.js",
+      "micro-frontends/src/next-ui/utils/cookieHandler/cookieHandler.spec.js",
+      "micro-frontends/src/next-ui/utils/ipsICVPService/ipsICVPService.js",
+      "micro-frontends/src/next-ui/utils/ipsService/ipsService.js",
+      "micro-frontends/src/next-ui/utils/providerNotifications/ProviderNotificationUtils.js",
+      "micro-frontends/src/next-ui/utils/providerNotifications/ProviderNotificationUtils.spec.js",
+      "micro-frontends/src/next-ui/utils/utils.js",
+      "micro-frontends/src/next-ui/utils/utils.spec.js",
+      "micro-frontends/src/polyfill.js",
+      "micro-frontends/src/setupTests.js",
+      "micro-frontends/src/shared.js",
+      "micro-frontends/src/utils/bridge-builder.js"
+    ]
+  },
+  "contracts": {
+    "endpointConstants": [
+      {
+        "name": "adhocTeleconsultationLinkServiceUrl",
+        "expression": "RESTWS_V1 + \"/adhocTeleconsultation/generateAdhocTeleconsultationLink\""
+      },
+      {
+        "name": "adminImportStatusUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/status\""
+      },
+      {
+        "name": "AllDiseaseTemplateUrl",
+        "expression": "BAHMNI_CORE + \"/diseaseTemplate\""
+      },
+      {
+        "name": "allFormsUrl",
+        "expression": "RESTWS_V1 + \"/bahmniie/form/allForms\""
+      },
+      {
+        "name": "appointmentServiceUrl",
+        "expression": "RESTWS_V1 + \"/appointmentService\""
+      },
+      {
+        "name": "auditLogUrl",
+        "expression": "RESTWS_V1 + \"/auditlog\""
+      },
+      {
+        "name": "bahmniapiConceptUrl",
+        "expression": "BAHMNI_COMMONS + \"/terminologies/concepts\""
+      },
+      {
+        "name": "bahmniBacteriologyResultsUrl",
+        "expression": "BACTERIOLOGY + \"/specimen\""
+      },
+      {
+        "name": "bahmniCommonsSearchUrl",
+        "expression": "BAHMNI_COMMONS + \"/search\""
+      },
+      {
+        "name": "bahmniConceptAnswerUrl",
+        "expression": "RESTWS_V1 + \"/bahmniconceptanswer\""
+      },
+      {
+        "name": "bahmniDeleteDiagnosisUrl",
+        "expression": "BAHMNI_CORE + \"/diagnosis/delete\""
+      },
+      {
+        "name": "bahmniDiagnosisUrl",
+        "expression": "BAHMNI_CORE + \"/diagnosis/search\""
+      },
+      {
+        "name": "bahmniDispositionByPatientUrl",
+        "expression": "BAHMNI_CORE + \"/disposition/patientWithLocale\""
+      },
+      {
+        "name": "bahmniDispositionByVisitUrl",
+        "expression": "BAHMNI_CORE + \"/disposition/visitWithLocale\""
+      },
+      {
+        "name": "bahmniDrugOrderUrl",
+        "expression": "BAHMNI_CORE + \"/drugOrders\""
+      },
+      {
+        "name": "bahmniEncounterUrl",
+        "expression": "BAHMNI_CORE + \"/bahmniencounter\""
+      },
+      {
+        "name": "bahmniFacilityLocationUrl",
+        "expression": "BAHMNI_CORE + \"/facilityLocation\""
+      },
+      {
+        "name": "bahmniLabOrderResultsUrl",
+        "expression": "BAHMNI_CORE + \"/labOrderResults\""
+      },
+      {
+        "name": "bahmniOrderUrl",
+        "expression": "BAHMNI_CORE + \"/orders\""
+      },
+      {
+        "name": "bahmniRESTBaseURL",
+        "expression": "BAHMNI_CORE + \"\""
+      },
+      {
+        "name": "bahmniSearchUrl",
+        "expression": "BAHMNI_CORE + \"/search\""
+      },
+      {
+        "name": "bahmniVisitLocationUrl",
+        "expression": "BAHMNI_CORE + \"/visitLocation\""
+      },
+      {
+        "name": "baseUrl",
+        "expression": "BASE_URL"
+      },
+      {
+        "name": "cdssUrl",
+        "expression": "RESTWS_V1 + \"/cdss\""
+      },
+      {
+        "name": "conceptImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/concept\""
+      },
+      {
+        "name": "conceptSearchByFullNameUrl",
+        "expression": "RESTWS_V1 + \"/concept?s=byFullySpecifiedName\""
+      },
+      {
+        "name": "conceptSetExportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/export/conceptset?conceptName=:conceptName\""
+      },
+      {
+        "name": "conceptSetImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/conceptset\""
+      },
+      {
+        "name": "conceptUrl",
+        "expression": "RESTWS_V1 + \"/concept\""
+      },
+      {
+        "name": "conditionHistoryUrl",
+        "expression": "EMRAPI + '/conditionhistory'"
+      },
+      {
+        "name": "conditionUrl",
+        "expression": "EMRAPI + '/condition'"
+      },
+      {
+        "name": "customUrl",
+        "expression": "CUSTOM_URL"
+      },
+      {
+        "name": "dischargeUrl",
+        "expression": "BAHMNI_CORE + \"/discharge\""
+      },
+      {
+        "name": "diseaseSummaryPivotUrl",
+        "expression": "BAHMNI_CORE + \"/diseaseSummaryData\""
+      },
+      {
+        "name": "diseaseTemplateUrl",
+        "expression": "BAHMNI_CORE + \"/diseaseTemplates\""
+      },
+      {
+        "name": "drugImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/drug\""
+      },
+      {
+        "name": "drugOrderConfigurationUrl",
+        "expression": "BAHMNI_CORE + \"/config/drugOrders\""
+      },
+      {
+        "name": "drugUrl",
+        "expression": "RESTWS_V1 + \"/drug\""
+      },
+      {
+        "name": "emrapiConceptUrl",
+        "expression": "EMRAPI + \"/concept\""
+      },
+      {
+        "name": "emrapiDiagnosisUrl",
+        "expression": "EMRAPI + \"/diagnosis\""
+      },
+      {
+        "name": "emrEncounterUrl",
+        "expression": "EMRAPI + \"/encounter\""
+      },
+      {
+        "name": "encounterConfigurationUrl",
+        "expression": "BAHMNI_CORE + \"/config/bahmniencounter\""
+      },
+      {
+        "name": "encounterImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/encounter\""
+      },
+      {
+        "name": "encounterModifierUrl",
+        "expression": "BAHMNI_CORE + \"/bahmniencountermodifier\""
+      },
+      {
+        "name": "encounterTypeUrl",
+        "expression": "RESTWS_V1 + \"/encountertype\""
+      },
+      {
+        "name": "encounterUrl",
+        "expression": "RESTWS_V1 + \"/encounter\""
+      },
+      {
+        "name": "endVisitAndCreateEncounterUrl",
+        "expression": "BAHMNI_CORE + \"/visit/endVisitAndCreateEncounter\""
+      },
+      {
+        "name": "endVisitUrl",
+        "expression": "BAHMNI_CORE + \"/visit/endVisit\""
+      },
+      {
+        "name": "entityMappingUrl",
+        "expression": "RESTWS_V1 + \"/entitymapping\""
+      },
+      {
+        "name": "eventlogFilterUrl",
+        "expression": "hostUrl + \"/openmrs/ws/rest/v1/eventlog/filter\""
+      },
+      {
+        "name": "faviconUrl",
+        "expression": "hostUrl + \"/bahmni/favicon.ico\""
+      },
+      {
+        "name": "fhirExportUrl",
+        "expression": "RESTWS_V1 + \"/fhirexport\""
+      },
+      {
+        "name": "fhirMedicationsUrl",
+        "expression": "FHIR_BASE_URL + \"/Medication\""
+      },
+      {
+        "name": "form2encounterImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/form2encounter\""
+      },
+      {
+        "name": "formDataUrl",
+        "expression": "RESTWS_V1 + \"/obs\""
+      },
+      {
+        "name": "formTranslationsUrl",
+        "expression": "RESTWS_V1 + \"/bahmniie/form/translations\""
+      },
+      {
+        "name": "formUrl",
+        "expression": "RESTWS_V1 + \"/form\""
+      },
+      {
+        "name": "globalPropertyUrl",
+        "expression": "BAHMNI_CORE + \"/sql/globalproperty\""
+      },
+      {
+        "name": "hostURL",
+        "expression": "hostUrl"
+      },
+      {
+        "name": "idgenConfigurationURL",
+        "expression": "RESTWS_V1 + \"/idgen/identifiertype\""
+      },
+      {
+        "name": "labResultsImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/labResults\""
+      },
+      {
+        "name": "labResultUploadedFileNameUrl",
+        "expression": "\"/uploaded_results/\""
+      },
+      {
+        "name": "locationUrl",
+        "expression": "RESTWS_V1 + \"/location\""
+      },
+      {
+        "name": "loggingUrl",
+        "expression": "hostUrl + \"/log/\""
+      },
+      {
+        "name": "observationsUrl",
+        "expression": "BAHMNI_CORE + \"/observations\""
+      },
+      {
+        "name": "obsRelationshipUrl",
+        "expression": "BAHMNI_CORE + \"/obsrelationships\""
+      },
+      {
+        "name": "openmrsObsUrl",
+        "expression": "RESTWS_V1 + \"/obs\""
+      },
+      {
+        "name": "openmrsUrl",
+        "expression": "hostUrl + \"/openmrs\""
+      },
+      {
+        "name": "orderSetMemberAttributeTypeUrl",
+        "expression": "RESTWS_V1 + \"/ordersetmemberattributetype\""
+      },
+      {
+        "name": "orderSetUrl",
+        "expression": "RESTWS_V1 + \"/bahmniorderset\""
+      },
+      {
+        "name": "ordersUrl",
+        "expression": "RESTWS_V1 + \"/order\""
+      },
+      {
+        "name": "orderTypeUrl",
+        "expression": "RESTWS_V1 + \"/ordertype\""
+      },
+      {
+        "name": "passwordPolicyUrl",
+        "expression": "BAHMNI_CORE + \"/globalProperty/passwordPolicyProperties\""
+      },
+      {
+        "name": "passwordUrl",
+        "expression": "RESTWS_V1 + \"/password\""
+      },
+      {
+        "name": "patientAllergiesURL",
+        "expression": "FHIR_BASE_URL + \"/AllergyIntolerance?patient={{patientUuid}}&_summary=data\""
+      },
+      {
+        "name": "patientConfigurationUrl",
+        "expression": "BAHMNI_CORE + \"/config/patient\""
+      },
+      {
+        "name": "patientFormsUrl",
+        "expression": "BAHMNI_CORE + \"/patient/{patientUuid}/forms\""
+      },
+      {
+        "name": "patientImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/patient\""
+      },
+      {
+        "name": "personAttributeTypeUrl",
+        "expression": "RESTWS_V1 + \"/personattributetype\""
+      },
+      {
+        "name": "programEnrollPatientUrl",
+        "expression": "RESTWS_V1 + \"/bahmniprogramenrollment\""
+      },
+      {
+        "name": "programImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/program\""
+      },
+      {
+        "name": "programStateDeletionUrl",
+        "expression": "RESTWS_V1 + \"/programenrollment\""
+      },
+      {
+        "name": "programUrl",
+        "expression": "RESTWS_V1 + \"/program\""
+      },
+      {
+        "name": "providerAttributeUrl",
+        "expression": "RESTWS_V1 + \"/provider/{{providerUuid}}/attribute\""
+      },
+      {
+        "name": "providerUrl",
+        "expression": "RESTWS_V1 + \"/provider\""
+      },
+      {
+        "name": "referenceTermsImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/referenceterms\""
+      },
+      {
+        "name": "relationshipImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/relationship\""
+      },
+      {
+        "name": "relationshipTypesUrl",
+        "expression": "RESTWS_V1 + \"/relationshiptype\""
+      },
+      {
+        "name": "reportsUrl",
+        "expression": "\"/bahmnireports\""
+      },
+      {
+        "name": "sendViaEmailUrl",
+        "expression": "RESTWS_V1 + \"/patient/{{patientUuid}}/send/email\""
+      },
+      {
+        "name": "serverDateTimeUrl",
+        "expression": "\"/cgi-bin/systemdate\""
+      },
+      {
+        "name": "sqlUrl",
+        "expression": "BAHMNI_CORE + \"/sql\""
+      },
+      {
+        "name": "updateReferenceTermsImportUrl",
+        "expression": "BAHMNI_CORE + \"/admin/upload/referenceterms/new\""
+      },
+      {
+        "name": "uploadReportTemplateUrl",
+        "expression": "\"/bahmnireports/upload\""
+      },
+      {
+        "name": "userUrl",
+        "expression": "RESTWS_V1 + \"/user\""
+      },
+      {
+        "name": "visitSummaryUrl",
+        "expression": "BAHMNI_CORE + \"/visit/summary\""
+      },
+      {
+        "name": "visitTypeUrl",
+        "expression": "RESTWS_V1 + \"/visittype\""
+      },
+      {
+        "name": "visitUrl",
+        "expression": "RESTWS_V1 + \"/visit\""
+      }
+    ],
+    "privileges": [
+      "Add Patients",
+      "Discharge Summary",
+      "Edit Visits",
+      "View Patients",
+      "app:admin",
+      "app:adt",
+      "app:appointments",
+      "app:clinical",
+      "app:clinical:bacteriologyTab",
+      "app:clinical:consultationTab",
+      "app:clinical:diagnosisTab",
+      "app:clinical:dispositionTab",
+      "app:clinical:history",
+      "app:clinical:observationTab",
+      "app:clinical:ordersTab",
+      "app:clinical:treatmentTab",
+      "app:implementer-interface",
+      "app:lab-lite",
+      "app:orders",
+      "app:ot",
+      "app:patient-documents",
+      "app:radiology-upload",
+      "app:radiologyOrders",
+      "app:registration",
+      "app:reports"
+    ],
+    "translations": [
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_ar.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_de.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_el.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_en.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_fr.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_hi.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_hr.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_it.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_km.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_ko.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_lo.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_pt_BR.json",
+        "keys": 36,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_pt.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_ru.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_te.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_vi.json",
+        "keys": 36,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "admin/locale_zh.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_ar.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_de.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_el.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_en.json",
+        "keys": 72,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_fr.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_hr.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_it.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_km.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_lo.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_pt_BR.json",
+        "keys": 72,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_pt.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_ru.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_vi.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "adt/locale_zh.json",
+        "keys": 67,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "appointments/locale_en.json",
+        "keys": 162,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "appointments/locale_es.json",
+        "keys": 162,
+        "malformed": true
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "appointments/locale_fr.json",
+        "keys": 146,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "appointments/locale_pt_BR.json",
+        "keys": 146,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_ar.json",
+        "keys": 391,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_de.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_el.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_en.json",
+        "keys": 391,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_es.json",
+        "keys": 391,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_fr.json",
+        "keys": 391,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_hr.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_it.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_km.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_ko.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_lo.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_pt_BR.json",
+        "keys": 391,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_pt.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_ru.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_te.json",
+        "keys": 362,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "clinical/locale_zh.json",
+        "keys": 391,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "document-upload/locale_en.json",
+        "keys": 37,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "document-upload/locale_es.json",
+        "keys": 34,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "document-upload/locale_fr.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_ar.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_de.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_en.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_es.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_fr.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_hr.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_it.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_km.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_ko.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_lo.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_pt_BR.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_pt.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_ru.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_te.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_vi.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "home/locale_zh.json",
+        "keys": 56,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "ipd/locale_en.json",
+        "keys": 87,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "ipd/locale_es.json",
+        "keys": 102,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "ipd/locale_fr.json",
+        "keys": 10,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_ar.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_de.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_en.json",
+        "keys": 38,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_es.json",
+        "keys": 38,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_fr.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_hr.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_it.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_km.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_lo.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_pt_BR.json",
+        "keys": 38,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_pt.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_ru.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_te.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_vi.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "orders/locale_zh.json",
+        "keys": 28,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "ot/locale_en.json",
+        "keys": 128,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "ot/locale_es.json",
+        "keys": 127,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_ar.json",
+        "keys": 125,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_de.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_en.json",
+        "keys": 125,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_es.json",
+        "keys": 125,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_fr.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_it.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_km.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_ko.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_lo.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_pt_BR.json",
+        "keys": 125,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_pt.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_ru.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_te.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "registration/locale_zh.json",
+        "keys": 122,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_ar.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_de.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_en.json",
+        "keys": 48,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_es.json",
+        "keys": 48,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_fr.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_it.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_km.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_ko.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_lo.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_pt_BR.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_pt.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_ru.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_te.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_vi.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
+        "path": "reports/locale_zh.json",
+        "keys": 45,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "admin/locale_en.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "admin/locale_es.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "adt/locale_en.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "adt/locale_es.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "adt/locale_pt_BR.json",
+        "keys": 19,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "appointments/locale_en.json",
+        "keys": 162,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "appointments/locale_es.json",
+        "keys": 273,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_ar.json",
+        "keys": 88,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_de.json",
+        "keys": 88,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_en.json",
+        "keys": 90,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_es.json",
+        "keys": 93,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_fr.json",
+        "keys": 88,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_km.json",
+        "keys": 88,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_lo.json",
+        "keys": 88,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_pt_BR.json",
+        "keys": 90,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "clinical/locale_zh.json",
+        "keys": 88,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_ar.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_de.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_en.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_es.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_fr.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_km.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_lo.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_pt_BR.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_pt.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_ru.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_vi.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "document-upload/locale_zh.json",
+        "keys": 4,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_ar.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_de.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_en.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_es.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_fr.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_km.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_lo.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_pt_BR.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_vi.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "home/locale_zh.json",
+        "keys": 15,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "ipd/locale_en.json",
+        "keys": 103,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "ipd/locale_es.json",
+        "keys": 72,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_ar.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_de.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_en.json",
+        "keys": 38,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_es.json",
+        "keys": 38,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_fr.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_km.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_lo.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_pt_BR.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_ru.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_vi.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "orders/locale_zh.json",
+        "keys": 1,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "ot/locale_en.json",
+        "keys": 3,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_ar.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_de.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_en.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_es.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_fr.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_km.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_lo.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_pt_BR.json",
+        "keys": 23,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "registration/locale_zh.json",
+        "keys": 23,
+        "malformed": false
+      }
+    ]
+  },
+  "legacyTests": [
+    {
+      "legacyPath": "ui/test/unit/admin/controllers/auditLogController.spec.js",
+      "module": "admin",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/admin/admin-controllers-auditlogcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/admin/controllers/fhirExportController.spec.js",
+      "module": "admin",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/admin/admin-controllers-fhirexportcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/admin/controllers/orderSetController.spec.js",
+      "module": "admin",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/admin/admin-controllers-ordersetcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/admin/services/adminImportService.spec.js",
+      "module": "admin",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/admin/admin-services-adminimportservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/controllers/adtController.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-controllers-adtcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/controllers/bedManagementController.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-controllers-bedmanagementcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/controllers/careViewController.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-controllers-careviewcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/controllers/wardController.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-controllers-wardcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/controllers/wardLayoutController.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-controllers-wardlayoutcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/controllers/wardListController.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-controllers-wardlistcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/controllers/wardsController.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-controllers-wardscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/models/wardDetails.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-models-warddetails.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/services/bedManagementService.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-services-bedmanagementservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/services/QueryService.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-services-queryservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/services/wardService.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-services-wardservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/adt/util/dispositionDisplayUtil.spec.js",
+      "module": "adt",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/adt/adt-util-dispositiondisplayutil.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/adtController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-adtcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/bedManagementController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-bedmanagementcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/careViewController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-careviewcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/editTagsController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-edittagscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/headerController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-headercontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/roomController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-roomcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/roomGridController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-roomgridcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/roomListController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-roomlistcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/controllers/wardController.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-controllers-wardcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/directives/backLinksCacheBuster.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-directives-backlinkscachebuster.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/directives/editAdtObservations.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-directives-editadtobservations.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/services/bedManagementService.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-services-bedmanagementservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/services/bedTagMapService.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-services-bedtagmapservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/services/queryService.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-services-queryservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/bedmanagement/services/wardService.spec.js",
+      "module": "bedmanagement",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/bedmanagement/bedmanagement-services-wardservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/controllers/consultationContextController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-controllers-consultationcontextcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/controllers/patientListHeaderController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-controllers-patientlistheadercontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/controllers/visitController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-controllers-visitcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/controllers/visitHeaderController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-controllers-visitheadercontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/models/tabConfig.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-models-tabconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/models/visitTabConfig.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-models-visittabconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/services/clinicalAppConfigService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-services-clinicalappconfigservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/services/treatmentService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-services-treatmentservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/services/visitTabConfig.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-services-visittabconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/utils/c3Chart.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-utils-c3chart.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/common/utils/obsGroupingHelper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-common-utils-obsgroupinghelper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/controllers/bacteriologyController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-controllers-bacteriologycontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/controllers/clinicalController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-controllers-clinicalcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/controllers/conceptSetPageController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-controllers-conceptsetpagecontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/controllers/diagnosisController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-controllers-diagnosiscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/controllers/treatmentController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-controllers-treatmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/directives/alertOnExit.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-directives-alertonexit.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/directives/formControls.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-directives-formcontrols.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/helpers/drugOrderHistoryHelper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-helpers-drugorderhistoryhelper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/helpers/focusOnInputErrors.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-helpers-focusoninputerrors.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/helpers/urlHelper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-helpers-urlhelper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/models/drugOrderOptions.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-models-drugorderoptions.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/models/specimen.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-models-specimen.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/services/cdssService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-services-cdssservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/services/exitAlertService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-services-exitalertservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/services/observationFormService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-services-observationformservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/services/treatmentConfig.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-services-treatmentconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/consultation/services/visitFormService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-consultation-services-visitformservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/addTreatmentController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-addtreatmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/consultationController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-consultationcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/consultationSummaryController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-consultationsummarycontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/dispositionController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-dispositioncontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/drugOrderHistoryController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-drugorderhistorycontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/editObservationFormController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-editobservationformcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/investigationSelector.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-investigationselector.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/latestPrescriptionPrintController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-latestprescriptionprintcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/orderController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-ordercontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/patientDashboardController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-patientdashboardcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/patientDashboardLabOrdersController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-patientdashboardlaborderscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/patientDashboardLabSummaryController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-patientdashboardlabsummarycontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/controllers/patientDashboardTreatmentController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-controllers-patientdashboardtreatmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/dashboard/controllers/diseaseTemplateController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-dashboard-controllers-diseasetemplatecontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/dashboard/controllers/patientDashboardProgramsController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-dashboard-controllers-patientdashboardprogramscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/dashboard/controllers/patientDashboardVisitsController.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-dashboard-controllers-patientdashboardvisitscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/directives/cdssAlertRow.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-directives-cdssalertrow.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/directives/cdssPopover.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-directives-cdsspopover.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/directives/newDrugOrders.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-directives-newdrugorders.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/directives/orderSelector.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-directives-orderselector.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/directives/recentPatients.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-directives-recentpatients.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/clinicalDashboardConfig.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-clinicaldashboardconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/drugOrderUtil.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-drugorderutil.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/models/graphLine.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-models-graphline.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/models/observationGraph.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-models-observationgraph.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/models/observationGraphReference.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-models-observationgraphreference.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/observationData/observationData.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-observationdata-observationdata.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/observationGraph.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-observationgraph.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/observationGraphConfig.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-observationgraphconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/patientContext/directives/patientContext.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-patientcontext-directives-patientcontext.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/treatmentTable.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-treatmenttable.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/displaycontrols/visitsTable.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-displaycontrols-visitstable.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/accessionNotesMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-accessionnotesmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/encounterTransactionMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-encountertransactionmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/encounterTransactionToObsMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-encountertransactiontoobsmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/labConceptsMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-labconceptsmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/labResultsMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-labresultsmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/otherInvestigationsConceptsMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-otherinvestigationsconceptsmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/patientFileObservationsMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-patientfileobservationsmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/recordsMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-recordsmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/specimenMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-specimenmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/mappers/visitHistoryEntry.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-mappers-visithistoryentry.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/category.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-category.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/condition.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-condition.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/diseaseTemplate.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-diseasetemplate.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/drugOrder.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-drugorder.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/drugOrderViewModel.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-drugorderviewmodel.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/drugSchedule.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-drugschedule.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/drugSearchResult.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-drugsearchresult.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/observationForm.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-observationform.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/observationTemplate.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-observationtemplate.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/order.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-order.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/orderObservationsMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-orderobservationsmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/ordersMapper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-ordersmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/resultGrouper.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-resultgrouper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/selectable.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-selectable.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/sortedConceptSet.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-sortedconceptset.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/tabularLabOrderResults.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-tabularlaborderresults.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/models/uiError.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-models-uierror.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/patientcontrolpanel/directives/patientControlPanel.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-patientcontrolpanel-directives-patientcontrolpanel.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/services/diseaseTemplateService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-services-diseasetemplateservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/services/labOrderResultService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-services-laborderresultservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/clinical/services/patientVisitHistoryService.spec.js",
+      "module": "clinical",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/clinical/clinical-services-patientvisithistoryservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/app-framework/service/loadConfigService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-app-framework-service-loadconfigservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/app-framework/service/mergeService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-app-framework-service-mergeservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/auth/authentication.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-auth-authentication.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/auth/user.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-auth-user.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/directives/concept.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-directives-concept.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/directives/conceptSet.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-directives-conceptset.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/directives/conceptSetGroup.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-directives-conceptsetgroup.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/directives/stepper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-directives-stepper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/mappers/observationMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-mappers-observationmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/booleanObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-booleanobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/conceptSetGroupPanelViewValidationHandler.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-conceptsetgrouppanelviewvalidationhandler.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/conceptSetGroupValidationHandler.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-conceptsetgroupvalidationhandler.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/conceptSetObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-conceptsetobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/conceptSetSection.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-conceptsetsection.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/customRepresentationBuilder.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-customrepresentationbuilder.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/multiselectObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-multiselectobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/observationNode.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-observationnode.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/specimenTypeObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-specimentypeobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/models/tabularObservations.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-models-tabularobservations.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/services/conceptGroupFormatService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-services-conceptgroupformatservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/concept-set/services/conceptService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-concept-set-services-conceptservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/config/services/configurations.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-config-services-configurations.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/config/showIfPrivilege.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-config-showifprivilege.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/bacteriologyResults/directives/bacteriologyResultsControl.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-bacteriologyresults-directives-bacteriologyresultscontrol.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/chronicTreatmentChart/directives/chronicTreatmentChart.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-chronictreatmentchart-directives-chronictreatmentchart.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/dashboard/dashboard.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-dashboard-dashboard.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/dashboard/dashboardSection.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-dashboard-dashboardsection.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/dashboard/Directives/dashboard.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-dashboard-directives-dashboard.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/dashboard/Directives/dashboardSection.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-dashboard-directives-dashboardsection.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/diagnosis/directives/bahmniDiagnosis.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-diagnosis-directives-bahmnidiagnosis.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/disposition/directives/disposition.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-disposition-directives-disposition.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/documents/bmDocuments.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-documents-bmdocuments.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/drugOrderDetails/directives/drugOrderDetails.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-drugorderdetails-directives-drugorderdetails.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/drugOrdersSection/directives/drugOrdersSection.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-drugorderssection-directives-drugorderssection.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/forms/controllers/versionedFormController.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-forms-controllers-versionedformcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/forms/directives/formsTable.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-forms-directives-formstable.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/navigationLinks/directives/navigationLinks.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-navigationlinks-directives-navigationlinks.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/observation/controllers/allObservationDetailsController.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-observation-controllers-allobservationdetailscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/observation/directives/bahmniObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-observation-directives-bahmniobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/observation/helpers/groupingFunction.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-observation-helpers-groupingfunction.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/observation/services/formHierarchyService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-observation-services-formhierarchyservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/observation/services/formRecordTreeBuildService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-observation-services-formrecordtreebuildservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/obsVsObsFlowSheet/directives/obsToObsFlowSheet.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-obsvsobsflowsheet-directives-obstoobsflowsheet.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/orders/directives/ordersControl.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-orders-directives-orderscontrol.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/pacsOrders/directives/pacsOrders.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-pacsorders-directives-pacsorders.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/patientProfile/directives/patientProfile.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-patientprofile-directives-patientprofile.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/patientProfile/filters/booleanFilter.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-patientprofile-filters-booleanfilter.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/patientProfile/filters/titleCase.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-patientprofile-filters-titlecase.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/pivottable/services/pivotTableService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-pivottable-services-pivottableservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/displaycontrols/programs/directives/programs.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-displaycontrols-programs-directives-programs.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/mappers/attributeFormatter.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-mappers-attributeformatter.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/mappers/attributeTypeMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-mappers-attributetypemapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/mappers/diagnosisMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-mappers-diagnosismapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/mappers/observationValueMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-mappers-observationvaluemapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/mappers/patientProgramMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-mappers-patientprogrammapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/observationFilter.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-observationfilter.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/bedService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-bedservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/conditionsService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-conditionsservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/configurationService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-configurationservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/dispositionService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-dispositionservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/localeService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-localeservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/locationService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-locationservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/observationsService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-observationsservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/programService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-programservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/retrospectiveEntryService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-retrospectiveentryservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/visitDocumentService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-visitdocumentservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/domain/services/visitService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-domain-services-visitservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/i18n/bahmni-translate.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-i18n-bahmni-translate.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/i18n/services/mergeLocaleFilesService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-i18n-services-mergelocalefilesservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/logging/services/auditLogService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-logging-services-auditlogservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/models/age.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-models-age.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/models/visitSummary.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-models-visitsummary.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/obs/directives/editObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-obs-directives-editobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/obs/directives/showObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-obs-directives-showobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/obs/gridObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-obs-gridobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/obs/multiSelectObservation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-obs-multiselectobservation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/obs/observation.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-obs-observation.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/obs/observationMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-obs-observationmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/obs/observationUtil.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-obs-observationutil.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/patient-search/controllers/patientsListController.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-patient-search-controllers-patientslistcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/patient-search/models/search.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-patient-search-models-search.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/patient/filters/dateToAge.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-patient-filters-datetoage.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/patient/filters/gender.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-patient-filters-gender.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/patient/mappers/patientContextMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-patient-mappers-patientcontextmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/patient/mappers/patientMapper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-patient-mappers-patientmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/patient/services/patientService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-patient-services-patientservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/services/allergyService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-services-allergyservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/services/formPrintService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-services-formprintservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/services/formService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-services-formservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/services/pacsService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-services-pacsservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/controllers/messageController.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-controllers-messagecontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/assignHeight.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-assignheight.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/bmShow.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-bmshow.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/monthyearpicker.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-monthyearpicker.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/ngconfirmClick.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-ngconfirmclick.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/notBlank.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-notblank.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/patternValidate.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-patternvalidate.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/singleClick.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-singleclick.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/directives/singleSubmit.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-directives-singlesubmit.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/filters/thumbnail.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-filters-thumbnail.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/ui-helper/services/messagingService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-ui-helper-services-messagingservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/uicontrols/concept-dropdown/conceptDropdown.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-uicontrols-concept-dropdown-conceptdropdown.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/uicontrols/programmanagement/controllers/manageProgramController.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-uicontrols-programmanagement-controllers-manageprogramcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/uicontrols/programmanagement/directives/programAttributes.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-uicontrols-programmanagement-directives-programattributes.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/uicontrols/programmanagement/mappers/programHelper.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-uicontrols-programmanagement-mappers-programhelper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/ageUtil.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-ageutil.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/dateTimeFormatter.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-datetimeformatter.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/dateUtil.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-dateutil.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/dynamicResourceLoader.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-dynamicresourceloader.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/formFieldPathUtil.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-formfieldpathutil.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/init.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-init.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/offlineStatusService.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-offlinestatusservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/stringFormat.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-stringformat.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/common/util/validationUtil.spec.js",
+      "module": "common",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/common/common-util-validationutil.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/document-upload/controllers/documentController.spec.js",
+      "module": "document-upload",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/document-upload/document-upload-controllers-documentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/document-upload/models/documentImage.spec.js",
+      "module": "document-upload",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/document-upload/document-upload-models-documentimage.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/document-upload/models/visit.spec.js",
+      "module": "document-upload",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/document-upload/document-upload-models-visit.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/home/controllers/changePasswordController.spec.js",
+      "module": "home",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/home/home-controllers-changepasswordcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/home/controllers/dashboardController.spec.js",
+      "module": "home",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/home/home-controllers-dashboardcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/home/controllers/errorLogController.spec.js",
+      "module": "home",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/home/home-controllers-errorlogcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/home/controllers/loginController.spec.js",
+      "module": "home",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/home/home-controllers-logincontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/home/controllers/loginLocationController.spec.js",
+      "module": "home",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/home/home-controllers-loginlocationcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/orders/controllers/orderFulfillmentController.spec.js",
+      "module": "orders",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/orders/orders-controllers-orderfulfillmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/orders/orderFulfillmentConfig.spec.js",
+      "module": "orders",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/orders/orders-orderfulfillmentconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/orders/services/orderObservationService.spec.js",
+      "module": "orders",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/orders/orders-services-orderobservationservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/orders/services/orderService.spec.js",
+      "module": "orders",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/orders/orders-services-orderservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/orders/services/orderSetService.spec.js",
+      "module": "orders",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/orders/orders-services-ordersetservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/orders/services/orderTypeService.spec.js",
+      "module": "orders",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/orders/orders-services-ordertypeservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/calendarViewCancelAppointmentController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-calendarviewcancelappointmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/calendarViewController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-calendarviewcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/cancelSurgicalBlockController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-cancelsurgicalblockcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/listViewController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-listviewcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/moveSurgicalAppointmentController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-movesurgicalappointmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/newSurgicalAppointmentController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-newsurgicalappointmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/otCalendarController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-otcalendarcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/surgicalAppointmentActualTimeController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-surgicalappointmentactualtimecontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/surgicalBlockController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-surgicalblockcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/controller/surgicalBlockViewCancelAppointmentController.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-controller-surgicalblockviewcancelappointmentcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/directives/otCalendarSurgicalAppointment.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-directives-otcalendarsurgicalappointment.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/directives/otCalendarSurgicalBlock.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-directives-otcalendarsurgicalblock.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/directives/stringToNumber.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-directives-stringtonumber.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/filters/surgicalBlockFilter.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-filters-surgicalblockfilter.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/helpers/surgicalAppointmentHelper.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-helpers-surgicalappointmenthelper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/helpers/surgicalBlockHelper.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-helpers-surgicalblockhelper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/mappers/SurgicalBlockMapper.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-mappers-surgicalblockmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/services/queryService.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-services-queryservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/ot/services/surgicalAppointmentService.spec.js",
+      "module": "ot",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/ot/ot-services-surgicalappointmentservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/controllers/createPatientController.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-controllers-createpatientcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/controllers/editPatientController.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-controllers-editpatientcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/controllers/patientCommonController.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-controllers-patientcommoncontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/controllers/searchPatientController.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-controllers-searchpatientcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/controllers/visitController.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-controllers-visitcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/directives/addressFields.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-directives-addressfields.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/directives/patientAction.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-directives-patientaction.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/directives/patientRelationshipController.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-directives-patientrelationshipcontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/directives/topDownAddressFields.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-directives-topdownaddressfields.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/mappers/createPatientRequestMapper.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-mappers-createpatientrequestmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/mappers/openmrsPatientMapper.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-mappers-openmrspatientmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/mappers/updatePatientRequestMapper.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-mappers-updatepatientrequestmapper.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/models/identifier.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-models-identifier.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/models/identifiers.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-models-identifiers.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/models/patient.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-models-patient.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/models/patientConfig.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-models-patientconfig.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/services/addressHierarchyService.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-services-addresshierarchyservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/services/defaultPatientServiceStrategy.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-services-defaultpatientservicestrategy.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/services/encounterService.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-services-encounterservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/services/patientAttributeService.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-services-patientattributeservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/registration/services/patientService.spec.js",
+      "module": "registration",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/registration/registration-services-patientservice.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/reports/controllers/myReportsController.spec.js",
+      "module": "reports",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/reports/reports-controllers-myreportscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/reports/controllers/reportsController.spec.js",
+      "module": "reports",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/reports/reports-controllers-reportscontroller.test.ts"
+    },
+    {
+      "legacyPath": "ui/test/unit/reports/services/reportService.spec.js",
+      "module": "reports",
+      "disposition": "port",
+      "status": "inventoried",
+      "targetSuite": "src/characterization/reports/reports-services-reportservice.test.ts"
+    }
+  ],
+  "totals": {
+    "angularModules": 11,
+    "angularStates": 67,
+    "configuredApps": 15,
+    "configurableScripts": 6,
+    "configuredTemplates": 14,
+    "microFrontendSourceFiles": 96,
+    "legacyUnitSpecs": 293,
+    "endpointConstants": 98,
+    "privileges": 25,
+    "translationFiles": 180
+  }
+}

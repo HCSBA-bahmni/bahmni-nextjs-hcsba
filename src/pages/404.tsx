@@ -1,0 +1,1 @@
+import Link from "next/link";export default function NotFound(){return <main className="centered"><section className="auth-card"><h1>Página no encontrada</h1><p>La ruta solicitada no existe en el nuevo shell.</p><Link className="p-button p-component" href="/home">Volver al inicio</Link></section></main>}

@@ -1,0 +1,108 @@
+.clinical-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.clinical-dashboard-card .clinical-card-header .allergy-add-button {
+  width: auto;
+  height: 2.2rem;
+  padding: .35rem .7rem;
+}
+
+.allergy-sidebar { width: min(38rem, 100vw); }
+.allergy-sidebar .p-sidebar-content {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  padding: 0 1.25rem 1.25rem;
+}
+.allergy-sidebar-state {
+  display: flex;
+  min-height: 12rem;
+  align-items: center;
+  justify-content: center;
+  gap: .7rem;
+  color: #526b74;
+}
+.allergy-step, .allergy-form { display: grid; gap: 1rem; }
+.allergy-step h3 { margin: .25rem 0; }
+.allergy-step p { margin: .15rem 0; }
+.allergy-search, .allergy-search .p-autocomplete, .allergy-search .p-autocomplete-input { width: 100%; }
+.allergy-search.p-icon-field > .p-input-icon { z-index: 1; color: #607680; }
+.allergy-search .p-autocomplete-input { padding-left: 2.7rem; }
+.p-autocomplete-panel .allergy-option, .allergy-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+.allergy-selected {
+  padding: .8rem;
+  border: 1px solid #b9d5dc;
+  border-radius: .55rem;
+  background: #eef9fb;
+  font-weight: 750;
+}
+.allergy-form > .p-button { justify-self: start; }
+.allergy-form .field { margin: 0; }
+.allergy-form .p-multiselect, .allergy-form .p-inputtextarea { width: 100%; }
+.allergy-severity {
+  display: grid;
+  gap: .65rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #cbd8dc;
+  border-radius: .55rem;
+}
+.allergy-severity legend { padding: 0 .35rem; font-weight: 700; }
+.allergy-severity label { display: flex; align-items: center; gap: .55rem; }
+.allergy-severity .field-error { grid-column: 1 / -1; }
+.allergy-sidebar-actions {
+  position: sticky;
+  bottom: -1.25rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: .65rem;
+  margin-top: auto;
+  padding: 1rem 0 1.25rem;
+  background: linear-gradient(transparent, #fff 18%);
+}
+
+.allergy-table .p-datatable-wrapper { overflow-x: auto; }
+.allergy-table .p-datatable-table { min-width: 38rem; }
+.allergy-table .p-datatable-thead > tr > th {
+  padding: .65rem .75rem;
+  background: #eef7f9;
+  color: #36515b;
+  border-color: #d7e2e5;
+}
+.allergy-table .p-datatable-tbody > tr > td {
+  padding: .7rem .75rem;
+  vertical-align: middle;
+  border-color: #e1eaec;
+}
+.allergy-table .p-row-toggler { color: #075d73; }
+.allergy-allergen { display: grid; justify-items: start; gap: .15rem; }
+.allergy-allergen strong { font-size: 1rem; }
+.allergy-allergen small { color: #607680; }
+.allergy-allergen .p-tag { margin-top: .25rem; font-size: .72rem; }
+.allergy-row-abnormal > td { color: #a5251d; }
+.allergy-detail {
+  display: grid;
+  gap: .8rem;
+  padding: .8rem 1rem;
+  border-left: 3px solid #78b8c7;
+  background: #f7fbfc;
+}
+.allergy-detail section { padding: .75rem; border-radius: .45rem; background: #fff8e6; }
+.allergy-detail section p { margin: .45rem 0 0; white-space: pre-wrap; }
+.allergy-detail dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 0; }
+.allergy-detail dl > div { min-width: 0; }
+.allergy-detail dt { color: #607680; font-size: .8rem; }
+.allergy-detail dd { margin: .2rem 0 0; font-weight: 600; overflow-wrap: anywhere; }
+
+@media (max-width: 720px) {
+  .allergy-detail dl { grid-template-columns: 1fr; }
+}

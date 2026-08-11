@@ -1,0 +1,67 @@
+{
+  "name": "bahmni-nextjs-hcsba",
+  "version": "0.1.0-rc.0",
+  "private": true,
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "postbuild": "node scripts/prepare-standalone.mjs",
+    "start": "node .next/standalone/server.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "inventory:legacy": "node scripts/generate-legacy-inventory.mjs",
+    "inventory:legacy:check": "node scripts/generate-legacy-inventory.mjs --check",
+    "audit:dashboard": "node scripts/audit-dashboard-runtime.mjs",
+    "audit:dashboard:functional": "node scripts/audit-dashboard-functional-coverage.mjs",
+    "certification:consultation": "node scripts/check-consultation-gate.mjs",
+    "gate:consultation": "node scripts/check-consultation-gate.mjs --require-ready",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.90.0",
+    "@types/pdfmake": "^0.2.12",
+    "i18next": "^25.8.0",
+    "js-cookie": "^3.0.5",
+    "jsbarcode": "^3.12.1",
+    "luxon": "^3.7.2",
+    "next": "16.2.12",
+    "pdfmake": "^0.2.20",
+    "primeflex": "4.0.0",
+    "primeicons": "7.0.0",
+    "primereact": "10.9.8",
+    "qrcode": "^1.5.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-hook-form": "^7.71.0",
+    "react-i18next": "^16.5.0",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "^1.58.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/js-cookie": "^3.0.6",
+    "@types/luxon": "^3.7.1",
+    "@types/node": "^24.10.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.2.12",
+    "jsdom": "^27.4.0",
+    "msw": "^2.12.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "postcss": "8.5.23",
+    "sharp": "0.35.0"
+  }
+}

@@ -1,0 +1,38 @@
+.consultation-documents-sidebar {
+  width: min(32rem, 92vw);
+}
+
+.consultation-documents-sidebar > .p-sidebar-content {
+  display: grid;
+  align-content: start;
+  gap: .75rem;
+}
+
+.consultation-documents-sidebar > .p-sidebar-content > .toolbar {
+  justify-content: flex-end;
+}
+
+.consultation-document-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .85rem;
+  border: 1px solid #d7e2e5;
+  border-radius: .65rem;
+  background: #fbfdfe;
+}
+
+.consultation-document-row > div {
+  display: grid;
+  gap: .2rem;
+}
+
+.consultation-document-row small {
+  color: #607680;
+}
+
+.consultation-document-row p {
+  margin: .15rem 0 0;
+  color: #405761;
+}

@@ -1,0 +1,19 @@
+# Matriz legacy / Next
+
+| Área | Fuente legacy verificada | Implementación Next | Estado |
+|---|---|---|---|
+| Shell | `consultationController`, `clinicalController`, extensiones `org.bahmni.clinical.consultation.board` | Ruta Pages Router, contexto común, orden estable, privilegios, cinco modos, guardado global y alerta de salida | Certificado |
+| Observaciones | `conceptSetPageController`, Form2 publicado, `conceptSetUI` | Varios Form2, definición/traducción/versiones, rangos, grupos y adaptadores TypeScript conocidos | Certificado con payload dorado |
+| Diagnósticos | `diagnosisController`, vistas de diagnóstico y `EncounterTransactionMapper` | Alta separada, actual/anteriores, codificado/libre aceptado, certeza, orden, estado, comentarios, edición, conversión a condición y eliminación por privilegio | Certificado con payload dorado y E2E |
+| Condiciones | `condition`, vistas de condiciones, `/emrapi/condition` y observación `Follow-up Condition` | Alta separada, activas/historial/inactivas, fecha activa original, transiciones, bloqueo retrospectivo, guardado posterior, reintento aislado y seguimiento persistido | Certificado, incluido fallo parcial |
+| Disposición | `dispositionController` | Acción/nota/anulación, confirmación de limpieza y bloqueo retrospectivo | Certificado con payload dorado |
+| Órdenes | `ordersTabInitialization`, `orderController`, `orderSelector`, `ordersTemplate.html`, modelo `Order` | `All Orderables`, secciones/tipos, categorías laterales, grupos por clase, paneles, búsqueda local por todos los nombres, seleccionadas, urgencia y `NeedsPrint` configurables, notas y suspensión/restauración | Implementado; unitarios, contrato, payload dorado y Chromium aprobados |
+| Bacteriología | `bacteriologyController`, modelo `Specimen` | Muestras múltiples, fuente, Other, atributos/resultados y `mdrtbSpecimen` | Certificado: configuración real, opciones deduplicadas, editor/listado legacy, validaciones y payload dorado/E2E |
+| Tratamiento | `treatmentController`, `addTreatmentController`, `drugOrderHistoryController`, `DrugOrder`, `extension.json`, `medication.json` | Editor permanente y sets a la izquierda; catálogos de `/config/drugOrders`; alergias configuradas; órdenes seleccionadas; grupos Reciente/visitas desde activas y prescritas; revisión, relleno, suspensión y validaciones legacy. La selección se conserva al perder foco; las órdenes codificadas transmiten `drug` sin el `concept` redundante, como el mapper legacy. PDF/correo no se muestran porque HCSBA no configura `printPrescriptionFeature` | Implementado; unitarios, contrato, payload dorado y Chromium aprobados |
+| Resumen | `consultationSummaryController`, `consultationMapper`, `consultation.html`, `Consultation Note` | Pad del encuentro actual: diagnósticos actuales/nuevos y diagnósticos históricos editados ahora, observaciones, disposición y tratamiento; excluye historia longitudinal, condiciones y contadores globales; notas siempre editables | Certificado con unitarios y E2E |
+| CDSS | `cdssService` | Evaluación previa; una alerta crítica impide el POST | Certificado |
+| Guardado | `EncounterTransactionMapper` + condiciones posteriores | `/bahmniencounter`, condiciones separadas, doble envío bloqueado y reconciliación ambigua | Certificado |
+| Acciones externas | quick prints, documentos, teleconsulta y receta | Menú de impresión, sidebar de documentos, navegación same-origin y teleconsulta; receta PDF/correo permanece gobernada por `printPrescriptionFeature` | Certificado para la configuración HCSBA vigente |
+| Navegación | `alertOnExit`, hashes y `consultationContext` | URLs limpias, bridges, diálogo guardar/descartar/cancelar y `beforeunload` | Certificado multinavegador |
+
+No se ejecuta JavaScript remoto ni HTML Angular. Sólo se aceptan propiedades declarativas y adaptadores TypeScript registrados.

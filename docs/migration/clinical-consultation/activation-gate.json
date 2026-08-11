@@ -1,0 +1,20 @@
+{
+  "gate": "clinical-consultation",
+  "evaluatedAt": "2026-08-04",
+  "criteria": [
+    { "id": "local-quality", "status": "passed", "evidence": "lint, typecheck, unit, build y E2E local multinavegador" },
+    { "id": "real-five-modes", "status": "passed", "evidence": "visita activa, sin visita, histórico, retrospectivo y programa sintético temporal" },
+    { "id": "real-seven-boards-read", "status": "passed", "evidence": "recorrido de los siete tableros contra HCSBA" },
+    { "id": "real-reversible-summary-write", "status": "passed", "evidence": "encuentro retrospectivo sintético guardado y anulado" },
+    { "id": "golden-form2", "status": "passed", "evidence": "goldenPayloads.test.ts: namespace, paths, grupos y UUID existentes" },
+    { "id": "golden-diagnosis", "status": "passed", "evidence": "goldenPayloads.test.ts: codificado/libre, edición y anulación" },
+    { "id": "golden-conditions-disposition", "status": "passed", "evidence": "goldenPayloads.test.ts y DispositionBoard.test.ts" },
+    { "id": "golden-orders", "status": "passed", "evidence": "goldenPayloads.test.ts: nueva, revisión, suspensión, urgencia y NeedsPrint" },
+    { "id": "golden-bacteriology", "status": "passed", "evidence": "goldenPayloads.test.ts: sample, report y mdrtbSpecimen" },
+    { "id": "golden-treatment", "status": "passed", "evidence": "goldenPayloads.test.ts: FlexibleDosingInstructions, revisión y suspensión" },
+    { "id": "real-three-privilege-profiles", "status": "passed", "evidence": "Playwright real con usuarios técnicos temporales y perfiles efectivos de 0, 1 y 7 tableros; fixtures purgados" },
+    { "id": "real-failure-modes", "status": "passed", "evidence": "Playwright real sin mutación: 409 reintentable, escritura ambigua bloqueada, condiciones con reintento aislado y CDSS crítico sin POST de encuentro" },
+    { "id": "real-external-actions", "status": "passed", "evidence": "Playwright: impresión rápida, documentos y teleconsulta con contexto real; receta PDF y correo con contrato controlado" },
+    { "id": "real-browser-accessibility", "status": "passed", "evidence": "Chromium, Firefox y Edge: axe sin impactos serios/críticos y navegación por teclado en cinco modos reales" }
+  ]
+}
