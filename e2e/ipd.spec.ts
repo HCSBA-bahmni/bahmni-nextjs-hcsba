@@ -350,3 +350,61 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
   expect(await page.locator("script[src*='angular'],script[src*='/ipd/']").count()).toBe(0);
 });
+
+test("adds a prescribed treatment to the drug chart with the legacy IPD contract", async ({ page }) => {
+  await page.unroute("**/openmrs/ws/rest/v1/user**");
+  await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user", username: "superman", display: "superman", privileges: ["app:adt", "Edit Medication Tasks"].map((name) => ({ uuid: name, name })), roles: [] }] }) }));
+  await page.route("**/bahmni_config/openmrs/apps/ipdDashboard/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    config: {
+      enable24HourTimers: true,
+      drugChartStartTimeFrequencies: ["Every 8 hours"],
+      drugChartScheduleFrequencies: [{ name: "Twice a day", frequencyPerDay: 2, scheduleTiming: ["06:00", "18:00"] }],
+    },
+    sections: [{ title: "Treatments", componentKey: "TR", displayOrder: 1 }],
+    nursingTasks: { timeInMinutesFromNowToShowPastTaskAsLate: 60, timeInMinutesFromStartTimeToShowAdministeredTaskAsLate: 60 },
+    drugChart: { timeInMinutesFromNowToShowPastTaskAsLate: 60, timeInMinutesFromStartTimeToShowAdministeredTaskAsLate: 60 },
+    drugChartSlider: { timeInMinutesToDisableSlotPostScheduledTime: 60 },
+  }) }));
+  await page.route("**/implementation_config/openmrs/apps/ipdDashboard/app.json", (route) => route.fulfill({ status: 404 }));
+  await page.route("**/openmrs/ws/rest/v1/patientprofile/patient**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { identifiers: [{ identifier: "SYN-1", preferred: true }], person: { names: [{ display: "Paciente Sintético" }], age: 30, gender: "F", addresses: [] } } }) }));
+  await page.route("**/openmrs/ws/rest/v1/beds?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ bedId: 1, bedUuid: "bed", bedNumber: "M-1", status: "OCCUPIED", physicalLocation: { name: "Sala 1", parentLocation: { uuid: "ward", name: "Medicina" } }, patients: [{ uuid: "patient" }] }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/visit**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "visit", startDatetime: "2026-08-04T10:00:00.000-04:00", stopDatetime: null, visitType: { display: "IPD" } }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ admissionDetails: { date: "2026-08-04T10:00:00.000-04:00", provider: "Super Man" } }) }));
+  let scheduled = false;
+  await page.route("**/openmrs/ws/rest/v1/ipdVisit/visit/medication?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ ipdDrugOrders: [{
+    drugOrder: {
+      uuid: "order-1", effectiveStartDate: "2026-08-04T12:00:00.000-04:00", scheduledDate: "2026-08-04T12:00:00.000-04:00", dateActivated: "2026-08-04T12:00:00.000-04:00",
+      visit: { uuid: "visit", startDateTime: "2026-08-04T10:00:00.000-04:00" }, drug: { display: "Paracetamol 500 mg" }, duration: 20, durationUnits: "Days",
+      dosingInstructions: { dose: 1, doseUnits: "Comprimido", quantity: 20, quantityUnits: "Comprimido", route: "Oral", frequency: "Twice a day", administrationInstructions: JSON.stringify({ instructions: "As directed", additionalInstructions: "Con agua" }) },
+    },
+    provider: { uuid: "provider", name: "Super Man" },
+    ...(scheduled ? { drugOrderSchedule: { firstDaySlotsStartTime: [1785895200], dayWiseSlotsStartTime: [1785895200, 1785938400], remainingDaySlotsStartTime: [], medicationAdministrationStarted: false, pendingSlotsAvailable: true, allSlotsAttended: false } } : {}),
+  }], emergencyMedications: [] }) }));
+  let schedulePayload: Record<string, unknown> | undefined;
+  await page.route("**/openmrs/ws/rest/v1/ipd/schedule/type/medication", (route) => {
+    schedulePayload = route.request().postDataJSON() as Record<string, unknown>;
+    scheduled = true;
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: "schedule" }) });
+  });
+  await page.route("**/openmrs/ws/rest/v1/auditlog", (route) => route.fulfill({ contentType: "application/json", body: "{}" }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/sql/globalproperty**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify("") }));
+
+  await page.goto("/bahmni/clinical/patient/patient/dashboard/visit/ipd/visit?source=careViewDashboard");
+  const add = page.getByRole("button", { name: "Programar" });
+  await expect(add).toBeVisible();
+  await add.click();
+  await expect(page.getByRole("dialog", { name: "Añadir al gráfico de medicamentos" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Medicamento" })).toHaveValue("Paracetamol 500 mg");
+  await expect(page.getByRole("textbox", { name: "Indicación", exact: true })).toHaveValue("As directed");
+  await expect(page.getByRole("textbox", { name: "Indicación adicional" })).toHaveValue("Con agua");
+  await expect(page.locator('input[type="time"]')).toHaveCount(0);
+  expect(await page.locator(".p-calendar").count()).toBeGreaterThanOrEqual(4);
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByRole("dialog", { name: "Añadir al gráfico de medicamentos" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Editar" })).toBeVisible();
+  expect(schedulePayload).toMatchObject({
+    patientUuid: "patient", providerUuid: "provider", orderUuid: "order-1", serviceType: "MEDICATION_REQUEST", medicationFrequency: "FIXED_SCHEDULE_FREQUENCY",
+  });
+  expect(Array.isArray(schedulePayload?.dayWiseSlotsStartTime)).toBe(true);
+  expect((schedulePayload?.dayWiseSlotsStartTime as number[]).every((value) => Number.isInteger(value) && value < 10_000_000_000)).toBe(true);
+});

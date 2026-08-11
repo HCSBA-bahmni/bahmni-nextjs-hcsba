@@ -43,6 +43,43 @@ describe("legacy dashboard drug order rules", () => {
     expect(row).toMatchObject({ name: "Ibuprofen 400 mg", provider: "Super Man", instructions: "As directed", status: "in-progress", medicationAdministrationStarted: true });
   });
 
+  it("normalizes the IPD visit endpoint and preserves the schedule used by treatment actions", () => {
+    const sections = normalizeTreatmentSections({
+      ipdDrugOrders: [{
+        provider: { uuid: "provider", name: "Super Man" },
+        drugOrderSchedule: {
+          firstDaySlotsStartTime: [1_786_473_600],
+          dayWiseSlotsStartTime: [1_786_430_400, 1_786_473_600],
+          remainingDaySlotsStartTime: [],
+          medicationAdministrationStarted: false,
+          pendingSlotsAvailable: true,
+          notes: "Control",
+        },
+        drugOrder: {
+          uuid: "scheduled",
+          scheduledDate: "2026-08-04T20:00:00Z",
+          drug: { display: "Paracetamol 500 mg" },
+          duration: 20,
+          durationUnits: "Days",
+          dosingInstructions: { dose: 1, doseUnits: "Comprimido", route: "Oral", frequency: "Twice a day", administrationInstructions: JSON.stringify({ instructions: "As directed", additionalInstructions: "Con agua", rate: 2, additives: "Diluyente" }) },
+        },
+      }],
+      emergencyMedications: [],
+    }, false, true, "visit-current");
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.orders[0]).toMatchObject({
+      uuid: "scheduled",
+      providerUuid: "provider",
+      doseValue: 1,
+      doseUnit: "Comprimido",
+      durationValue: 20,
+      durationUnit: "Days",
+      rate: 2,
+      additives: "Diluyente",
+      schedule: { medicationAdministrationStarted: false, pendingSlotsAvailable: true, notes: "Control" },
+    });
+  });
+
   it("keeps the legacy visit grouping and other-active section", () => {
     const sections = normalizeTreatmentSections({
       visitDrugOrders: [

@@ -59,6 +59,13 @@ export async function getPrescribedAndActiveDrugOrders(params: {
   return bahmniRequest(`/ws/rest/v1/bahmnicore/drugOrders/prescribedAndActive?${search}`, { schema: record });
 }
 
+export async function getIpdVisitMedications(visitUuid: string) {
+  return bahmniRequest(`/ws/rest/v1/ipdVisit/${encodeURIComponent(visitUuid)}/medication${queryString({ includes: "emergencyMedications" })}`, {
+    schema: record,
+    cache: "no-store",
+  });
+}
+
 export interface PatientEmailAttachment { contentType: string; name: string; data: string }
 export async function sendPatientEmail(patientUuid: string, payload: { mailAttachments: PatientEmailAttachment[]; subject: string; body: string; cc?: string[]; bcc?: string[] }) {
   const response = await bahmniRequest(`/ws/rest/v1/patient/${encodeURIComponent(patientUuid)}/send/email`, {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { discardGesNotification, getAppointments, getDashboardDrugOrders, getDashboardOrders, getDiseaseSummaryData, getDispositions, getDrugOrderDetails, getEncountersForEncounterType, getObservationEncounterUuid, getObservationFlowSheet, getObservationsByConceptUuid, getPrescribedAndActiveDrugOrders, sendPatientEmail } from "./dashboard";
+import { discardGesNotification, getAppointments, getDashboardDrugOrders, getDashboardOrders, getDiseaseSummaryData, getDispositions, getDrugOrderDetails, getEncountersForEncounterType, getIpdVisitMedications, getObservationEncounterUuid, getObservationFlowSheet, getObservationsByConceptUuid, getPrescribedAndActiveDrugOrders, sendPatientEmail } from "./dashboard";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -65,6 +65,15 @@ describe("dashboard legacy contracts", () => {
     expect(url.searchParams.get("getOtherActive")).toBe("true");
     expect(url.searchParams.getAll("visitUuids")).toEqual(["v1", "v2"]);
     expect(url.searchParams.get("preferredLocale")).toBe("es");
+  });
+
+  it("uses the IPD visit medication contract for the legacy-IPD treatment control", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ipdDrugOrders: [], emergencyMedications: [] }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    await getIpdVisitMedications("visit/id");
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]), "https://hcsba.local");
+    expect(url.pathname).toBe("/openmrs/ws/rest/v1/ipdVisit/visit%2Fid/medication");
+    expect(url.searchParams.get("includes")).toBe("emergencyMedications");
   });
 
   it("uses the configured observation concept contract for dashboard form sections", async () => {

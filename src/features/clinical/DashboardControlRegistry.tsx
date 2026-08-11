@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import Cookies from "js-cookie";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "primereact/button";
 import { Avatar } from "primereact/avatar";
 import { Fragment, useEffect, useState } from "react";
@@ -11,7 +11,7 @@ import type { JsonObject } from "@/config-compat/merge";
 import { ClinicalMfeHost } from "@/features/microfrontends/MfeHost";
 import { loadAppConfig, loadAppTextAsset } from "@/services/bahmni/config";
 import { getPatientConditionHistory, getPatientDiagnoses, getPatientObservations, getPatientPrograms, type ClinicalRecord } from "@/services/bahmni/clinical";
-import { discardGesNotification, getAppointments, getAssignedBed, getBacteriologyResults, getDashboardOrders, getDiseaseSummaryData, getDispositions, getDrugOrderDetails, getDrugRegimen, getEncountersForEncounterType, getGesNotifications, getLabOrderResults, getObservationEncounterUuid, getObservationFlowSheet, getOrderTypes, getPrescribedAndActiveDrugOrders, sendPatientEmail, type DashboardRecord } from "@/services/bahmni/dashboard";
+import { discardGesNotification, getAppointments, getAssignedBed, getBacteriologyResults, getDashboardOrders, getDiseaseSummaryData, getDispositions, getDrugOrderDetails, getDrugRegimen, getEncountersForEncounterType, getGesNotifications, getIpdVisitMedications, getLabOrderResults, getObservationEncounterUuid, getObservationFlowSheet, getOrderTypes, getPrescribedAndActiveDrugOrders, sendPatientEmail, type DashboardRecord } from "@/services/bahmni/dashboard";
 import { getEncounterConfiguration } from "@/services/bahmni/metadata";
 import type { Visit } from "@/types/bahmni";
 import type { DashboardControlProps } from "./dashboardContext";
@@ -31,6 +31,9 @@ import { normalizeOrderFulfillmentRecords } from "./orderFulfillmentRecords";
 import { normalizeDashboardPrograms } from "./programRecords";
 import { normalizeAdmissionDetails } from "./admissionDetails";
 import { renderTreatmentPdf, treatmentDocument } from "./treatmentDocument";
+import { IpdTreatmentScheduleDialog } from "@/features/ipd/ipd-dashboard/IpdTreatmentScheduleDialog";
+import { resolveTreatmentScheduleAction, type TreatmentScheduleAction, type TreatmentScheduleConfig } from "@/features/ipd/ipd-dashboard/treatmentSchedule";
+import { getPrnScheduledOrderUuids } from "@/services/bahmni/ipdTreatments";
 
 export interface DashboardControlAdapter {
   type: string;
@@ -422,9 +425,41 @@ function RadiologyDocumentsControl(props: DashboardControlProps) {
   return <QueryFrame loading={loading} error={error} empty={!groups.length} retry={() => { void encounterConfig.refetch(); void query.refetch(); }}><div className="radiology-document-groups">{groups.map((group) => <details open key={group.conceptName}><summary>{group.conceptName} <span>({group.documents.length})</span></summary><div className="radiology-document-grid">{group.documents.map((document) => { const href = `/document_images/${encodeURI(document.value)}`; const pdf = document.value.toLocaleLowerCase().endsWith(".pdf"); return <a href={href} target="_blank" rel="noreferrer" key={document.id}>{pdf ? <i className="pi pi-file-pdf" /> : <Image unoptimized src={href} width={52} height={52} alt="" />}<span><strong>{pdf ? "Abrir informe PDF" : "Abrir imagen"}</strong><small>{dateOf(document.date, props.context.locale, props.context.timeZone)}{document.visitActive ? " · visita activa" : ""}</small>{document.comment && <small>{document.comment}</small>}</span></a>; })}</div></details>)}</div></QueryFrame>;
 }
 
-function IpdTreatmentTable({ sections, locale, timeZone }: { sections: TreatmentSection[]; locale: string; timeZone: string }) {
+function IpdTreatmentTable({ sections, locale, timeZone, context, config, onUpdated }: {
+  sections: TreatmentSection[];
+  locale: string;
+  timeZone: string;
+  context: DashboardControlProps["context"];
+  config: JsonObject;
+  onUpdated(): void | Promise<unknown>;
+}) {
   const orders = sections.flatMap((section) => section.orders);
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(orders.map((order) => order.uuid)));
+  const [selected, setSelected] = useState<{ order: DrugOrderRow; action: TreatmentScheduleAction }>();
+  const scheduleSource = asRecord(config.ipdScheduleConfig);
+  const scheduleConfig: TreatmentScheduleConfig = {
+    enable24HourTimers: scheduleSource.enable24HourTimers === true,
+    drugChartStartTimeFrequencies: Array.isArray(scheduleSource.drugChartStartTimeFrequencies) ? scheduleSource.drugChartStartTimeFrequencies.filter((value): value is string => typeof value === "string") : [],
+    drugChartScheduleFrequencies: Array.isArray(scheduleSource.drugChartScheduleFrequencies) ? scheduleSource.drugChartScheduleFrequencies.flatMap((value) => {
+      const item = asRecord(value);
+      const name = typeof item.name === "string" ? item.name : undefined;
+      const frequencyPerDay = Number(item.frequencyPerDay);
+      const scheduleTiming = Array.isArray(item.scheduleTiming) ? item.scheduleTiming.filter((entry): entry is string => typeof entry === "string") : [];
+      return name && Number.isInteger(frequencyPerDay) && frequencyPerDay > 0 ? [{ name, frequencyPerDay, scheduleTiming }] : [];
+    }) : [],
+    timeInMinutesToDisableSlotPostScheduledTime: Number(scheduleSource.timeInMinutesToDisableSlotPostScheduledTime) || 60,
+  };
+  const canEditSchedules = context.privilegeNames.has("Edit Medication Tasks");
+  const prnOrderUuids = orders.filter((order) => order.asNeeded && !order.stopDate).map((order) => order.uuid);
+  const prnSchedules = useQuery({
+    queryKey: ["ipd", "treatments", "prn-schedules", context.patient.uuid, prnOrderUuids.join(",")],
+    queryFn: () => getPrnScheduledOrderUuids(context.patient.uuid, prnOrderUuids),
+    enabled: canEditSchedules && prnOrderUuids.length > 0,
+  });
+  const visitSummary = asRecord(context.visitSummary);
+  const admitted = Object.keys(asRecord(visitSummary.admissionDetails)).length > 0;
+  const readOnly = Boolean(context.visit?.stopDatetime ?? visitSummary.stopDateTime ?? visitSummary.stopDatetime);
   const toggle = (uuid: string) => setExpanded((current) => {
     const next = new Set(current);
     if (next.has(uuid)) next.delete(uuid); else next.add(uuid);
@@ -452,7 +487,10 @@ function IpdTreatmentTable({ sections, locale, timeZone }: { sections: Treatment
             <td>{dosage}</td>
             <td><span className={`ipd-treatment-status ${orderStatus.className}`}>{orderStatus.label}</span></td>
             <td>{order.provider}</td>
-            <td className="ipd-treatment-actions">—</td>
+            <td className="ipd-treatment-actions">{(() => {
+              const action = resolveTreatmentScheduleAction(order, { hasPrivilege: canEditSchedules, readOnly, admitted, prnScheduled: prnSchedules.data?.has(order.uuid) });
+              return action ? <button type="button" className="ipd-treatment-action" disabled={action.disabled} title={action.disabledReason} onClick={() => setSelected({ order, action })}>{action.label}</button> : "—";
+            })()}</td>
           </tr>
           {isExpanded && <tr className="ipd-treatment-detail-row"><td /><td colSpan={6}><div className="ipd-treatment-detail">
             {order.instructions && <dl><dt>Indicaciones</dt><dd>{order.instructions}</dd></dl>}
@@ -464,11 +502,29 @@ function IpdTreatmentTable({ sections, locale, timeZone }: { sections: Treatment
         </Fragment>;
       })}</tbody>
     </table>
+    {selected && <IpdTreatmentScheduleDialog
+      patientUuid={context.patient.uuid}
+      visitUuid={context.visit?.uuid}
+      locationUuid={context.location?.uuid}
+      currentProvider={context.provider}
+      order={selected.order}
+      action={selected.action}
+      config={scheduleConfig}
+      onHide={() => setSelected(undefined)}
+      onSaved={async () => {
+        await onUpdated();
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["ipd", "patient-dashboard"] }),
+          queryClient.invalidateQueries({ queryKey: ["ipd", "care-view", "tasks"] }),
+          prnSchedules.refetch(),
+        ]);
+      }}
+    />}
   </div>;
 }
 
-function TreatmentList({ sections, config, locale, timeZone, onPrint, onEmail, busy }: { sections: TreatmentSection[]; config: JsonObject; locale: string; timeZone: string; onPrint?(section: TreatmentSection): void; onEmail?(section: TreatmentSection): void; busy?: string }) {
-  if (config.legacyIpd === true) return <IpdTreatmentTable sections={sections} locale={locale} timeZone={timeZone} />;
+function TreatmentList({ sections, config, locale, timeZone, context, onUpdated, onPrint, onEmail, busy }: { sections: TreatmentSection[]; config: JsonObject; locale: string; timeZone: string; context: DashboardControlProps["context"]; onUpdated(): void | Promise<unknown>; onPrint?(section: TreatmentSection): void; onEmail?(section: TreatmentSection): void; busy?: string }) {
+  if (config.legacyIpd === true) return <IpdTreatmentTable sections={sections} locale={locale} timeZone={timeZone} context={context} config={config} onUpdated={onUpdated} />;
   const showRoute = config.showRoute === true;
   const showDrugForm = config.showDrugForm === true;
   const showDetails = config.showDetailsButton === true;
@@ -512,13 +568,15 @@ function DrugControl(props: DashboardControlProps) {
   const query = useQuery({ queryKey: ["clinical-dashboard", regimen ? "regimen" : "drug-orders", props.context.patient.uuid, props.context.enrollmentUuid, props.section.id, config], queryFn: async () => {
     if (regimen) return { regimen: asRecord(await getDrugRegimen({ patientUuid: props.context.patient.uuid, patientProgramUuid: props.context.enrollmentUuid, drugs: arrayConfig(config, "drugs") })), orders: [] as DashboardRecord[], treatmentResponse: {} as DashboardRecord };
     if (treatment) {
-      const response = await getPrescribedAndActiveDrugOrders({
-        patientUuid: props.context.patient.uuid,
-        numberOfVisits: config.numberOfVisits as number | string | undefined,
-        showOtherActive: config.showOtherActive === true,
-        visitUuids: Array.isArray(config.visitUuids) ? config.visitUuids.filter((value): value is string => typeof value === "string") : undefined,
-        preferredLocale: props.context.locale,
-      });
+      const response = config.legacyIpd === true && props.context.visit?.uuid
+        ? await getIpdVisitMedications(props.context.visit.uuid)
+        : await getPrescribedAndActiveDrugOrders({
+          patientUuid: props.context.patient.uuid,
+          numberOfVisits: config.numberOfVisits as number | string | undefined,
+          showOtherActive: config.showOtherActive === true,
+          visitUuids: Array.isArray(config.visitUuids) ? config.visitUuids.filter((value): value is string => typeof value === "string") : undefined,
+          preferredLocale: props.context.locale,
+        });
       return { regimen: {} as DashboardRecord, orders: [] as DashboardRecord[], treatmentResponse: response };
     }
     const orders = await getDrugOrderDetails({ patientUuid: props.context.patient.uuid, patientProgramUuid: props.context.enrollmentUuid, includeConceptSet: typeof config.drugConceptSet === "string" ? config.drugConceptSet : typeof config.includeConceptSet === "string" ? config.includeConceptSet : undefined, excludeConceptSet: typeof config.excludeConceptSet === "string" ? config.excludeConceptSet : undefined, active: typeof config.active === "boolean" ? config.active : undefined });
@@ -547,7 +605,7 @@ function DrugControl(props: DashboardControlProps) {
     const prescription = (section: TreatmentSection) => treatmentDocument(section, props.context.patient, institution, props.context.locale);
     const printSection = async (section: TreatmentSection) => { setShareBusy(`print-${section.id}`); setShareMessage(undefined); try { const blob = await renderTreatmentPdf(prescription(section), "blob") as Blob; const url = URL.createObjectURL(blob); window.open(url, "_blank", "noopener,noreferrer"); window.setTimeout(() => URL.revokeObjectURL(url), 60_000); } catch { setShareMessage({ error: true, text: "No fue posible generar la receta." }); } finally { setShareBusy(undefined); } };
     const emailSection = async (section: TreatmentSection) => { if (!patientEmail) { setShareMessage({ error: true, text: "El paciente no tiene un correo registrado." }); return; } setShareBusy(`email-${section.id}`); setShareMessage(undefined); try { const data = await renderTreatmentPdf(prescription(section), "base64") as string; const visitDate = dateOf(section.date, props.context.locale, props.context.timeZone); await sendPatientEmail(props.context.patient.uuid, { mailAttachments: [{ contentType: "application/pdf", name: `Receta_${props.context.patient.identifier}_${visitDate.replaceAll("/", "-")}.pdf`, data }], subject: `Receta médica · ${institution} · ${visitDate}`, body: `Estimado/a ${props.context.patient.name}:\n\nAdjuntamos la receta de su consulta del ${visitDate}.\n\nAtentamente,\n${institution}` }); setShareMessage({ error: false, text: "Receta enviada por correo." }); } catch { setShareMessage({ error: true, text: "No fue posible enviar la receta." }); } finally { setShareBusy(undefined); } };
-    const treatmentContent = <>{config.showListView !== false && <TreatmentList sections={treatmentSections} config={config} locale={props.context.locale} timeZone={props.context.timeZone} onPrint={(section) => void printSection(section)} onEmail={(section) => void emailSection(section)} busy={shareBusy} />}{config.showFlowSheet === true && admitted && <TreatmentFlowSheet sections={treatmentSections} visitStart={visitStart} visitStop={visitStop} locale={props.context.locale} />}</>;
+    const treatmentContent = <>{config.showListView !== false && <TreatmentList sections={treatmentSections} config={config} locale={props.context.locale} timeZone={props.context.timeZone} context={props.context} onUpdated={() => query.refetch()} onPrint={(section) => void printSection(section)} onEmail={(section) => void emailSection(section)} busy={shareBusy} />}{config.showFlowSheet === true && admitted && <TreatmentFlowSheet sections={treatmentSections} visitStart={visitStart} visitStop={visitStop} locale={props.context.locale} />}</>;
     return <QueryFrame loading={query.isLoading} error={query.error} empty={!count} retry={() => void query.refetch()}>{shareMessage && <p role={shareMessage.error ? "alert" : "status"} className={shareMessage.error ? "error-banner" : "success-banner"}>{shareMessage.text}</p>}{treatmentContent}{config.legacyIpd !== true && <><Button outlined icon="pi pi-print" label="Imprimir todo" onClick={() => window.print()} /><section className="print-sheet"><h1>{valueOf(props.section.raw.title ?? props.section.translationKey ?? "Tratamientos")}</h1><dl><dt>Paciente</dt><dd>{props.context.patient.name}</dd><dt>Identificador</dt><dd>{props.context.patient.identifier}</dd></dl>{treatmentContent}</section></>}</QueryFrame>;
   }
   const table = regimen ? <div className="dashboard-matrix-scroll"><table className="dashboard-matrix chronic-treatment-table"><thead><tr>{regimenRows.some((row) => row.month) && <th>Mes</th>}<th>Fecha</th>{headers.map((header, index) => <th key={String(header.uuid ?? header.name ?? index)}>{valueOf(header.shortName ?? header.name)}</th>)}</tr></thead><tbody>{regimenRows.map((row, rowIndex) => <tr key={String(row.uuid ?? row.date ?? rowIndex)}>{regimenRows.some((item) => item.month) && <td>{valueOf(row.month)}</td>}<td>{dateOf(row.date, props.context.locale, props.context.timeZone)}</td>{headers.map((header, headerIndex) => { const value = asRecord(row.drugs)[String(header.name)]; return <td className={value === "Stop" || value === "Error" ? "abnormal" : ""} key={String(header.uuid ?? header.name ?? headerIndex)}>{valueOf(value)}</td>; })}</tr>)}</tbody></table></div> : <div className="dashboard-matrix-scroll"><table className="dashboard-matrix drug-order-details"><thead><tr><th>Medicamento</th><th>Dosis</th><th>Cantidad</th><th>Vía</th><th>Frecuencia</th><th>Inicio</th><th>Indicaciones</th><th>Indicaciones adicionales</th></tr></thead><tbody>{orders.map((order) => <tr className={order.active ? "active" : ""} key={order.uuid}><td>{order.name}</td><td>{order.dose}</td><td>{order.quantity}</td><td>{order.route}</td><td>{order.frequency}</td><td>{dateOf(order.startDate, props.context.locale, props.context.timeZone)}</td><td>{order.instructions || "—"}</td><td>{order.additionalInstructions || "—"}<small>{order.provider}</small></td></tr>)}</tbody></table></div>;

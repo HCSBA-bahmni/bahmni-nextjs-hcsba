@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-const looseRecord = z.record(z.string(), z.unknown());
-
 const sectionSchema = z.object({
   title: z.string(),
   componentKey: z.string(),
@@ -23,8 +21,22 @@ const shiftSchema = z.object({
   shiftEndTime: z.string(),
 }).loose();
 
+const treatmentScheduleSchema = z.object({
+  enable24HourTimers: z.boolean().default(false),
+  drugChartStartTimeFrequencies: z.array(z.string()).default([]),
+  drugChartScheduleFrequencies: z.array(z.object({
+    name: z.string(),
+    frequencyPerDay: z.number().int().positive(),
+    scheduleTiming: z.array(z.string()),
+  }).loose()).default([]),
+}).loose().default({
+  enable24HourTimers: false,
+  drugChartStartTimeFrequencies: [],
+  drugChartScheduleFrequencies: [],
+});
+
 const dashboardSchema = z.object({
-  config: looseRecord.default({}),
+  config: treatmentScheduleSchema,
   sections: z.array(sectionSchema).default([]),
   nonMedicationTaskTypes: z.array(z.string()).default([]),
   nursingTasks: thresholdSchema,
@@ -59,6 +71,15 @@ export interface IpdDashboardSectionConfig {
 
 export interface IpdDashboardConfig {
   config: Record<string, unknown>;
+  treatmentSchedule: {
+    enable24HourTimers: boolean;
+    drugChartStartTimeFrequencies: string[];
+    drugChartScheduleFrequencies: Array<{
+      name: string;
+      frequencyPerDay: number;
+      scheduleTiming: string[];
+    }>;
+  };
   sections: IpdDashboardSectionConfig[];
   nonMedicationTaskTypes: string[];
   nursingTasks: {
@@ -86,6 +107,11 @@ export function parseIpdDashboardConfig(raw: Record<string, unknown>): IpdDashbo
   const parsed = dashboardSchema.parse(raw);
   return {
     ...parsed,
+    treatmentSchedule: {
+      enable24HourTimers: parsed.config.enable24HourTimers,
+      drugChartStartTimeFrequencies: parsed.config.drugChartStartTimeFrequencies,
+      drugChartScheduleFrequencies: parsed.config.drugChartScheduleFrequencies,
+    },
     sections: parsed.sections
       .map((section) => ({
         title: section.title,

@@ -4,20 +4,28 @@ export interface DrugOrderRow {
   uuid: string;
   name: string;
   dose: string;
+  doseValue?: number | string;
+  doseUnit?: string;
   quantity: string;
   route: string;
   frequency: string;
   drugForm: string;
   duration: string;
+  durationValue?: number | string;
+  durationUnit?: string;
   startDate?: string | number;
-  stopDate?: string | number;
+  stopDate?: string | number | null;
   plannedEndDate?: string | number;
   recordedDateTime?: string | number;
+  scheduledDate?: string | number;
   visitUuid?: string;
   visitDate?: string | number;
   instructions: string;
   additionalInstructions: string;
+  rate?: number | string;
+  additives?: string;
   provider: string;
+  providerUuid?: string;
   active: boolean;
   status: "" | "in-progress" | "completed" | "stopped";
   stopReason: string;
@@ -25,6 +33,18 @@ export interface DrugOrderRow {
   immediately: boolean;
   emergency: boolean;
   medicationAdministrationStarted: boolean;
+  durationCount?: number;
+  isVariableDose?: boolean;
+  schedule?: {
+    slotStartTime?: number;
+    firstDaySlotsStartTime: number[];
+    dayWiseSlotsStartTime: number[];
+    remainingDaySlotsStartTime: number[];
+    notes: string;
+    medicationAdministrationStarted: boolean;
+    pendingSlotsAvailable: boolean;
+    allSlotsAttended: boolean;
+  };
   orderNumber: number;
   raw: DrugRecord;
 }
@@ -61,6 +81,9 @@ const time = (value: unknown): number => {
   const parsed = typeof value === "number" ? value : typeof value === "string" ? new Date(value).getTime() : 0;
   return Number.isFinite(parsed) ? parsed : 0;
 };
+const numbers = (value: unknown): number[] => Array.isArray(value)
+  ? value.map(Number).filter(Number.isFinite)
+  : [];
 const dayDifference = (left: unknown, right: unknown): number => Math.abs(time(left) - time(right)) / 86_400_000;
 const continuousSignature = (item: DrugRecord): string => {
   const dosing = record(item.dosingInstructions);
@@ -108,9 +131,14 @@ export function normalizeDrugOrders(items: DrugRecord[], showOnlyActive: boolean
       ...record(wrapper.administrationInstructions),
     };
     const dose = [display(dosing.dose ?? administration.dose), display(dosing.doseUnits ?? administration.doseUnits)].filter(Boolean).join(" ");
+    const doseValue = dosing.dose ?? administration.dose;
+    const doseUnit = display(dosing.doseUnits ?? administration.doseUnits);
+    const durationValue = item.duration ?? dosing.duration;
+    const rate = administration.rate ?? wrapper.rate;
     const quantity = [display(dosing.quantity), display(dosing.quantityUnits)].filter(Boolean).join(" ");
     const provider = record(wrapper.provider ?? item.provider ?? item.orderer);
     const schedule = scheduleRecord(wrapper);
+    const hasSchedule = Object.keys(schedule).length > 0;
     const stopped = Boolean(item.dateStopped || String(item.action ?? "").toUpperCase() === "DISCONTINUE");
     const allSlotsAttended = schedule.allSlotsAttended === true;
     const medicationAdministrationStarted = schedule.medicationAdministrationStarted === true;
@@ -125,20 +153,28 @@ export function normalizeDrugOrders(items: DrugRecord[], showOnlyActive: boolean
       uuid: display(item.uuid) || `drug-${index}`,
       name: name || "Medicamento",
       dose: dose || "—",
+      doseValue: typeof doseValue === "number" || typeof doseValue === "string" ? doseValue : undefined,
+      doseUnit,
       quantity: quantity || "—",
       route: display(dosing.route) || "—",
       frequency: display(dosing.frequency) || "—",
       drugForm: display(record(item.drug).dosageForm ?? record(item.drug).drugReferenceMap ?? record(item.concept).dosageForm) || "",
       duration: [display(item.duration ?? dosing.duration), display(item.durationUnits ?? dosing.durationUnits)].filter(Boolean).join(" "),
+      durationValue: typeof durationValue === "number" || typeof durationValue === "string" ? durationValue : undefined,
+      durationUnit: display(item.durationUnits ?? dosing.durationUnits),
       startDate: item.effectiveStartDate as string | number | undefined,
-      stopDate: item.dateStopped as string | number | undefined,
+      stopDate: item.dateStopped === null || item.dateStopped === "" ? undefined : item.dateStopped as string | number | undefined,
       plannedEndDate: item.effectiveStopDate as string | number | undefined,
       recordedDateTime: (item.dateActivated ?? item.dateCreated) as string | number | undefined,
+      scheduledDate: (item.scheduledDate ?? item.effectiveStartDate) as string | number | undefined,
       visitUuid: display(record(item.visit).uuid) || undefined,
       visitDate: (record(item.visit).startDateTime ?? record(item.visit).startDatetime) as string | number | undefined,
       instructions: display(administration.instructions ?? wrapper.instructions) || "",
       additionalInstructions: display(administration.additionalInstructions ?? wrapper.additionalInstructions) || "",
+      rate: typeof rate === "number" || typeof rate === "string" ? rate : undefined,
+      additives: display(administration.additives ?? wrapper.additives) || "",
       provider: display(provider.name ?? provider.display ?? item.creatorName) || "—",
+      providerUuid: display(provider.uuid) || undefined,
       active: isActiveOrScheduledDrugOrder(item, now),
       status,
       stopReason,
@@ -146,6 +182,18 @@ export function normalizeDrugOrders(items: DrugRecord[], showOnlyActive: boolean
       immediately: Boolean(dosing.immediately ?? item.immediately),
       emergency: Boolean(dosing.emergency ?? item.emergency ?? wrapper.emergency),
       medicationAdministrationStarted,
+      durationCount: Number.isFinite(Number(item.duration ?? dosing.duration)) ? Number(item.duration ?? dosing.duration) : undefined,
+      isVariableDose: String(item.dosingInstructionType ?? "").toLocaleLowerCase().includes("variable"),
+      schedule: hasSchedule ? {
+        slotStartTime: Number.isFinite(Number(schedule.slotStartTime)) ? Number(schedule.slotStartTime) : undefined,
+        firstDaySlotsStartTime: numbers(schedule.firstDaySlotsStartTime),
+        dayWiseSlotsStartTime: numbers(schedule.dayWiseSlotsStartTime),
+        remainingDaySlotsStartTime: numbers(schedule.remainingDaySlotsStartTime),
+        notes: display(schedule.notes),
+        medicationAdministrationStarted,
+        pendingSlotsAvailable: schedule.pendingSlotsAvailable === true,
+        allSlotsAttended,
+      } : undefined,
       orderNumber,
       raw: item,
     };
@@ -167,6 +215,17 @@ export interface TreatmentSection {
 /** Mirrors treatmentData.js: visit orders are grouped by visit start date and
  * `otherActiveDrugOrders` is kept as a separate final section. */
 export function normalizeTreatmentSections(response: DrugRecord, showOnlyActive = false, legacyIpd = false, visitUuid?: string): TreatmentSection[] {
+  const ipdOrders = Array.isArray(response.ipdDrugOrders) ? response.ipdDrugOrders as DrugRecord[] : [];
+  if (legacyIpd && ipdOrders.length > 0) {
+    const normalized = normalizeDrugOrders(ipdOrders.map(flattenOrder), showOnlyActive);
+    return normalized.length > 0 ? [{
+      id: `visit-${visitUuid ?? "ipd"}`,
+      label: "Visita IPD",
+      visitUuid,
+      otherActive: false,
+      orders: normalized,
+    }] : [];
+  }
   const visitOrders = Array.isArray(response.visitDrugOrders) ? response.visitDrugOrders as DrugRecord[] : [];
   const otherOrders = Array.isArray(response.otherActiveDrugOrders) ? response.otherActiveDrugOrders as DrugRecord[] : [];
   const grouped = new Map<string, DrugRecord[]>();

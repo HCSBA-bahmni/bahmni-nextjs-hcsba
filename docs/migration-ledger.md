@@ -22,7 +22,7 @@ Este documento es la compuerta de avance del plan maestro. El inventario detalla
 | Registro | Sí | Parcial | Parcial avanzado: flujo y segunda página implementados | No | No |
 | Clinical/Programas | Sí | Parcial avanzada | Dashboard migrado; Consulta tiene shell, siete tableros y guardado unificado implementados bajo flag apagado, con certificación HCSBA pendiente | No | No |
 | ADT | Sí | Caracterizada; ver `docs/migration/ipd-bedmanagement.md` | Implementada con relectura de cama/visita/encuentro | Certificación manual HCSBA `.205` en curso | Sí en ambiente local; rollback disponible |
-| Gestión de camas/IPD | Sí | Caracterizada: rutas de Bed Management, Care View y dashboard IPD individual | Bed Management y Care View nativos; dashboard individual con seis secciones de lectura | Parcial: faltan certificar y portar acciones clínicas de tareas/tratamientos del dashboard individual | Sí local para Bed Management; rollback disponible |
+| Gestión de camas/IPD | Sí | Caracterizada: rutas de Bed Management, Care View y dashboard IPD individual | Bed Management y Care View nativos; dashboard individual con seis secciones y acciones de tratamientos uniformes/PRN | Parcial: falta certificar escrituras en HCSBA y portar tratamientos de dosis variable por etapa | Sí local para Bed Management; rollback disponible |
 | Documentos | Sí | No | No | No | No |
 | Órdenes | Sí | No | No | No | No |
 | Pabellón | Sí | No | No | No | No |

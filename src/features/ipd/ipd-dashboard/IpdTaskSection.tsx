@@ -226,7 +226,7 @@ export function IpdTaskSection({ patientUuid, visitUuid, locationUuid, config, k
       <Button outlined label="Turno actual" disabled={shiftIsCurrent} onClick={() => setShift(liveShift)} />
       <Button outlined icon="pi pi-chevron-right" aria-label="Turno siguiente" title="Ver turno siguiente (hasta dos dÃ­as)" disabled={!canNavigateToNextIpdShift(shift, liveShift)} onClick={() => setShift((current) => adjacentIpdShift(config.shiftDetails, current, 1))} />
       {kind === "nursing" && <Dropdown aria-label="Filtrar tareas" value={filter} options={filterOptions} onChange={(event) => setFilter(event.value as NursingTaskFilter)} />}
-      {kind === "nursing" && <Button icon="pi pi-plus" label="Añadir tarea" disabled={!canAddTask} title={!canAddTask ? readOnly ? "La visita está cerrada y sólo permite consulta." : !shiftIsCurrent ? "Vuelva al turno vigente para crear tareas." : "Requiere Add Tasks o Edit adhoc medication tasks." : undefined} onClick={() => setAddingTask(true)} />}
+      {kind === "nursing" && <Button className="ipd-add-task-button" icon="pi pi-plus" label="Añadir tarea" disabled={!canAddTask} title={!canAddTask ? readOnly ? "La visita está cerrada y sólo permite consulta." : !shiftIsCurrent ? "Vuelva al turno vigente para crear tareas." : "Requiere Add Tasks o Edit adhoc medication tasks." : undefined} onClick={() => setAddingTask(true)} />}
       <Button text icon="pi pi-refresh" label="Actualizar" loading={medication.isFetching || nonMedication.isFetching} onClick={() => void reconcile()} />
     </div></header>
     {!shiftIsCurrent && <p className="ipd-task-readonly"><i className="pi pi-info-circle" /> Está revisando un turno distinto del vigente. Sus actividades se muestran en modo de consulta.</p>}

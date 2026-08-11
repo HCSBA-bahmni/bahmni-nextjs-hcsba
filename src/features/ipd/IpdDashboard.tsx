@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import Image from "next/image";
 import { Button } from "primereact/button";
 import { AppShell } from "@/components/AppShell";
-import type { IpdDashboardSectionConfig } from "@/config-compat/ipdDashboardConfig";
+import type { IpdDashboardConfig, IpdDashboardSectionConfig } from "@/config-compat/ipdDashboardConfig";
 import { parseIpdDashboardConfig } from "@/config-compat/ipdDashboardConfig";
 import type { ClinicalDashboardSection, ClinicalDashboardTab } from "@/config-compat/clinicalConfig";
 import { AuthGuard } from "@/features/auth/AuthGuard";
@@ -41,7 +41,7 @@ const sectionIcons: Record<string, string> = {
   DC: "pi pi-calendar-clock",
 };
 
-function clinicalSection(section: IpdDashboardSectionConfig): ClinicalDashboardSection | undefined {
+function clinicalSection(section: IpdDashboardSectionConfig, ipdConfig: IpdDashboardConfig): ClinicalDashboardSection | undefined {
   const base = {
     id: `ipd-${section.componentKey.toLowerCase()}`,
     sourceIndex: section.displayOrder,
@@ -57,7 +57,17 @@ function clinicalSection(section: IpdDashboardSectionConfig): ClinicalDashboardS
   if (section.componentKey === "VT") return undefined;
   if (section.componentKey === "AL") return { ...base, type: "allergies", dashboardConfig: { legacyIpdColumns: true } };
   if (section.componentKey === "DG") return { ...base, type: "diagnosis", dashboardConfig: { legacyIpdColumns: true, showCertainty: true, showOrder: true, showRuledOutDiagnoses: true } };
-  if (section.componentKey === "TR") return { ...base, type: "treatment", dashboardConfig: { numberOfVisits: 10, showListView: true, showFlowSheet: false, showOtherActive: true, legacyIpd: true } };
+  if (section.componentKey === "TR") return { ...base, type: "treatment", dashboardConfig: {
+    numberOfVisits: 10,
+    showListView: true,
+    showFlowSheet: false,
+    showOtherActive: true,
+    legacyIpd: true,
+    ipdScheduleConfig: {
+      ...ipdConfig.treatmentSchedule,
+      timeInMinutesToDisableSlotPostScheduledTime: ipdConfig.drugChartSlider.timeInMinutesToDisableSlotPostScheduledTime,
+    },
+  } };
   return undefined;
 }
 
@@ -122,7 +132,7 @@ export function IpdDashboard({ patientUuid, visitUuid }: Props) {
         <main className="ipd-individual-content">
           {sections.map((section) => {
             const id = `ipd-section-${section.componentKey.toLowerCase()}`;
-            const mapped = clinicalSection(section);
+            const mapped = clinicalSection(section, configQuery.data);
             return <section className={`panel ipd-individual-section ipd-individual-section-${section.componentKey.toLowerCase()}`} id={id} key={section.componentKey}>
               <header><span><i className={sectionIcons[section.componentKey] ?? "pi pi-circle"} /><h2>{sectionTitles[section.componentKey] ?? section.title}</h2></span><a href={`#${firstSectionId}`} aria-label="Volver al inicio del contenido"><i className="pi pi-chevron-up" /></a></header>
               <div>{mapped ? <ClinicalDashboardSectionCard section={mapped} context={context} /> : section.componentKey === "VT" ? <IpdVitalsSection patientUuid={patientUuid} config={configQuery.data.vitalsConfig} locale={context.locale} timeZone={context.timeZone} /> : section.componentKey === "NT" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="nursing" readOnly={dashboardReadOnly} /> : section.componentKey === "DC" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="drug-chart" readOnly={dashboardReadOnly} /> : <p className="warning-banner">El componente configurado {section.componentKey} aún no dispone de adaptador.</p>}</div>
