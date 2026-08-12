@@ -4,7 +4,8 @@ import Cookies from "js-cookie";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "primereact/button";
 import { Avatar } from "primereact/avatar";
-import { Fragment, useEffect, useState } from "react";
+import { Menu } from "primereact/menu";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ComponentType } from "react";
 import type { JsonObject } from "@/config-compat/merge";
@@ -52,19 +53,21 @@ const valueOf = (value: unknown): string => {
   const item = asRecord(value);
   return valueOf(item.display ?? item.shortName ?? item.name ?? item.label ?? item.valueAsString ?? item.value ?? item.uuid);
 };
+const dashboardDateInput = (value: string | number): string | number => typeof value === "string" && /^\d{10,}$/.test(value.trim()) ? Number(value) : value;
 const dateOf = (value: unknown, locale = "es-CL", timeZone?: string) => {
   if (typeof value !== "string" && typeof value !== "number") return "—";
-  const date = new Date(value);
+  const date = new Date(dashboardDateInput(value));
   if (Number.isNaN(date.getTime())) return valueOf(value);
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", ...(timeZone ? { timeZone } : {}) }).format(date);
 };
 const dateOnlyOf = (value: unknown, locale = "es-CL", timeZone?: string) => {
   if (typeof value !== "string" && typeof value !== "number") return "—";
-  const date = new Date(value);
+  const date = new Date(dashboardDateInput(value));
   if (Number.isNaN(date.getTime())) return valueOf(value);
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", ...(timeZone ? { timeZone } : {}) }).format(date);
 };
 const arrayConfig = (config: JsonObject, name: string): string[] => Array.isArray(config[name]) ? (config[name] as unknown[]).filter((value): value is string => typeof value === "string") : [];
+const scopedVisitUuid = (config: JsonObject): string | undefined => arrayConfig(config, "visitUuids")[0];
 const activeConfig = ({ section, expanded }: DashboardControlProps): JsonObject => ({
   ...section.raw,
   ...section.config,
@@ -132,6 +135,26 @@ function PatientInformationControl(props: DashboardControlProps) {
   const summary = asRecord(props.context.visitSummary);
   const admitted = Boolean(props.context.visit && !props.context.visit.stopDatetime && Object.keys(asRecord(summary.admissionDetails)).length);
   useReport(props, false, null, 1);
+  if (props.context.surface === "visit") {
+    const address = patient.addressFields ?? {};
+    const visitDate = props.context.visit?.startDatetime ?? summary.startDateTime;
+    const gender = patient.gender || "—";
+    return <article className="clinical-visit-patient-information">
+      <header className="clinical-visit-patient-summary">
+        <Avatar image={patient.image} icon="pi pi-user" size="large" shape="circle" />
+        <div><strong>{patient.name}</strong><span>{patient.identifier || "—"}</span></div>
+        <span className="clinical-visit-demographics"><b>{gender}</b><b>{patient.age ?? "—"} años</b></span>
+        {admitted && <span className="clinical-admission-indicator" role="img" aria-label="Paciente hospitalizado" title="Paciente hospitalizado"><BedIcon /></span>}
+      </header>
+      <dl className="clinical-visit-patient-meta">
+        <div><dt>Localidad</dt><dd>{address.cityVillage || "—"}</dd></div>
+        <div><dt>P.O.</dt><dd>{address.address2 || "—"}</dd></div>
+        <div><dt>Distrito</dt><dd>{address.countyDistrict || "—"}</dd></div>
+        <div><dt>Fecha de visita</dt><dd>{dateOnlyOf(visitDate, props.context.locale, props.context.timeZone)}</dd></div>
+        {config.hideProviderName !== true && <div><dt>Profesional</dt><dd>{props.context.visitProviderName || "—"}</dd></div>}
+      </dl>
+    </article>;
+  }
   return <div className="clinical-patient-profile">
     <div className="clinical-patient-profile-summary">
       <Avatar image={patient.image} icon="pi pi-user" size="xlarge" shape="circle" />
@@ -187,7 +210,8 @@ function RecordsControl(props: DashboardControlProps & { kind: RecordKind }) {
 function DiagnosisControl(props: DashboardControlProps) {
   const { t } = useTranslation();
   const config = activeConfig(props);
-  const query = useQuery({ queryKey: ["clinical-dashboard", "diagnosis", props.context.patient.uuid], queryFn: () => getPatientDiagnoses(props.context.patient.uuid) });
+  const visitUuid = scopedVisitUuid(config);
+  const query = useQuery({ queryKey: ["clinical-dashboard", "diagnosis", props.context.patient.uuid, visitUuid], queryFn: () => getPatientDiagnoses(props.context.patient.uuid, visitUuid) });
   const diagnoses = normalizeDashboardDiagnoses(query.data ?? [], config.showRuledOutDiagnoses !== false);
   useReport(props, query.isLoading, query.error, diagnoses.length);
   const translatedLabel = (type: "CERTAINTY" | "ORDER" | "STATUS", value?: string) => value
@@ -208,9 +232,8 @@ function DiagnosisControl(props: DashboardControlProps) {
   </QueryFrame>;
   return <QueryFrame loading={query.isLoading} error={query.error} empty={!diagnoses.length} retry={() => void query.refetch()}>
     <div className={`dashboard-diagnoses${config.compact === true ? " compact" : ""}`}>{diagnoses.map((diagnosis) => <article className={diagnosis.ruledOut ? "ruled-out" : ""} key={diagnosis.key}>
-      <div className="dashboard-diagnosis-main"><span><strong>{diagnosis.name}</strong>{config.hideVisitDate !== true && diagnosis.date !== undefined && <small>{dateOf(diagnosis.date, props.context.locale, props.context.timeZone)}</small>}</span><span className="dashboard-diagnosis-labels">{config.showCertainty !== false && diagnosis.certainty && <span>{translatedLabel("CERTAINTY", diagnosis.certainty)}</span>}{config.showOrder !== false && diagnosis.order && <span>{translatedLabel("ORDER", diagnosis.order)}</span>}{diagnosis.status && <span>{translatedLabel("STATUS", diagnosis.status)}</span>}</span></div>
+      <div className="dashboard-diagnosis-main"><span><strong>{diagnosis.name}</strong>{config.hideVisitDate !== true && diagnosis.date !== undefined && <small>{dateOf(diagnosis.date, props.context.locale, props.context.timeZone)}</small>}</span><div className="dashboard-diagnosis-labels">{config.showCertainty !== false && diagnosis.certainty && <span>{translatedLabel("CERTAINTY", diagnosis.certainty)}</span>}{config.showOrder !== false && diagnosis.order && <span>{translatedLabel("ORDER", diagnosis.order)}</span>}{diagnosis.status && <span>{translatedLabel("STATUS", diagnosis.status)}</span>}{!diagnosis.comments && config.showDetailsButton === true && diagnosis.provider && <details className="dashboard-diagnosis-details"><summary aria-label={`Ver detalles de ${diagnosis.name}`} title="Ver detalles"><i className="pi pi-chevron-down" aria-hidden="true" /></summary><small>Registrado por {diagnosis.provider}</small></details>}</div></div>
       {diagnosis.comments && <div className="dashboard-diagnosis-comments"><i className="pi pi-comments" /><span>{diagnosis.comments}</span>{diagnosis.provider && <small>{diagnosis.provider}</small>}</div>}
-      {!diagnosis.comments && config.showDetailsButton === true && diagnosis.provider && <details><summary>Ver detalles</summary><small>Registrado por {diagnosis.provider}</small></details>}
     </article>)}</div>
   </QueryFrame>;
 }
@@ -266,8 +289,9 @@ function ObservationGraph({ records, referenceLines = [], birthDate, useAgeAxis 
 
 function ObservationControl(props: DashboardControlProps) {
   const config = activeConfig(props);
+  const visitUuid = scopedVisitUuid(config);
   const conceptNames = [...arrayConfig(config, "conceptNames"), ...arrayConfig(config, "obsConcepts"), ...arrayConfig(config, "yAxisConcepts")];
-  const query = useQuery({ queryKey: ["clinical-dashboard", "observations", props.context.patient.uuid, props.context.visit?.uuid, props.section.id, props.expanded, conceptNames, config.scope, config.numberOfVisits], queryFn: () => getPatientObservations({ patientUuid: props.context.patient.uuid, conceptNames, numberOfVisits: config.numberOfVisits as number | string | undefined, scope: typeof config.scope === "string" ? config.scope : undefined, obsIgnoreList: arrayConfig(config, "obsIgnoreList") }) });
+  const query = useQuery({ queryKey: ["clinical-dashboard", "observations", props.context.patient.uuid, visitUuid, props.section.id, props.expanded, conceptNames, config.scope, config.numberOfVisits], queryFn: () => getPatientObservations({ patientUuid: props.context.patient.uuid, visitUuid, conceptNames, numberOfVisits: config.numberOfVisits as number | string | undefined, scope: typeof config.scope === "string" ? config.scope : undefined, obsIgnoreList: arrayConfig(config, "obsIgnoreList") }) });
   const referenceFile = props.section.type === "observationGraph" && typeof config.referenceData === "string" ? config.referenceData : undefined;
   const referenceQuery = useQuery({
     queryKey: ["clinical-dashboard", "observation-reference", referenceFile, props.context.patient.gender, props.context.patient.birthDate],
@@ -283,9 +307,10 @@ function ObservationControl(props: DashboardControlProps) {
 
 function PivotTableControl(props: DashboardControlProps) {
   const config = activeConfig(props);
+  const visitUuid = scopedVisitUuid(config);
   const query = useQuery({
-    queryKey: ["clinical-dashboard", "pivot", props.context.patient.uuid, props.section.id, props.expanded, config],
-    queryFn: () => getDiseaseSummaryData({ patientUuid: props.context.patient.uuid, config }),
+    queryKey: ["clinical-dashboard", "pivot", props.context.patient.uuid, visitUuid, props.section.id, props.expanded, config],
+    queryFn: () => getDiseaseSummaryData({ patientUuid: props.context.patient.uuid, visitUuid, config }),
   });
   const root = asRecord(query.data);
   const concepts: Record<string, unknown>[] = asRecords(root.conceptDetails).map((concept) => ({
@@ -359,7 +384,8 @@ function ObsToObsFlowSheetControl(props: DashboardControlProps) {
 
 function DispositionControl(props: DashboardControlProps) {
   const config = activeConfig(props);
-  const query = useQuery({ queryKey: ["clinical-dashboard", "dispositions", props.context.patient.uuid, config.numberOfVisits, props.context.locale], queryFn: () => getDispositions({ patientUuid: props.context.patient.uuid, numberOfVisits: config.numberOfVisits as number | string | undefined, locale: props.context.locale }) });
+  const visitUuid = scopedVisitUuid(config);
+  const query = useQuery({ queryKey: ["clinical-dashboard", "dispositions", props.context.patient.uuid, visitUuid, config.numberOfVisits, props.context.locale], queryFn: () => getDispositions({ patientUuid: props.context.patient.uuid, visitUuid, numberOfVisits: config.numberOfVisits as number | string | undefined, locale: props.context.locale }) });
   const data = (query.data ?? []).map((item) => ({ uuid: item.uuid, provider: item.provider, creatorName: item.creatorName, display: valueOf(item.preferredName ?? item.conceptName), notes: valueOf(asRecords(item.additionalObs)[0]?.value), date: item.dispositionDateTime }));
   useReport(props, query.isLoading, query.error, data.length);
   return <QueryFrame loading={query.isLoading} error={query.error} empty={!data.length} retry={() => void query.refetch()}><div className="dashboard-dispositions">{data.map((item, index) => <article key={String(item.uuid ?? index)}><div><strong>{item.display}</strong><time>{dateOf(item.date, props.context.locale, props.context.timeZone)}</time></div>{item.notes !== "—" ? <div className="dashboard-record-comment"><i className="pi pi-comment" /><pre>{item.notes}</pre><small>{valueOf(item.provider ?? item.creatorName)}</small></div> : config.showDetailsButton === true && <details><summary>Ver detalles</summary><small>{valueOf(item.provider ?? item.creatorName)}</small></details>}</article>)}</div></QueryFrame>;
@@ -371,14 +397,16 @@ function OrdersControl(props: DashboardControlProps) {
   // expandedViewConfig in the details dialog. Top-level section metadata (for
   // example orderType and displayOrder) is not observation-rendering config.
   const config: JsonObject = {
+    ...props.section.config,
     ...props.section.dashboardConfig,
     ...(props.expanded ? props.section.expandedViewConfig : {}),
     ...(typeof props.section.raw.showDetailsButton === "boolean" ? { showDetailsButton: props.section.raw.showDetailsButton } : {}),
   };
-  const configuredType = typeof props.section.raw.orderType === "string" ? props.section.raw.orderType : props.section.type === "radiology" || props.section.type === "pacsOrders" ? "Radiology Order" : undefined;
+  const configuredType = typeof props.section.raw.orderType === "string" ? props.section.raw.orderType : typeof config.orderType === "string" ? config.orderType : props.section.type === "radiology" || props.section.type === "pacsOrders" ? "Radiology Order" : undefined;
+  const visitUuid = scopedVisitUuid(config);
   const types = useQuery({ queryKey: ["clinical-dashboard", "order-types"], queryFn: getOrderTypes });
   const orderTypeUuid = types.data?.find((type) => (type.display ?? type.name)?.toLocaleLowerCase() === configuredType?.toLocaleLowerCase())?.uuid;
-  const query = useQuery({ queryKey: ["clinical-dashboard", "orders", props.context.patient.uuid, props.section.id, orderTypeUuid, config.numberOfVisits], enabled: !configuredType || Boolean(orderTypeUuid), queryFn: () => getDashboardOrders({ patientUuid: props.context.patient.uuid, orderTypeUuid, conceptNames: arrayConfig(config, "conceptNames"), obsIgnoreList: arrayConfig(config, "obsIgnoreList"), numberOfVisits: config.numberOfVisits as number | string | undefined, includeObs: true }) });
+  const query = useQuery({ queryKey: ["clinical-dashboard", "orders", props.context.patient.uuid, visitUuid, props.section.id, orderTypeUuid, config.numberOfVisits], enabled: !configuredType || Boolean(orderTypeUuid), queryFn: () => getDashboardOrders({ patientUuid: props.context.patient.uuid, visitUuid, orderTypeUuid, conceptNames: arrayConfig(config, "conceptNames"), obsIgnoreList: arrayConfig(config, "obsIgnoreList"), numberOfVisits: config.numberOfVisits as number | string | undefined, includeObs: true }) });
   const data = query.data ?? [];
   const orders = normalizeOrderFulfillmentRecords(data, props.context.locale);
   const missingOrderType = Boolean(configuredType && types.isSuccess && !orderTypeUuid);
@@ -415,8 +443,9 @@ function OrdersControl(props: DashboardControlProps) {
 function RadiologyDocumentsControl(props: DashboardControlProps) {
   const config = activeConfig(props);
   const encounterConfig = useQuery({ queryKey: ["encounter-config"], queryFn: getEncounterConfiguration });
-  const radiologyTypeUuid = encounterConfig.data?.encounterTypes.RADIOLOGY;
-  const query = useQuery({ queryKey: ["clinical-dashboard", "radiology-documents", props.context.patient.uuid, radiologyTypeUuid], enabled: Boolean(radiologyTypeUuid), queryFn: () => getEncountersForEncounterType(props.context.patient.uuid, radiologyTypeUuid!) });
+  const encounterTypeName = props.section.type === "patientFiles" ? "Patient Document" : "RADIOLOGY";
+  const encounterTypeUuid = encounterConfig.data?.encounterTypes[encounterTypeName];
+  const query = useQuery({ queryKey: ["clinical-dashboard", "clinical-documents", encounterTypeName, props.context.patient.uuid, encounterTypeUuid], enabled: Boolean(encounterTypeUuid), queryFn: () => getEncountersForEncounterType(props.context.patient.uuid, encounterTypeUuid!) });
   const visitUuids = Array.isArray(config.visitUuids) ? config.visitUuids.filter((value): value is string => typeof value === "string") : undefined;
   const groups = mapRadiologyDocuments(query.data ?? [], visitUuids);
   const error = encounterConfig.error ?? query.error;
@@ -523,17 +552,31 @@ function IpdTreatmentTable({ sections, locale, timeZone, context, config, onUpda
   </div>;
 }
 
+function TreatmentShareActions({ section, label, onPrint, onEmail, busy }: { section: TreatmentSection; label: string; onPrint?(): void; onEmail?(): void; busy?: string }) {
+  const menu = useRef<Menu>(null);
+  const menuId = `treatment-share-${section.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
+  const working = busy === `print-${section.id}` || busy === `email-${section.id}`;
+  return <span className="dashboard-treatment-share">
+    <Menu ref={menu} id={menuId} popup model={[
+      { label: "Descargar receta", icon: "pi pi-download", disabled: working, command: onPrint },
+      { label: "Enviar por correo", icon: "pi pi-envelope", disabled: working, command: onEmail },
+    ]} />
+    <Button text rounded icon="pi pi-share-alt" aria-label={`Compartir receta de ${label}`} aria-haspopup="menu" aria-controls={menuId} loading={working} onClick={(event) => menu.current?.toggle(event)} />
+  </span>;
+}
+
 function TreatmentList({ sections, config, locale, timeZone, context, onUpdated, onPrint, onEmail, busy }: { sections: TreatmentSection[]; config: JsonObject; locale: string; timeZone: string; context: DashboardControlProps["context"]; onUpdated(): void | Promise<unknown>; onPrint?(section: TreatmentSection): void; onEmail?(section: TreatmentSection): void; busy?: string }) {
   if (config.legacyIpd === true) return <IpdTreatmentTable sections={sections} locale={locale} timeZone={timeZone} context={context} config={config} onUpdated={onUpdated} />;
   const showRoute = config.showRoute === true;
   const showDrugForm = config.showDrugForm === true;
   const showDetails = config.showDetailsButton === true;
+  const showProvider = config.showProvider !== false;
   return <div className="dashboard-treatment-sections">{sections.map((section) => <section key={section.id}>
-    <header><strong>{section.otherActive ? section.label : `Visita del ${dateOf(section.date, locale, timeZone)}`}</strong>{config.legacyIpd !== true && !section.otherActive && <span className="dashboard-inline-actions"><Button text rounded icon="pi pi-download" aria-label="Descargar receta" loading={busy === `print-${section.id}`} onClick={() => onPrint?.(section)} /><Button text rounded icon="pi pi-envelope" aria-label="Enviar receta por correo" loading={busy === `email-${section.id}`} onClick={() => onEmail?.(section)} /></span>}</header>
+    <header><strong>{section.otherActive ? section.label : `Visita del ${dateOnlyOf(section.date, locale, timeZone)}`}</strong>{!section.otherActive && <TreatmentShareActions section={section} label={dateOnlyOf(section.date, locale, timeZone)} busy={busy} onPrint={() => onPrint?.(section)} onEmail={() => onEmail?.(section)} />}</header>
     {section.orders.map((order) => <article className={order.active ? "active" : "stopped"} key={order.uuid}>
       <div className="dashboard-treatment-main"><span><strong>{order.name}{showDrugForm && order.drugForm ? ` (${order.drugForm})` : ""}</strong><small>{[order.dose, showRoute ? order.route : undefined, order.frequency, order.duration].filter(Boolean).join(" · ")}</small></span><time>{dateOf(order.startDate, locale, timeZone)}</time></div>
       {order.stopDate !== undefined && <small>Detenido el {dateOf(order.stopDate, locale, timeZone)}</small>}
-      {(order.additionalInstructions || showDetails) && <details open={Boolean(order.additionalInstructions)}><summary>Detalles</summary>{order.instructions && <p>{order.instructions}</p>}{order.additionalInstructions && <p>{order.additionalInstructions}</p>}<small>{order.provider}</small></details>}
+      {(order.additionalInstructions || showDetails) && <details className={`dashboard-treatment-details${order.additionalInstructions ? " has-additional-instructions" : ""}`} open={Boolean(order.additionalInstructions)}><summary aria-label={`Ver detalles de ${order.name}`}>Detalles</summary>{order.instructions && <p>{order.instructions}</p>}{order.additionalInstructions && <p>{order.additionalInstructions}</p>}{showProvider && <small>{order.provider}</small>}</details>}
     </article>)}
   </section>)}</div>;
 }
@@ -556,7 +599,7 @@ function TreatmentFlowSheet({ sections, visitStart, visitStop, locale }: { secti
     if (orders.some((order) => activeOnDate(order, date))) days.push(date);
   }
   if (!days.length) return null;
-  return <section className="dashboard-treatment-flow"><h3>Cuadro de tratamientos</h3><div className="dashboard-matrix-scroll"><table className="dashboard-matrix"><thead><tr><th>Fecha</th>{orders.map((order) => <th key={order.uuid}>{order.name}</th>)}</tr></thead><tbody>{days.map((date) => <tr key={date.toISOString()}><th>{new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date)}</th>{orders.map((order) => <td key={order.uuid}>{activeOnDate(order, date) ? <i className="pi pi-check" aria-label="Activo" /> : "—"}</td>)}</tr>)}</tbody></table></div></section>;
+  return <details className="dashboard-treatment-flow"><summary><span>Cuadro de tratamientos</span><small>{days.length} días · {orders.length} tratamiento{orders.length === 1 ? "" : "s"}</small></summary><div className="dashboard-matrix-scroll"><table className="dashboard-matrix"><thead><tr><th>Fecha</th>{orders.map((order) => <th key={order.uuid}>{order.name}</th>)}</tr></thead><tbody>{days.map((date) => <tr key={date.toISOString()}><th>{new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date)}</th>{orders.map((order) => <td key={order.uuid}>{activeOnDate(order, date) ? <i className="pi pi-check" aria-label="Activo" /> : "—"}</td>)}</tr>)}</tbody></table></div></details>;
 }
 
 function DrugControl(props: DashboardControlProps) {
@@ -606,7 +649,7 @@ function DrugControl(props: DashboardControlProps) {
     const printSection = async (section: TreatmentSection) => { setShareBusy(`print-${section.id}`); setShareMessage(undefined); try { const blob = await renderTreatmentPdf(prescription(section), "blob") as Blob; const url = URL.createObjectURL(blob); window.open(url, "_blank", "noopener,noreferrer"); window.setTimeout(() => URL.revokeObjectURL(url), 60_000); } catch { setShareMessage({ error: true, text: "No fue posible generar la receta." }); } finally { setShareBusy(undefined); } };
     const emailSection = async (section: TreatmentSection) => { if (!patientEmail) { setShareMessage({ error: true, text: "El paciente no tiene un correo registrado." }); return; } setShareBusy(`email-${section.id}`); setShareMessage(undefined); try { const data = await renderTreatmentPdf(prescription(section), "base64") as string; const visitDate = dateOf(section.date, props.context.locale, props.context.timeZone); await sendPatientEmail(props.context.patient.uuid, { mailAttachments: [{ contentType: "application/pdf", name: `Receta_${props.context.patient.identifier}_${visitDate.replaceAll("/", "-")}.pdf`, data }], subject: `Receta médica · ${institution} · ${visitDate}`, body: `Estimado/a ${props.context.patient.name}:\n\nAdjuntamos la receta de su consulta del ${visitDate}.\n\nAtentamente,\n${institution}` }); setShareMessage({ error: false, text: "Receta enviada por correo." }); } catch { setShareMessage({ error: true, text: "No fue posible enviar la receta." }); } finally { setShareBusy(undefined); } };
     const treatmentContent = <>{config.showListView !== false && <TreatmentList sections={treatmentSections} config={config} locale={props.context.locale} timeZone={props.context.timeZone} context={props.context} onUpdated={() => query.refetch()} onPrint={(section) => void printSection(section)} onEmail={(section) => void emailSection(section)} busy={shareBusy} />}{config.showFlowSheet === true && admitted && <TreatmentFlowSheet sections={treatmentSections} visitStart={visitStart} visitStop={visitStop} locale={props.context.locale} />}</>;
-    return <QueryFrame loading={query.isLoading} error={query.error} empty={!count} retry={() => void query.refetch()}>{shareMessage && <p role={shareMessage.error ? "alert" : "status"} className={shareMessage.error ? "error-banner" : "success-banner"}>{shareMessage.text}</p>}{treatmentContent}{config.legacyIpd !== true && <><Button outlined icon="pi pi-print" label="Imprimir todo" onClick={() => window.print()} /><section className="print-sheet"><h1>{valueOf(props.section.raw.title ?? props.section.translationKey ?? "Tratamientos")}</h1><dl><dt>Paciente</dt><dd>{props.context.patient.name}</dd><dt>Identificador</dt><dd>{props.context.patient.identifier}</dd></dl>{treatmentContent}</section></>}</QueryFrame>;
+    return <QueryFrame loading={query.isLoading} error={query.error} empty={!count} retry={() => void query.refetch()}>{shareMessage && <p role={shareMessage.error ? "alert" : "status"} className={shareMessage.error ? "error-banner" : "success-banner"}>{shareMessage.text}</p>}{treatmentContent}</QueryFrame>;
   }
   const table = regimen ? <div className="dashboard-matrix-scroll"><table className="dashboard-matrix chronic-treatment-table"><thead><tr>{regimenRows.some((row) => row.month) && <th>Mes</th>}<th>Fecha</th>{headers.map((header, index) => <th key={String(header.uuid ?? header.name ?? index)}>{valueOf(header.shortName ?? header.name)}</th>)}</tr></thead><tbody>{regimenRows.map((row, rowIndex) => <tr key={String(row.uuid ?? row.date ?? rowIndex)}>{regimenRows.some((item) => item.month) && <td>{valueOf(row.month)}</td>}<td>{dateOf(row.date, props.context.locale, props.context.timeZone)}</td>{headers.map((header, headerIndex) => { const value = asRecord(row.drugs)[String(header.name)]; return <td className={value === "Stop" || value === "Error" ? "abnormal" : ""} key={String(header.uuid ?? header.name ?? headerIndex)}>{valueOf(value)}</td>; })}</tr>)}</tbody></table></div> : <div className="dashboard-matrix-scroll"><table className="dashboard-matrix drug-order-details"><thead><tr><th>Medicamento</th><th>Dosis</th><th>Cantidad</th><th>Vía</th><th>Frecuencia</th><th>Inicio</th><th>Indicaciones</th><th>Indicaciones adicionales</th></tr></thead><tbody>{orders.map((order) => <tr className={order.active ? "active" : ""} key={order.uuid}><td>{order.name}</td><td>{order.dose}</td><td>{order.quantity}</td><td>{order.route}</td><td>{order.frequency}</td><td>{dateOf(order.startDate, props.context.locale, props.context.timeZone)}</td><td>{order.instructions || "—"}</td><td>{order.additionalInstructions || "—"}<small>{order.provider}</small></td></tr>)}</tbody></table></div>;
   return <QueryFrame loading={query.isLoading} error={query.error} empty={!count} retry={() => void query.refetch()}>{table}<Button outlined icon="pi pi-print" label="Imprimir" onClick={() => window.print()} /><section className="print-sheet"><h1>{valueOf(props.section.raw.title ?? props.section.translationKey ?? "Tratamientos")}</h1><dl><dt>Paciente</dt><dd>{props.context.patient.name}</dd><dt>Identificador</dt><dd>{props.context.patient.identifier}</dd></dl>{table}</section></QueryFrame>;
@@ -614,7 +657,8 @@ function DrugControl(props: DashboardControlProps) {
 
 function LabControl(props: DashboardControlProps) {
   const config = activeConfig(props);
-  const query = useQuery({ queryKey: ["clinical-dashboard", "lab-results", props.context.patient.uuid, props.context.visit?.uuid, config.numberOfVisits], queryFn: () => getLabOrderResults({ patientUuid: props.context.patient.uuid, numberOfVisits: config.numberOfVisits as number | string | undefined }) });
+  const visitUuids = arrayConfig(config, "visitUuids");
+  const query = useQuery({ queryKey: ["clinical-dashboard", "lab-results", props.context.patient.uuid, visitUuids, config.numberOfVisits], queryFn: () => getLabOrderResults({ patientUuid: props.context.patient.uuid, visitUuids, numberOfVisits: config.numberOfVisits as number | string | undefined }) });
   const root = asRecord(query.data);
   const accessions = groupLabAccessions(asRecords(root.results), {
     initialAccessionCount: typeof config.initialAccessionCount === "number" ? config.initialAccessionCount : undefined,
@@ -733,6 +777,7 @@ const registryEntries: DashboardControlAdapter[] = [
   { type: "obsToObsFlowSheet", Component: ObsToObsFlowSheetControl, supportsExpanded: true, capabilities: ["read"] },
   { type: "disposition", Component: DispositionControl, supportsExpanded: true, capabilities: ["read"] },
   { type: "radiology", Component: RadiologyDocumentsControl, supportsExpanded: true, capabilities: ["read", "navigate"] },
+  { type: "patientFiles", Component: RadiologyDocumentsControl, supportsExpanded: true, capabilities: ["read", "navigate"] },
   ...["ordersControl", "pacsOrders"].map((type): DashboardControlAdapter => ({ type, Component: OrdersControl, supportsExpanded: true, capabilities: ["read", ...(type === "pacsOrders" ? ["navigate" as const] : [])] })),
   ...["treatment", "drugOrderDetails", "chronicTreatmentChart"].map((type): DashboardControlAdapter => ({ type, Component: DrugControl, supportsExpanded: true, capabilities: ["read", "print"] })),
   { type: "labOrders", Component: LabControl, supportsExpanded: true, capabilities: ["read"] },

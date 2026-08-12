@@ -15,6 +15,14 @@ npm test
 npm run build
 ```
 
+Para desarrollar contra el mismo OpenMRS, configuraciones, proxy HTTPS y sesión del stack local, ejecute desde `bahmni-docker-HCSBA/bahmni-standard`:
+
+```powershell
+.\next-dev.ps1 up
+```
+
+Abra siempre `https://localhost/bahmni`; los cambios realizados en este repositorio se aplican mediante Fast Refresh. Para ver los logs use `.\next-dev.ps1 logs` y para volver a la imagen versionada use `.\next-dev.ps1 restore`. El modo dev requiere que `bahmni-nextjs-hcsba` y `bahmni-docker-HCSBA` sean repositorios hermanos dentro del mismo directorio.
+
 El sitio se sirve bajo `/bahmni`. El navegador consume `/openmrs`, `/bahmni_config` e `/implementation_config` con cookies incluidas. Las únicas APIs propias son `/bahmni/api/health` y `/bahmni/api/runtime-config`.
 
 ## Estado actual del RC

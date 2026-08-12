@@ -93,15 +93,20 @@ test("clinical dashboard uses HCSBA configuration and active visit context", asy
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "login-location", display: "OPD-1" } }) }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "clinical", name: "app:clinical" }], roles: [] }] }) }));
   await page.route("**/openmrs/ws/rest/v1/provider**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "provider-1", display: "Super Man", attributes: [] }] }) }));
-  await page.route("**/bahmni_config/openmrs/apps/clinical/dashboard.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ general: { translationKey: "DASHBOARD_TAB_GENERAL_KEY", displayByDefault: true, sections: { patientInformation: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY", displayOrder: 0, addressFields: ["cityVillage"] }, diagnosis: { type: "diagnosis", translationKey: "DASHBOARD_TITLE_DIAGNOSIS_KEY", displayOrder: 1 }, conditions: { type: "conditionsList", translationKey: "CONDITION_LIST_DISPLAY_CONTROL_TITLE", displayOrder: 3 }, visits: { type: "visits", translationKey: "DASHBOARD_TITLE_VISITS_KEY", displayOrder: 7 }, labFulfillment: { type: "ordersControl", orderType: "Lab Order", translationKey: "DASHBOARD_TITLE_LAB_ORDERS_DISPLAY_CONTROL_KEY", displayOrder: 8, dashboardConfig: { conceptNames: [] }, expandedViewConfig: { conceptNames: [], showDetailsButton: true } }, forms: { type: "formsV2React", translationKey: "Observation Forms", displayOrder: 17, dashboardConfig: { maximumNoOfVisits: 10, showEditForActiveEncounter: true } } } }, trends: { translationKey: "DASHBOARD_TAB_TRENDS_KEY", displayByDefault: false, sections: { trendsPatient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY" } } }, patientSummary: { translationKey: "DASHBOARD_TAB_PATIENT_SUMMARY_KEY", displayByDefault: false, sections: { summaryPatient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY" } } } }) }));
+  await page.route("**/bahmni_config/openmrs/apps/clinical/dashboard.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ general: { translationKey: "DASHBOARD_TAB_GENERAL_KEY", displayByDefault: true, sections: { patientInformation: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY", displayOrder: 0, addressFields: ["cityVillage"] }, diagnosis: { type: "diagnosis", translationKey: "DASHBOARD_TITLE_DIAGNOSIS_KEY", displayOrder: 1 }, conditions: { type: "conditionsList", translationKey: "CONDITION_LIST_DISPLAY_CONTROL_TITLE", displayOrder: 3 }, treatments: { type: "treatment", translationKey: "DASHBOARD_TITLE_TREATMENTS_KEY", displayOrder: 4, dashboardConfig: { showFlowSheet: true, showListView: true, showRoute: true, showDrugForm: true, numberOfVisits: 5, showOtherActive: true, showDetailsButton: true } }, visits: { type: "visits", translationKey: "DASHBOARD_TITLE_VISITS_KEY", displayOrder: 7 }, labFulfillment: { type: "ordersControl", orderType: "Lab Order", translationKey: "DASHBOARD_TITLE_LAB_ORDERS_DISPLAY_CONTROL_KEY", displayOrder: 8, dashboardConfig: { conceptNames: [] }, expandedViewConfig: { conceptNames: [], showDetailsButton: true } }, forms: { type: "formsV2React", translationKey: "Observation Forms", displayOrder: 17, dashboardConfig: { maximumNoOfVisits: 10, showEditForActiveEncounter: true } } } }, trends: { translationKey: "DASHBOARD_TAB_TRENDS_KEY", displayByDefault: false, sections: { trendsPatient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY" } } }, patientSummary: { translationKey: "DASHBOARD_TAB_PATIENT_SUMMARY_KEY", displayByDefault: false, sections: { summaryPatient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY" } } } }) }));
   await page.route("**/implementation_config/openmrs/apps/clinical/dashboard.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/bahmni_config/openmrs/i18n/clinical/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ DASHBOARD_TAB_GENERAL_KEY: "General", DASHBOARD_TAB_TRENDS_KEY: "Tendencias", DASHBOARD_TAB_PATIENT_SUMMARY_KEY: "Resumen del paciente", DASHBOARD_TITLE_PATIENT_INFORMATION_KEY: "Información del paciente", DASHBOARD_TITLE_DIAGNOSIS_KEY: "Diagnóstico", CONDITION_LIST_DISPLAY_CONTROL_TITLE: "Condiciones", DASHBOARD_TITLE_VISITS_KEY: "Visitas" }) }));
   await page.route("**/implementation_config/openmrs/i18n/clinical/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ DASHBOARD_TITLE_LAB_ORDERS_DISPLAY_CONTROL_KEY: "Cumplimiento de órdenes de Laboratorio", NO_FULFILMENT_MESSAGE: "No se han captado observaciones de esta orden" }) }));
   await page.route("**/bahmni/i18n/clinical/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: "{}" }));
   await page.route("**/openmrs/ws/rest/v1/patientprofile/patient-1**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { identifiers: [{ identifier: "RUN*1-9" }], person: { gender: "F", age: 36, names: [{ givenName: "Ana", familyName: "Pérez" }], addresses: [{ address1: "No configurada", cityVillage: "Santiago" }] } } }) }));
   await page.route("**/openmrs/ws/rest/v1/visit**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "visit-1", startDatetime: "2026-08-03T10:00:00.000Z", stopDatetime: null, visitType: { uuid: "opd", display: "OPD" }, location: { uuid: "visit-location", display: "Consulta" }, encounters: [] }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ admissionDetails: { uuid: "admission-1" }, startDateTime: "2026-08-03T10:00:00.000Z" }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/visitLocation/login-location", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: "visit-location", display: "Consulta" }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/diagnosis/search**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(Array.from({ length: 9 }, (_, index) => ({ uuid: `diagnosis-${index + 1}`, codedAnswer: { name: index === 0 ? "Hipertensión" : `Diagnóstico ${index + 1}` }, certainty: "CONFIRMED", order: "PRIMARY", diagnosisDateTime: `2026-08-${String(index + 1).padStart(2, "0")}T10:00:00.000Z` }))) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/drugOrders/prescribedAndActive**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    visitDrugOrders: [{ uuid: "treatment-1", visit: { uuid: "visit-1", startDateTime: "1774955218000" }, drug: { display: "Paracetamol 500 mg", dosageForm: { display: "Comprimido" } }, dosingInstructions: { dose: 1, doseUnits: "Comprimido", route: "Oral", frequency: "Twice a day", administrationInstructions: JSON.stringify({ instructions: "Con alimentos" }) }, duration: 20, durationUnits: "Days", effectiveStartDate: "2026-08-04T20:00:00-04:00", provider: { name: "Dra. Rivera" } }],
+    otherActiveDrugOrders: [],
+  }) }));
   await page.route("**/openmrs/ws/rest/emrapi/conditionhistory**", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 450));
     await route.fulfill({ contentType: "application/json", body: JSON.stringify([{ conditions: [{ uuid: "condition-active", concept: { shortName: "Asma" }, status: "ACTIVE", onSetDate: "2025-01-01" }, { uuid: "condition-history", concept: { shortName: "Asma" }, status: "HISTORY_OF", onSetDate: "2026-01-01", previousConditionUuid: "condition-active" }] }]) });
@@ -142,10 +147,46 @@ test("clinical dashboard uses HCSBA configuration and active visit context", asy
   await expect(page.getByText("No se han captado observaciones de esta orden", { exact: true }).filter({ visible: true })).toHaveCount(1);
   await page.getByText("Blood grouping test", { exact: true }).click();
   await expect(page.getByText("No se han captado observaciones de esta orden", { exact: true }).filter({ visible: true })).toHaveCount(2);
+  const treatmentCard = page.locator('[data-control-type="treatment"]');
+  const treatmentList = treatmentCard.locator(".dashboard-treatment-sections").first();
+  await expect(treatmentList.getByText(/^Visita del /)).not.toContainText("1774955218000");
+  await expect(treatmentList.getByText(/Paracetamol 500 mg/)).toBeVisible();
+  const treatmentRow = treatmentList.locator("article").first();
+  const compactTreatmentHeight = (await treatmentRow.boundingBox())?.height ?? 100;
+  expect(compactTreatmentHeight).toBeLessThan(42);
+  const shareTreatment = treatmentList.getByRole("button", { name: /Compartir receta/ });
+  await expect(shareTreatment).toHaveCount(1);
+  await shareTreatment.click();
+  await expect(page.getByText("Descargar receta", { exact: true })).toBeVisible();
+  await expect(page.getByText("Enviar por correo", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  const treatmentDetails = treatmentRow.locator(".dashboard-treatment-details");
+  await expect(treatmentDetails.locator("summary")).toHaveCSS("font-size", "0px");
+  await expect(treatmentDetails.getByText("Dra. Rivera")).toBeHidden();
+  await treatmentDetails.locator("summary").click();
+  await expect(treatmentDetails.getByText("Dra. Rivera")).toBeVisible();
+  expect((await treatmentRow.boundingBox())?.height ?? compactTreatmentHeight).toBeGreaterThan(compactTreatmentHeight);
+  const treatmentFlow = treatmentCard.locator(".dashboard-treatment-flow");
+  await expect(treatmentFlow).not.toHaveAttribute("open", "");
+  await expect(treatmentFlow.locator("table")).toBeHidden();
+  await treatmentFlow.locator("summary").click();
+  await expect(treatmentFlow.locator("table")).toBeVisible();
   const diagnosisPrimeCard = page.locator('[data-control-type="diagnosis"] > .p-card');
   await expect(diagnosisPrimeCard).toBeVisible();
   await expect(diagnosisPrimeCard.locator(".p-card-header")).toHaveCSS("background-image", /linear-gradient/);
   await expect(diagnosisPrimeCard.locator(".clinical-card-header h2")).toHaveCSS("color", "rgb(255, 255, 255)");
+  const diagnosisContent = diagnosisPrimeCard.locator(".clinical-card-content");
+  const diagnosisCollapse = diagnosisPrimeCard.locator("button[aria-controls]");
+  const expandedDiagnosisHeight = (await diagnosisPrimeCard.boundingBox())?.height ?? 0;
+  await expect(diagnosisCollapse).toHaveAttribute("aria-expanded", "true");
+  await diagnosisCollapse.click();
+  await expect(diagnosisPrimeCard).toHaveClass(/is-collapsed/);
+  await expect(diagnosisContent).toBeHidden();
+  await expect(diagnosisCollapse).toHaveAttribute("aria-expanded", "false");
+  const collapsedDiagnosisHeight = (await diagnosisPrimeCard.boundingBox())?.height ?? expandedDiagnosisHeight;
+  expect(collapsedDiagnosisHeight).toBeLessThan(expandedDiagnosisHeight / 2);
+  await diagnosisCollapse.click();
+  await expect(diagnosisContent).toBeVisible();
   await expect.poll(async () => {
     const diagnosisCard = await page.locator('[data-control-type="diagnosis"]').boundingBox();
     const conditionsCard = await page.locator('[data-control-type="conditionsList"]').boundingBox();
@@ -181,6 +222,79 @@ test("clinical dashboard uses HCSBA configuration and active visit context", asy
   await page.getByRole("button", { name: "Cerrar Tendencias", exact: true }).click();
   await expect(page).toHaveURL(/tab=general/);
   await expect(page.getByRole("button", { name: "Tendencias", exact: true })).toHaveCount(0);
+});
+
+test("clinical visit route loads visit.json and scopes legacy controls to the selected visit", async ({ page }) => {
+  await page.setViewportSize({ width: 1366, height: 768 });
+  const requestedUrls: string[] = [];
+  page.on("request", (request) => requestedUrls.push(request.url()));
+  await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "location-1", display: "HCSBA" } }) }));
+  await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "clinical", name: "app:clinical" }], roles: [], userProperties: { defaultLocale: "es" } }] }) }));
+  await page.route("**/bahmni_config/openmrs/apps/clinical/visit.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ general: { translationKey: "DASHBOARD_TAB_GENERAL_KEY", displayByDefault: true, defaultSections: true, sections: { pivot: { type: "pivotTable", title: "Signos vitales", displayOrder: 0, config: { groupBy: "encounters", obsConcepts: ["Pulse"] } } } } }) }));
+  await page.route("**/implementation_config/openmrs/apps/clinical/visit.json", (route) => route.fulfill({ status: 404 }));
+  await page.route("**/bahmni_config/openmrs/apps/clinical/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showProviderInfoinVisits: true } }) }));
+  await page.route("**/implementation_config/openmrs/apps/clinical/app.json", (route) => route.fulfill({ status: 404 }));
+  await page.route("**/bahmni_config/openmrs/i18n/clinical/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ DASHBOARD_TAB_GENERAL_KEY: "General", VISIT_TITLE_PATIENT_INFORMATION: "Información del paciente", VISIT_TITLE_DIAGNOSIS_KEY: "Diagnóstico", VISIT_TITLE_OBSERVATIONS_KEY: "Observaciones", VISIT_TITLE_DISPOSITIONS_KEY: "Disposición", VISIT_TITLE_ADMISSION_DETAILS_KEY: "Detalles de admisión", VISIT_TITLE_LAB_ORDERS_KEY: "Órdenes de laboratorio", VISIT_TITLE_TREATMENTS_KEY: "Tratamientos", VISIT_TITLE_RADIOLOGY_DOCUMENTS_KEY: "Radiología", VISIT_TITLE_PATIENT_FILES_KEY: "Archivos del paciente" }) }));
+  await page.route("**/implementation_config/openmrs/i18n/clinical/locale_es.json", (route) => route.fulfill({ status: 404 }));
+  await page.route("**/bahmni/i18n/clinical/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: "{}" }));
+  await page.route("**/openmrs/ws/rest/v1/patientprofile/patient-visit**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { identifiers: [{ identifier: "RUN*2-7" }], person: { gender: "M", age: 29, names: [{ givenName: "Paciente", familyName: "Visita" }], addresses: [{ cityVillage: "Santiago", address2: "Correo Central", countyDistrict: "Santiago" }] } } }) }));
+  await page.route("**/openmrs/ws/rest/v1/location?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "location-1", name: "Registration Desk", attributes: [{ display: "Certificate Header: Hospital HCSBA", value: "Hospital HCSBA" }] }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/visit?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [
+    { uuid: "visit-1", startDatetime: 1444129200000, stopDatetime: 1458882000000, visitType: { display: "IPD" }, location: { uuid: "location-1", display: "HCSBA" }, encounters: [] },
+    { uuid: "visit-2", startDatetime: "2026-03-31T10:00:00Z", stopDatetime: null, visitType: { display: "IPD" }, location: { uuid: "location-1", display: "HCSBA" }, encounters: [] },
+  ] }) }));
+  await page.route("**/openmrs/ws/rest/v1/visit/visit-*", (route) => {
+    const uuid = /\/visit\/(visit-[^?]+)/.exec(route.request().url())?.[1] ?? "visit-2";
+    if (uuid === "visit-1") return route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: { message: "legacy provider detail unavailable" } }) });
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid, startDatetime: "2026-03-31T10:00:00Z", stopDatetime: null, visitType: { display: "IPD" }, location: { display: "HCSBA" }, encounters: [{ uuid: "encounter-1", encounterDatetime: "2026-03-31T10:30:00Z", encounterType: { display: "Consultation" }, provider: { display: "Super Man" } }] }) });
+  });
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary**", (route) => {
+    const oldVisit = route.request().url().includes("visitUuid=visit-1");
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: oldVisit ? "visit-1" : "visit-2", visitType: { display: "IPD" }, admissionDetails: {}, startDateTime: oldVisit ? 1444129200000 : "2026-03-31T10:00:00Z", stopDateTime: oldVisit ? 1458882000000 : null }) });
+  });
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/diagnosis/search**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ uuid: "diagnosis-visit", codedAnswer: { name: "Anemia" }, certainty: "PRESUMED", order: "PRIMARY" }]) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/observations**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ uuid: "obs-visit", concept: { name: "Nota clínica" }, value: "Control" }]) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/diseaseSummaryData**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ conceptDetails: [{ name: "Pulse" }], tabularData: {} }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/disposition/visitWithLocale**", (route) => route.fulfill({ contentType: "application/json", body: "[]" }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/labOrderResults**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/drugOrders/prescribedAndActive**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ visitDrugOrders: [], otherActiveDrugOrders: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/config/bahmniencounter**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ encounterTypes: { RADIOLOGY: "radiology-type", "Patient Document": "document-type" }, visitTypes: {} }) }));
+  await page.route("**/openmrs/ws/rest/v1/encounter**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/beds**", (route) => route.fulfill({ contentType: "application/json", body: "[]" }));
+
+  await page.goto("/bahmni/clinical/patient/patient-visit/visit/visit-2");
+  await expect(page.getByRole("heading", { name: "Paciente Visita", level: 1 })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Navegar entre visitas" })).toContainText("IPD");
+  await expect(page.getByLabel("Contexto de atención")).toContainText("Super Man");
+  await expect(page.getByLabel("Contexto de atención")).toContainText("Registration Desk");
+  await expect(page.getByText("Localidad", { exact: true })).toBeVisible();
+  await expect(page.getByText("Correo Central", { exact: true })).toBeVisible();
+  const visitPaginator = page.getByRole("navigation", { name: "Navegar entre visitas" });
+  const previousButton = page.getByRole("button", { name: "Visita anterior" });
+  const paginatorSummary = visitPaginator.locator(".clinical-visit-selector-value");
+  const [previousBox, summaryBox, patientInfoBox] = await Promise.all([previousButton.boundingBox(), paginatorSummary.boundingBox(), page.locator(".clinical-visit-patient-information").boundingBox()]);
+  expect(previousBox && summaryBox && previousBox.x + previousBox.width <= summaryBox.x + 2).toBeTruthy();
+  expect(previousBox?.height ?? 100).toBeLessThanOrEqual(32);
+  expect(patientInfoBox?.height ?? 200).toBeLessThan(110);
+  await expect(page.getByRole("heading", { name: "Información del paciente" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Colapsar Información del paciente" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Signos vitales" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Diagnóstico" })).toBeVisible();
+  await expect(page.getByText("Anemia", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Observaciones" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Disposición" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Tratamientos" })).toHaveCount(0);
+  await expect.poll(() => requestedUrls.some((url) => url.includes("/diagnosis/search") && url.includes("visitUuid=visit-2"))).toBe(true);
+  await expect.poll(() => requestedUrls.some((url) => url.includes("/observations") && url.includes("visitUuid=visit-2"))).toBe(true);
+  await expect.poll(() => requestedUrls.some((url) => url.includes("/diseaseSummaryData") && url.includes("visit=visit-2"))).toBe(true);
+  await expect.poll(() => requestedUrls.some((url) => url.includes("/labOrderResults") && url.includes("visitUuids=visit-2"))).toBe(true);
+  const accessibility = await new AxeBuilder({ page }).include("main").analyze();
+  expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
+  await page.getByRole("button", { name: "Visita anterior" }).click();
+  await expect(page).toHaveURL(/\/bahmni\/clinical\/patient\/patient-visit\/visit\/visit-1\?tab=general$/);
+  await expect(page.getByRole("navigation", { name: "Navegar entre visitas" })).toContainText("6 oct 2015");
+  await expect(page.getByText("No fue posible cargar completamente la visita seleccionada.")).toHaveCount(0);
+  await expect(page.getByText("Paciente Visita", { exact: true }).first()).toBeVisible();
 });
 
 test("registration Form 2 preserves the published layout and latest-observations panel", async ({ page }) => {

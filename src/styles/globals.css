@@ -78,3 +78,114 @@ a { color:inherit; text-decoration:none; }
 @media(max-width:900px){.adt-action-panel{align-items:stretch;flex-direction:column}.adt-action-panel .p-dropdown{width:100%;min-width:0}.adt-dashboard-layout{grid-template-columns:1fr}.clinical-result-badges{display:none}}
 /* Compact bed marker used by configured clinical queues. */
 .clinical-bed-badge svg{width:1.05rem;height:.8rem}
+
+/* Compact dashboard cards and diagnosis rows keep long clinical summaries navigable. */
+.clinical-dashboard-card.is-collapsed .p-card-body{display:none}
+.clinical-dashboard-card.is-collapsed.p-card:hover{box-shadow:0 3px 12px #17333d14}
+.dashboard-diagnoses article{padding:.5rem .25rem}
+.dashboard-diagnosis-main{gap:.5rem}
+.dashboard-diagnosis-main>span:first-child{display:flex;min-width:0;align-items:baseline;gap:.2rem .55rem;flex-wrap:wrap}
+.dashboard-diagnosis-main>span:first-child strong{min-width:0;overflow-wrap:anywhere}
+.dashboard-diagnosis-main>span:first-child small{flex:0 0 auto;font-size:.76rem;white-space:nowrap}
+.dashboard-diagnosis-labels{align-items:center;gap:.2rem .35rem;font-size:.86rem;white-space:nowrap}
+.dashboard-diagnosis-details{margin:0!important}
+.clinical-card .dashboard-diagnosis-details>summary{display:inline-flex;width:1.75rem;height:1.75rem;align-items:center;justify-content:center;margin:0;padding:0;border:1px solid #b8ced5;border-radius:50%;background:#f4f9fa;color:#075d73;list-style:none}
+.clinical-card .dashboard-diagnosis-details>summary::-webkit-details-marker{display:none}
+.clinical-card .dashboard-diagnosis-details>summary:hover{border-color:#087b96;background:#e4f4f7}
+.dashboard-diagnosis-details[open]>summary i{transform:rotate(180deg)}
+.dashboard-diagnosis-details>summary i{font-size:.72rem;transition:transform .15s ease}
+.dashboard-diagnosis-details>small{display:block;max-width:18rem;margin-top:.25rem;padding:.3rem .45rem;border-radius:.35rem;background:#f4f9fa;color:#526b74;text-align:right;white-space:normal}
+@media(max-width:620px){.dashboard-diagnosis-main{grid-template-columns:1fr;align-items:start}.dashboard-diagnosis-labels{justify-content:flex-start;white-space:normal}}
+
+/* Treatment dashboard follows the compact visit table hierarchy from legacy. */
+.dashboard-treatment-sections{display:grid;gap:.45rem}
+.dashboard-treatment-sections>section{overflow:hidden;border:1px solid #cfdee2;border-radius:.35rem;background:#fff}
+.dashboard-treatment-sections>section>header{display:flex;min-height:2.1rem;align-items:center;justify-content:space-between;gap:.5rem;padding:.18rem .45rem;border-bottom:1px solid #d8e4e7;background:#eef6f8}
+.dashboard-treatment-sections>section>header>strong{min-width:0;overflow:hidden;color:#17333d;font-size:.74rem;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-treatment-sections>section>header>strong:before{content:"";display:inline-block;width:.32rem;height:.32rem;margin:0 .38rem .08rem 0;border-radius:50%;background:#087b96}
+.dashboard-treatment-share{display:flex;flex:0 0 auto}
+.dashboard-treatment-sections>section>header .p-button{width:1.65rem;height:1.65rem;padding:0;border:1px solid transparent;color:#075d73}
+.dashboard-treatment-sections>section>header .p-button .p-button-icon{font-size:.72rem}
+.dashboard-treatment-sections>section>header .p-button:hover{border-color:#9bc8d2;background:#fff}
+.dashboard-treatment-sections>section>article{position:relative;min-height:2rem;padding:.32rem 2rem .32rem .45rem;border-bottom:1px solid #e0e9ec;background:#fff}
+.dashboard-treatment-sections>section>article:last-child{border-bottom:0}
+.dashboard-treatment-sections>section>article:hover{background:#fbfdfe}
+.dashboard-treatment-main{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:.35rem}
+.dashboard-treatment-main>span{display:grid;grid-template-columns:minmax(7.25rem,.9fr) minmax(0,1.65fr);align-items:baseline;gap:.45rem;min-width:0}
+.dashboard-treatment-main strong{min-width:0;overflow:hidden;color:#17333d;font-size:.72rem;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-treatment-main small{min-width:0;overflow:hidden;color:#36515b;font-size:.65rem;line-height:1.15;text-overflow:ellipsis;white-space:nowrap}
+.dashboard-treatment-main>time{color:#607680;font-size:.61rem;line-height:1.15;white-space:nowrap}
+.dashboard-treatment-sections>section>article.stopped .dashboard-treatment-main strong,.dashboard-treatment-sections>section>article.stopped .dashboard-treatment-main small{color:#71828a;text-decoration:line-through}
+.dashboard-treatment-sections>section>article>small{display:flex;align-items:center;gap:.25rem;margin-top:.16rem;color:#8a4e55;font-size:.59rem;line-height:1.1}
+.dashboard-treatment-details{margin:0!important}
+.clinical-card .dashboard-treatment-details>summary{position:absolute;top:.2rem;right:.28rem;display:grid;width:1.5rem;height:1.5rem;place-items:center;margin:0;padding:0;border:1px solid transparent;border-radius:.25rem;background:transparent;color:#075d73;font-size:0;line-height:1;list-style:none;cursor:pointer}
+.clinical-card .dashboard-treatment-details>summary::-webkit-details-marker{display:none}
+.clinical-card .dashboard-treatment-details>summary:before{content:"\203a";font-size:.9rem;transform:rotate(90deg);transition:transform .15s ease}
+.clinical-card .dashboard-treatment-details>summary:hover,.clinical-card .dashboard-treatment-details>summary:focus-visible{border-color:#8fc4d0;background:#e9f7fa;outline:0}
+.clinical-card .dashboard-treatment-details[open]>summary:before{transform:rotate(270deg)}
+.clinical-card .dashboard-treatment-details.has-additional-instructions>summary{display:none}
+.dashboard-treatment-details[open]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.25rem .5rem;margin-top:.28rem!important;padding:.3rem .4rem;border-left:2px solid #73bdc9;border-radius:.2rem;background:#f3f8f9}
+.dashboard-treatment-details>p{margin:0;color:#36515b;font-size:.65rem;white-space:pre-wrap}
+.dashboard-treatment-details>small{grid-column:1/-1;color:#607680;font-size:.61rem;text-align:right}
+.dashboard-treatment-flow{margin:.55rem 0 0!important;border-top:1px solid #d7e2e5}
+.clinical-card .dashboard-treatment-flow>summary{display:flex;min-height:2rem;align-items:center;justify-content:space-between;gap:.6rem;margin:0;padding:.32rem .45rem;background:transparent;border-radius:0;color:#17333d;font-size:.72rem;list-style:none}
+.clinical-card .dashboard-treatment-flow>summary::-webkit-details-marker{display:none}
+.clinical-card .dashboard-treatment-flow>summary span:before{content:"\203a";display:inline-block;margin-right:.4rem;color:#075d73;font-size:.9rem;transform:rotate(90deg);transition:transform .15s ease}
+.clinical-card .dashboard-treatment-flow[open]>summary span:before{transform:rotate(270deg)}
+.dashboard-treatment-flow>summary small{color:#607680;font-size:.61rem;font-weight:400;white-space:nowrap}
+.dashboard-treatment-flow>.dashboard-matrix-scroll{margin-top:.25rem}
+.dashboard-treatment-flow .dashboard-matrix{font-size:.68rem}
+.dashboard-treatment-flow .dashboard-matrix th,.dashboard-treatment-flow .dashboard-matrix td{padding:.32rem .4rem}
+@media(max-width:720px){.dashboard-treatment-main>span{grid-template-columns:minmax(6.5rem,.9fr) minmax(0,1.4fr)}.dashboard-treatment-main>time{font-size:.58rem}.dashboard-treatment-details[open]{grid-template-columns:1fr}.dashboard-treatment-details>small{grid-column:1;text-align:left}}
+
+/* Visit summary is a dedicated, visit-scoped successor to the Angular route. */
+.clinical-visit-workspace{display:grid;gap:.7rem;max-width:1280px;margin:0 auto}
+.clinical-visit-header{display:grid;grid-template-columns:minmax(13rem,auto) minmax(0,1fr) auto;align-items:center;gap:.8rem;padding:.45rem .65rem}
+.clinical-visit-patient{display:flex;min-width:0;flex-direction:column;align-items:flex-start;padding:.25rem .4rem;color:#17333d;text-align:left}
+.clinical-visit-patient h1{max-width:16rem;margin:0;overflow:hidden;font-size:1rem;text-overflow:ellipsis;white-space:nowrap}
+.clinical-visit-patient button{padding:0;border:0;background:transparent;color:#607680;font-size:.68rem;cursor:pointer}
+.clinical-visit-tabs{display:flex;min-width:0;align-items:center;gap:.25rem;overflow-x:auto}
+.clinical-visit-tabs .p-button{flex:0 0 auto;padding:.42rem .65rem;font-size:.8rem}
+.clinical-visit-header .toolbar{flex-wrap:nowrap;margin:0}
+.clinical-visit-header .toolbar .p-button{padding:.45rem .65rem;font-size:.78rem}
+.clinical-visit-selector{display:grid;grid-template-columns:2rem minmax(0,1fr) 2rem;align-items:center;width:min(34rem,100%);margin:0 auto;padding:.2rem;border-radius:.7rem;background:#fff;box-shadow:0 3px 12px #17333d0d}
+.clinical-visit-selector-button.p-button{width:2rem;height:2rem;padding:0;color:#075d73}
+.clinical-visit-selector-button.p-button:disabled{color:#a8b6bb}
+.clinical-visit-selector-button .p-button-icon{font-size:.72rem}
+.clinical-visit-selector-value{display:flex;min-width:0;align-items:center;justify-content:center;gap:.35rem;text-align:center}
+.clinical-visit-selector-value strong{min-width:0;overflow:hidden;font-size:.74rem;text-overflow:ellipsis;white-space:nowrap}
+.clinical-visit-type{flex:0 0 auto;padding:.12rem .38rem;border-radius:999px;background:#e9f5f8;color:#075d73;font-size:.64rem;font-weight:700}
+.clinical-visit-selector .pi-star-fill{flex:0 0 auto;color:#e5a400;font-size:.68rem}
+.clinical-visit-provider{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;padding:.45rem .6rem;border-radius:.65rem;background:#fff}
+.clinical-visit-provider>div{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:.5rem;min-width:0}
+.clinical-visit-provider>div+div{padding-left:.65rem;border-left:1px solid #d7e2e5}
+.clinical-visit-provider-icon{display:grid;width:1.8rem;height:1.8rem;place-items:center;border-radius:50%;background:#e9f5f8;color:#087b96}
+.clinical-visit-provider-icon .pi{font-size:.72rem}
+.clinical-visit-provider>div>span:last-child{display:flex;min-width:0;flex-direction:column}
+.clinical-visit-provider small{color:#607680;font-size:.61rem}
+.clinical-visit-provider strong{overflow:hidden;font-size:.7rem;text-overflow:ellipsis;white-space:nowrap}
+.clinical-visit-provider em{overflow:hidden;color:#607680;font-size:.59rem;font-style:normal;text-overflow:ellipsis;white-space:nowrap}
+.clinical-visit-patient-information{display:grid;gap:.5rem}
+.clinical-visit-patient-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:.65rem;padding-bottom:.5rem;border-bottom:1px solid #d7e2e5}
+.clinical-visit-patient-summary .p-avatar{width:2.5rem;height:2.5rem;background:#e9f5f8;color:#087b96}
+.clinical-visit-patient-summary>div{display:flex;min-width:0;flex-direction:column}
+.clinical-visit-patient-summary>div strong{overflow:hidden;font-size:.86rem;text-overflow:ellipsis;white-space:nowrap}
+.clinical-visit-patient-summary>div span{color:#526b74;font-size:.68rem}
+.clinical-visit-demographics{display:flex;gap:.3rem}
+.clinical-visit-demographics b{padding:.16rem .4rem;border-radius:999px;background:#f0f5f6;color:#36515b;font-size:.63rem;font-weight:650}
+.clinical-visit-patient-summary .clinical-admission-indicator{display:grid;width:2rem;height:2rem;place-items:center;padding:0}
+.clinical-visit-patient-summary .clinical-admission-indicator svg{width:1.15rem;height:1.15rem}
+.clinical-visit-patient-meta{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.35rem .75rem;margin:0}
+.clinical-visit-patient-meta>div{min-width:0}
+.clinical-visit-patient-meta dt{color:#607680;font-size:.61rem}
+.clinical-visit-patient-meta dd{margin:.08rem 0 0;overflow:hidden;color:#17333d;font-size:.69rem;font-weight:600;text-overflow:ellipsis;white-space:nowrap}
+.clinical-visit-sections{display:grid;gap:.65rem}
+.clinical-visit-sections .clinical-dashboard-card .p-card-header{background:linear-gradient(90deg,#087b96,#0b7185)}
+.clinical-visit-sections .clinical-card-header{min-height:2.5rem;margin:0;padding:.25rem .65rem;border:0}
+.clinical-visit-sections .clinical-card-header h2{padding:0;border:0;color:#fff;font-size:.88rem}
+.clinical-visit-sections .clinical-card-header-actions .p-button{width:1.8rem;height:1.8rem;color:#fff}
+.clinical-visit-sections .clinical-dashboard-card .p-card-body{padding:.55rem .7rem}
+.clinical-visit-sections .clinical-dashboard-card .p-card-content{padding:0}
+@media(max-width:800px){.clinical-visit-header{grid-template-columns:1fr}.clinical-visit-header .toolbar{justify-content:flex-start}.clinical-visit-provider{grid-template-columns:1fr}.clinical-visit-provider>div+div{padding-top:.45rem;padding-left:0;border-top:1px solid #d7e2e5;border-left:0}.clinical-visit-patient-meta{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.clinical-visit-selector-value{gap:.2rem}.clinical-visit-selector-value strong{font-size:.66rem}.clinical-visit-patient-summary{grid-template-columns:auto minmax(0,1fr) auto}.clinical-visit-demographics{grid-column:2/-1}.clinical-visit-patient-meta{grid-template-columns:1fr}}
+@media print{.clinical-visit-header .toolbar,.clinical-visit-selector-button,.clinical-visit-tabs,.clinical-card-header-actions,.topbar{display:none!important}.clinical-visit-page{padding:0}.clinical-visit-workspace{max-width:none}.clinical-visit-sections{gap:.35rem}}

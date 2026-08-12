@@ -1,0 +1,21 @@
+# Copie este archivo como .env.local para desarrollo fuera de Docker.
+# Con Docker Compose no es necesario: Apache mantiene OpenMRS y la
+# configuracion en el mismo origen https://localhost.
+NEXT_PUBLIC_OPENMRS_BASE=/openmrs
+NEXT_PUBLIC_CONFIG_BASE=/bahmni_config/openmrs/apps
+NEXT_PUBLIC_IMPLEMENTATION_CONFIG_BASE=/implementation_config/openmrs/apps
+NEXT_PUBLIC_I18N_BASE=/bahmni_config/openmrs/i18n
+NEXT_PUBLIC_IMPLEMENTATION_I18N_BASE=/implementation_config/openmrs/i18n
+NEXT_PUBLIC_BUNDLED_I18N_BASE=/bahmni/i18n
+NEXT_PUBLIC_LEGACY_BAHMNI_BASE=/bahmni
+NEXT_PUBLIC_DEFAULT_LOCALE=es
+NEXT_PUBLIC_CLINICAL_CONSULTATION_ENABLED=true
+
+# IPS permanece deshabilitado hasta disponer de un mediador same-origin.
+# Nunca agregue credenciales a variables NEXT_PUBLIC_*.
+NEXT_PUBLIC_IPS_ENABLED=false
+NEXT_PUBLIC_IPS_PDQM_BASE=/ips-mediator/pdqm
+NEXT_PUBLIC_IPS_REGIONAL_BASE=/ips-mediator/regional
+NEXT_PUBLIC_IPS_VHL_GENERATE_PATH=/ips-mediator/vhl/_generate
+NEXT_PUBLIC_IPS_VHL_RESOLVE_PATH=/ips-mediator/vhl/_resolve
+NEXT_PUBLIC_ICVP_FROM_BUNDLE_PATH=/ips-mediator/icvpcert/_from-bundle

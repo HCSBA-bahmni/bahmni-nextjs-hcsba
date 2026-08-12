@@ -4,7 +4,7 @@ import { dashboardControlTypes, getDashboardControlAdapter } from "./DashboardCo
 describe("dashboard control registry", () => {
   it("registers every control type configured by HCSBA", () => {
     expect([...dashboardControlTypes]).toEqual(expect.arrayContaining([
-      "patientInformation", "allergies", "formsV2React", "ipsReact", "ipsIcvpReact", "diagnosis", "custom", "navigationLinksControl", "disposition", "treatment", "radiology", "programs", "ordersControl", "pacsOrders", "bacteriologyResultsControl", "labOrders", "observation", "flowSheet", "vitals", "visits", "admissionDetails", "conditionsList", "forms", "obsToObsFlowSheet", "allOrdersReact", "observationGraph", "historyAndExamination", "drugOrderDetails", "chronicTreatmentChart",
+      "patientInformation", "allergies", "formsV2React", "ipsReact", "ipsIcvpReact", "diagnosis", "custom", "navigationLinksControl", "disposition", "treatment", "radiology", "patientFiles", "programs", "ordersControl", "pacsOrders", "bacteriologyResultsControl", "labOrders", "observation", "flowSheet", "vitals", "visits", "admissionDetails", "conditionsList", "forms", "obsToObsFlowSheet", "allOrdersReact", "observationGraph", "historyAndExamination", "drugOrderDetails", "chronicTreatmentChart",
     ]));
   });
 

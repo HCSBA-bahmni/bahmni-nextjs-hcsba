@@ -15,6 +15,8 @@ export interface ClinicalDashboardContext {
   timeZone: string;
   privilegeNames: ReadonlySet<string>;
   tabs: ClinicalDashboardTab[];
+  surface?: "dashboard" | "visit";
+  visitProviderName?: string;
 }
 
 export interface DashboardControlState {

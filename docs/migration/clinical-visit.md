@@ -1,0 +1,11 @@
+# Resumen clínico de una visita
+
+La ruta `/clinical/patient/[patientUuid]/visit/[visitUuid]` reemplaza a `patient.dashboard.visit`; no debe redirigir ni reutilizar silenciosamente el dashboard longitudinal. Carga `clinical/visit.json`, respeta sus pestañas y combina una copia literal de `visitMandatoryTab.json` sólo en la pestaña marcada con `defaultSections`. Esa copia es configuración de aplicación, no una lista paralela reconstruida en TypeScript.
+
+Antes de renderizar se normalizan los aliases propios de la vista legacy (`pivotTable` a `flowSheet`, `prescription` a `treatment` y `order` a `ordersControl`) y se añade `patientUuid` y `visitUuids: [visitUuid]` al `config` de cada sección. Diagnóstico, observaciones, flujogramas, órdenes, laboratorios y documentos deben consumir ese alcance; mostrar datos longitudinales aquí rompe la semántica clínica de la vista. El render conserva además el mismo conjunto de casos de `visitSummary.html`: una sección presente en el JSON pero ausente de su `ng-switch` no se introduce artificialmente en la pestaña.
+
+La vista conserva navegación hacia la visita anterior y siguiente en orden cronológico, marca la visita activa, obtiene el primer profesional de los tipos de encuentro configurados para la pestaña y mantiene el evento de auditoría `VIEWED_VISIT_DASHBOARD`. Como en `VisitController`, la consulta de detalle usada para obtener el profesional es auxiliar: su error no puede bloquear una visita inactiva que ya está presente en el historial.
+
+Legacy gobierna el contenido y Next gobierna la presentación. El selector, el contexto de atención y la información del paciente usan tarjetas, badges, iconos y colapso del sistema visual migrado; no deben imitar tablas, bordes ni colores de Angular. Esta modernización no habilita campos o controles adicionales: la lista de widgets continúa saliendo de la combinación configurada y del conjunto admitido por `visitSummary.html`.
+
+La presencia en `visit.json` no implica que siempre exista una caja visible. En particular, `pivotTable.html` usa `ng-if="hasData"`; por eso `Vitals Flowsheet` debe desaparecer por completo cuando `tabularData` no contiene filas. No aplicar esta regla indiscriminadamente: diagnóstico, observaciones, laboratorio y documentos mantienen sus estados vacíos según sus propios templates legacy.
