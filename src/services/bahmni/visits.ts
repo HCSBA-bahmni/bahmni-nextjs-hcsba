@@ -3,9 +3,13 @@ import { bahmniRequest, queryString } from "./http";
 import type { Visit } from "@/types/bahmni";
 import type { Form2Observation } from "@/features/forms/form2";
 
-const visit = z.object({ uuid: z.string(), startDatetime: z.string(), stopDatetime: z.string().nullish() }).loose();
+const visitDate = z.union([z.string(), z.number()]).transform((value) => {
+  if (typeof value === "string") return value;
+  return new Date(value < 10_000_000_000 ? value * 1000 : value).toISOString();
+});
+const visit = z.object({ uuid: z.string(), startDatetime: visitDate, stopDatetime: visitDate.nullish() }).loose();
 const list = z.object({ results: z.array(visit) }).loose();
-const visitSummary = z.object({ admissionDetails: z.unknown().nullish(), dischargeDetails: z.unknown().nullish(), visitType: z.unknown().optional(), stopDateTime: z.string().nullish(), stopDatetime: z.string().nullish() }).loose();
+const visitSummary = z.object({ admissionDetails: z.unknown().nullish(), dischargeDetails: z.unknown().nullish(), visitType: z.unknown().optional(), startDateTime: z.union([z.string(), z.number()]).nullish(), stopDateTime: z.union([z.string(), z.number()]).nullish(), stopDatetime: z.union([z.string(), z.number()]).nullish() }).loose();
 
 export async function getActiveVisits(patientUuid: string): Promise<Visit[]> {
   return getPatientVisits(patientUuid, false);
@@ -13,6 +17,10 @@ export async function getActiveVisits(patientUuid: string): Promise<Visit[]> {
 
 export async function getPatientVisits(patientUuid: string, includeInactive = true): Promise<Visit[]> {
   return (await bahmniRequest(`/ws/rest/v1/visit${queryString({ patient: patientUuid, includeInactive, v: "custom:(uuid,visitType,startDatetime,stopDatetime,location,encounters:(uuid))" })}`, { schema: list })).results as Visit[];
+}
+
+export async function getVisitDetails(visitUuid: string): Promise<Visit> {
+  return await bahmniRequest(`/ws/rest/v1/visit/${encodeURIComponent(visitUuid)}${queryString({ v: "custom:(uuid,visitType,startDatetime,stopDatetime,location,encounters:(uuid,encounterDatetime,provider:(uuid,display),encounterType:(uuid,display)))" })}`, { schema: visit }) as Visit;
 }
 
 export async function startVisit(patientUuid: string, visitTypeUuid: string, locationUuid: string): Promise<Visit> {

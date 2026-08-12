@@ -1,6 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Form2Observation } from "@/features/forms/form2";
-import { buildRegistrationEncounterPayload, toEncounterWireObservations } from "./visits";
+import { buildRegistrationEncounterPayload, getPatientVisits, getVisitDetails, getVisitSummary, toEncounterWireObservations } from "./visits";
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe("visit details contract", () => {
+  it("requests the encounter provider metadata used by the legacy visit header", async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => { void input; return new Response(JSON.stringify({ uuid: "visit/1", startDatetime: "2026-03-31T10:00:00Z", encounters: [] }), { status: 200, headers: { "content-type": "application/json" } }); });
+    vi.stubGlobal("fetch", fetchMock);
+    await getVisitDetails("visit/1");
+    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(url).toContain("/openmrs/ws/rest/v1/visit/visit%2F1?");
+    expect(decodeURIComponent(url)).toContain("provider:(uuid,display)");
+  });
+
+  it("accepts the numeric date representation returned by older inactive visits", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ results: [{ uuid: "old-visit", startDatetime: 1444129200000, stopDatetime: 1458882000000 }] }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    const [oldVisit] = await getPatientVisits("patient", true);
+    expect(oldVisit?.startDatetime).toBe("2015-10-06T11:00:00.000Z");
+    expect(oldVisit?.stopDatetime).toBe("2016-03-25T05:00:00.000Z");
+  });
+
+  it("does not reject a legacy summary whose admission dates are numeric", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ visitType: "IPD", startDateTime: 1444129200000, stopDateTime: 1458882000000 }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(getVisitSummary("old-visit")).resolves.toMatchObject({ visitType: "IPD", startDateTime: 1444129200000 });
+  });
+});
 
 describe("toEncounterWireObservations", () => {
   it("matches the minimal recursive concept contract sent by Angular", () => {

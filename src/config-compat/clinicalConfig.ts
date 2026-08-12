@@ -68,5 +68,5 @@ export const supportedClinicalSectionTypes = new Set([
   "programs", "navigationLinksControl", "forms", "formsV2React", "disposition", "treatment",
   "drugOrderDetails", "chronicTreatmentChart", "ordersControl", "labOrders", "radiology",
   "pacsOrders", "bacteriologyResultsControl", "admissionDetails", "allOrdersReact", "ipsReact",
-  "ipsIcvpReact", "custom",
+  "ipsIcvpReact", "patientFiles", "custom",
 ]);
