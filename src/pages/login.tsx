@@ -9,6 +9,16 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { resolveLoginDestination } from "@/config-compat/legacyRoutes";
 import { useAuth } from "@/features/auth/AuthContext";
+import {
+  claimKeycloakLoginRedirect,
+  clearKeycloakLoginRedirect,
+  consumeKeycloakReturnUrl,
+  isKeycloakAuth,
+  isKeycloakLogoutReturn,
+  keycloakLoginUrl,
+  keycloakLogoutUrl,
+  rememberKeycloakReturnUrl,
+} from "@/features/auth/authMode";
 import * as authApi from "@/services/bahmni/auth";
 import { audit } from "@/services/bahmni/audit";
 import { loadLocaleLanguages, loadLoginConfig, loadWhiteLabel } from "@/services/bahmni/config";
@@ -30,6 +40,7 @@ function navigateRemembered(rememberedUrl: string): void {
 
 export default function LoginPage() {
   const { authenticate, session, location, loading, error: sessionError } = useAuth();
+  const keycloakAuth = isKeycloakAuth();
   const router = useRouter();
   const [needsOtp, setNeedsOtp] = useState(false);
   const [error, setError] = useState("");
@@ -66,16 +77,30 @@ export default function LoginPage() {
   }, [localeConfig.data]);
   const timezoneMismatch = Boolean(serverTime.data?.offset && !new Date().toString().includes(serverTime.data.offset));
   const rawReturnUrl = router.query.returnUrl ?? router.query.from;
+  const loggedOut = isKeycloakLogoutReturn(router.query.loggedOut);
   const whiteListedDomains = useMemo(() => Array.isArray(loginConfig.data?.whiteListedDomains)
     ? loginConfig.data.whiteListedDomains.filter((value): value is string => typeof value === "string")
     : [], [loginConfig.data]);
 
   useEffect(() => {
-    if (!router.isReady || loading || busy || loginConfig.isLoading || !session?.authenticated) return;
-    const destination = resolveLoginDestination(rawReturnUrl, whiteListedDomains, window.location.origin);
+    if (!keycloakAuth || loggedOut || !router.isReady || loading || session?.authenticated || sessionError) return;
+    if (!claimKeycloakLoginRedirect()) return;
+    rememberKeycloakReturnUrl(rawReturnUrl);
+    window.location.replace(keycloakLoginUrl());
+  }, [keycloakAuth, loading, loggedOut, rawReturnUrl, router.isReady, session, sessionError]);
+
+  useEffect(() => {
+    if (loggedOut) clearKeycloakLoginRedirect();
+  }, [loggedOut]);
+
+  useEffect(() => {
+    if (loggedOut || !router.isReady || loading || busy || loginConfig.isLoading || !session?.authenticated) return;
+    clearKeycloakLoginRedirect();
+    const requestedReturnUrl = keycloakAuth ? consumeKeycloakReturnUrl() : rawReturnUrl;
+    const destination = resolveLoginDestination(requestedReturnUrl, whiteListedDomains, window.location.origin);
     if (location && destination.external) window.location.replace(destination.href);
-    else void router.replace(location ? destination.href : `/location?locale=${encodeURIComponent(locale)}&returnUrl=${encodeURIComponent(typeof rawReturnUrl === "string" ? rawReturnUrl : "/home")}`);
-  }, [busy, loading, locale, location, loginConfig.isLoading, rawReturnUrl, router, session, whiteListedDomains]);
+    else void router.replace(location ? destination.href : `/location?locale=${encodeURIComponent(locale)}&returnUrl=${encodeURIComponent(typeof requestedReturnUrl === "string" ? requestedReturnUrl : "/home")}`);
+  }, [busy, keycloakAuth, loading, locale, location, loggedOut, loginConfig.isLoading, rawReturnUrl, router, session, whiteListedDomains]);
 
   const submit = async (values: Values, resend = false) => {
     setBusy(true);
@@ -128,6 +153,36 @@ export default function LoginPage() {
       setBusy(false);
     }
   };
+
+  if (keycloakAuth) {
+    const message = sessionError
+      ?? (loggedOut
+        ? "Tu sesión se cerró correctamente."
+        : router.query.sessionExpired
+          ? "Tu sesión expiró. Vuelve a identificarte."
+          : "Serás redirigido al acceso seguro HCSBA.");
+    return <main className="centered"><section className="auth-card" aria-live="polite">
+      {logo && <Image unoptimized src={logo} width={180} height={90} style={{ objectFit: "contain" }} alt="Logo HCSBA" />}
+      <h1>Acceso HCSBA</h1>
+      <p>Bahmni · Identidad protegida por Keycloak</p>
+      {sessionError ? <div role="alert" className="error-banner">{message}</div> : <p>{message}</p>}
+      <Button
+        type="button"
+        label={sessionError ? "Cerrar sesión SSO" : loggedOut ? "Volver a iniciar sesión" : "Continuar con Keycloak"}
+        icon={sessionError ? "pi pi-sign-out" : "pi pi-shield"}
+        loading={loading && !sessionError}
+        className="w-full"
+        onClick={() => {
+          if (sessionError) window.location.replace(keycloakLogoutUrl());
+          else {
+            clearKeycloakLoginRedirect();
+            rememberKeycloakReturnUrl(rawReturnUrl);
+            if (claimKeycloakLoginRedirect()) window.location.replace(keycloakLoginUrl());
+          }
+        }}
+      />
+    </section></main>;
+  }
 
   return <main className="centered"><form className="auth-card" onSubmit={handleSubmit((values) => submit(values))}>
     {logo && <Image unoptimized src={logo} width={180} height={90} style={{ objectFit: "contain" }} alt="Logo HCSBA" />}

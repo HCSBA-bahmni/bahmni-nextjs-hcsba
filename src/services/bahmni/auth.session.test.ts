@@ -66,9 +66,9 @@ describe("legacy authentication persistence", () => {
   it("keeps the last login location when the server session is destroyed", async () => {
     persistLocation({ uuid: "location-1", display: "Urgencia" });
     Cookies.set("bahmni.user", "doctor", { path: "/" });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(undefined, { status: 204 }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(undefined, { status: 204, headers: { Location: "https://sso.example/logout" } }));
 
-    await logout();
+    await expect(logout()).resolves.toBe("https://sso.example/logout");
 
     expect(Cookies.get("bahmni.user")).toBeUndefined();
     expect(JSON.parse(Cookies.get("bahmni.user.location") ?? "{}")).toEqual({ uuid: "location-1", name: "Urgencia" });
