@@ -43,9 +43,15 @@ export async function loadAppTextAsset(app: string, fileName: string): Promise<s
 }
 
 export async function loadExtensions(app: string): Promise<AppExtension[]> {
+  return await loadExtensionFile(app, "extension.json");
+}
+
+/** Loads an alternate Bahmni extension descriptor, such as extension-programs.json. */
+export async function loadExtensionFile(app: string, fileName: string): Promise<AppExtension[]> {
+  if (!/^extension(?:-[A-Za-z0-9_-]+)?\.json$/.test(fileName)) throw new Error("Archivo de extensiones no permitido.");
   const [standard, custom] = await Promise.all([
-    getJson(`${baseConfig}/${app}/extension.json`, true),
-    getJson(`${implementationConfig}/${app}/extension.json`, true),
+    getJson(`${baseConfig}/${app}/${fileName}`, true),
+    getJson(`${implementationConfig}/${app}/${fileName}`, true),
   ]);
   const merged = mergeExtensions(standard, custom);
   const extensions: AppExtension[] = Object.entries(merged).map(([id, value]) => ({ id, ...(value as Omit<AppExtension, "id">) }));

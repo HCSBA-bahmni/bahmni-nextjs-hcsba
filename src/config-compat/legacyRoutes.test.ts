@@ -16,6 +16,7 @@ describe("legacy bookmarks", () => {
 describe("dashboard navigation", () => {
   it.each([
     ["../registration/index.html", "/bahmni/registration", "next"],
+    ["../clinical/#/programs/patient/search", "/bahmni/clinical/programs", "next"],
     ["../clinical/index.html#/default/patient/search", "/bahmni/clinical", "next"],
     ["../bedmanagement/#/bedManagement", "/bahmni/bedmanagement/manage", "next"],
     ["../adt/#/patient/p1/visit/v1/", "/bahmni/adt/patient/p1/visit/v1", "next"],
@@ -44,6 +45,8 @@ describe("return URL safety", () => {
 describe("legacy fallbacks", () => {
   it("maps the home dashboard", () => expect(resolveLegacyRoute("/bahmni/home/index.html", "#/dashboard")).toBe("/home"));
   it("maps the clinical patient dashboard", () => expect(resolveLegacyRoute("/bahmni/clinical/index.html", "#/default/patient/p1/dashboard")).toBe("/clinical/patient/p1/dashboard"));
+  it("maps the legacy program patient search", () => expect(resolveLegacyRoute("/bahmni/clinical/index.html", "#/programs/patient/search")).toBe("/clinical/programs"));
+  it("maps the legacy program patient detail", () => expect(resolveLegacyRoute("/bahmni/clinical/index.html", "#/programs/patient/p1/consultationContext")).toBe("/clinical/programs/patient/p1"));
   it("maps the Care View patient dashboard and preserves its source", () => expect(resolveLegacyRoute("/bahmni/clinical/index.html", "#/default/patient/p1/dashboard/visit/ipd/v1?source=careViewDashboard")).toBe("/clinical/patient/p1/dashboard/visit/ipd/v1?source=careViewDashboard"));
   it("maps a legacy clinical visit", () => expect(resolveLegacyRoute("/bahmni/clinical/index.html", "#/default/patient/p1/dashboard/visit/v1/summary")).toBe("/clinical/patient/p1/visit/v1"));
   it("maps a legacy consultation board with its context", () => expect(resolveLegacyRoute("/bahmni/clinical/index.html", "#/programs/patient/p1/treatment?encounterUuid=e1&enrollment=pg1")).toBe("/clinical/patient/p1/consultation/treatment?encounterUuid=e1&enrollment=pg1&configName=programs"));
