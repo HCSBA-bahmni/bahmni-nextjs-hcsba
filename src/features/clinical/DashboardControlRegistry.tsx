@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import Cookies from "js-cookie";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "primereact/button";
 import { Avatar } from "primereact/avatar";
@@ -11,6 +10,7 @@ import type { ComponentType } from "react";
 import type { JsonObject } from "@/config-compat/merge";
 import { ClinicalMfeHost } from "@/features/microfrontends/MfeHost";
 import { loadAppConfig, loadAppTextAsset } from "@/services/bahmni/config";
+import { getPersistedUsername } from "@/services/bahmni/auth";
 import { getPatientConditionHistory, getPatientDiagnoses, getPatientObservations, getPatientPrograms, type ClinicalRecord } from "@/services/bahmni/clinical";
 import { discardGesNotification, getAppointments, getAssignedBed, getBacteriologyResults, getDashboardOrders, getDiseaseSummaryData, getDispositions, getDrugOrderDetails, getDrugRegimen, getEncountersForEncounterType, getGesNotifications, getIpdVisitMedications, getLabOrderResults, getObservationEncounterUuid, getObservationFlowSheet, getOrderTypes, getPrescribedAndActiveDrugOrders, sendPatientEmail, type DashboardRecord } from "@/services/bahmni/dashboard";
 import { getEncounterConfiguration } from "@/services/bahmni/metadata";
@@ -27,7 +27,7 @@ import { resolveClinicalNavigationLinks } from "./navigationLinks";
 import { AllergyHeaderAction } from "./allergies/AllergyHeaderAction";
 import { AllergyDashboardControl } from "./allergies/AllergyDashboardControl";
 import { normalizeDashboardDiagnoses } from "./diagnosisRecords";
-import { BedIcon } from "./BedIcon";
+import { AssignedBedBadge } from "@/features/ipd/AssignedBedBadge";
 import { normalizeOrderFulfillmentRecords } from "./orderFulfillmentRecords";
 import { normalizeDashboardPrograms } from "./programRecords";
 import { normalizeAdmissionDetails } from "./admissionDetails";
@@ -35,6 +35,7 @@ import { renderTreatmentPdf, treatmentDocument } from "./treatmentDocument";
 import { IpdTreatmentScheduleDialog } from "@/features/ipd/ipd-dashboard/IpdTreatmentScheduleDialog";
 import { resolveTreatmentScheduleAction, type TreatmentScheduleAction, type TreatmentScheduleConfig } from "@/features/ipd/ipd-dashboard/treatmentSchedule";
 import { getPrnScheduledOrderUuids } from "@/services/bahmni/ipdTreatments";
+import { hasActiveAdmission, registrationVisitUrl, resolveVisitManagementAction } from "./visitManagement";
 
 export interface DashboardControlAdapter {
   type: string;
@@ -133,7 +134,7 @@ function PatientInformationControl(props: DashboardControlProps) {
     .filter((value): value is string => Boolean(value))
     .join(", ");
   const summary = asRecord(props.context.visitSummary);
-  const admitted = Boolean(props.context.visit && !props.context.visit.stopDatetime && Object.keys(asRecord(summary.admissionDetails)).length);
+  const admitted = Boolean(props.context.visit && !props.context.visit.stopDatetime && hasActiveAdmission(summary));
   useReport(props, false, null, 1);
   if (props.context.surface === "visit") {
     const address = patient.addressFields ?? {};
@@ -144,7 +145,7 @@ function PatientInformationControl(props: DashboardControlProps) {
         <Avatar image={patient.image} icon="pi pi-user" size="large" shape="circle" />
         <div><strong>{patient.name}</strong><span>{patient.identifier || "—"}</span></div>
         <span className="clinical-visit-demographics"><b>{gender}</b><b>{patient.age ?? "—"} años</b></span>
-        {admitted && <span className="clinical-admission-indicator" role="img" aria-label="Paciente hospitalizado" title="Paciente hospitalizado"><BedIcon /></span>}
+        {props.context.visit && !props.context.visit.stopDatetime && <AssignedBedBadge patientUuid={patient.uuid} showAdmittedWithoutBed={admitted} />}
       </header>
       <dl className="clinical-visit-patient-meta">
         <div><dt>Localidad</dt><dd>{address.cityVillage || "—"}</dd></div>
@@ -159,7 +160,7 @@ function PatientInformationControl(props: DashboardControlProps) {
     <div className="clinical-patient-profile-summary">
       <Avatar image={patient.image} icon="pi pi-user" size="xlarge" shape="circle" />
       <div><strong>{patient.name}</strong><span>{patient.identifier || "—"}</span><small>{[patient.gender, patient.age !== undefined ? `${patient.age} años` : undefined, patient.bloodGroup].filter(Boolean).join(" · ")}</small></div>
-      {admitted && <span className="clinical-admission-indicator" role="img" aria-label="Paciente hospitalizado" title="Paciente hospitalizado"><BedIcon /></span>}
+      {props.context.visit && !props.context.visit.stopDatetime && <AssignedBedBadge patientUuid={patient.uuid} showAdmittedWithoutBed={admitted} />}
     </div>
     <dl className="clinical-details">
       <div><dt>Identificador</dt><dd>{patient.identifier || "—"}</dd></div><div><dt>Nombre</dt><dd>{patient.name}</dd></div><div><dt>Sexo</dt><dd>{patient.gender || "—"}</dd></div><div><dt>Edad</dt><dd>{patient.age ?? "—"}{patient.birthDateEstimated ? " (est.)" : ""}</dd></div>
@@ -176,7 +177,21 @@ function VisitsControl(props: DashboardControlProps) {
   const maximum = Number(activeConfig(props).maximumNoOfVisits ?? 8);
   const visits = props.context.visits.slice(0, Number.isFinite(maximum) ? maximum : 8);
   useReport(props, false, null, visits.length);
-  return <div className="clinical-visits">{visits.map((visit: Visit) => <Link className={visit.uuid === props.context.visit?.uuid ? "selected" : ""} key={visit.uuid} href={{ pathname: `/clinical/patient/${props.context.patient.uuid}/dashboard`, query: { visitUuid: visit.uuid } }}><strong>{visit.visitType?.display ?? visit.visitType?.name ?? "Visita"}</strong><span>{dateOf(visit.startDatetime, props.context.locale, props.context.timeZone)}</span><small>{visit.stopDatetime ? `Cerrada ${dateOf(visit.stopDatetime, props.context.locale, props.context.timeZone)}` : "Activa"}</small></Link>)}</div>;
+  return <div className="clinical-visits">{visits.map((visit: Visit) => {
+    const selected = visit.uuid === props.context.visit?.uuid;
+    const management = resolveVisitManagementAction(visit, props.context.visit?.uuid, props.context.visitSummary, props.context.privilegeNames);
+    const status = visit.stopDatetime
+      ? `Cerrada ${dateOf(visit.stopDatetime, props.context.locale, props.context.timeZone)}`
+      : management?.pendingDischargeClosure ? "Alta registrada · pendiente de cierre" : "Activa";
+    return <article className={`clinical-visit-row ${selected ? "selected" : ""}`} key={visit.uuid}>
+      <Link className="clinical-visit-select" href={{ pathname: `/clinical/patient/${props.context.patient.uuid}/dashboard`, query: { visitUuid: visit.uuid } }} aria-current={selected ? "true" : undefined}>
+        <strong>{visit.visitType?.display ?? visit.visitType?.name ?? "Visita"}</strong>
+        <span>{dateOf(visit.startDatetime, props.context.locale, props.context.timeZone)}</span>
+        <small>{status}</small>
+      </Link>
+      {management && <Link className="clinical-visit-action" href={registrationVisitUrl(props.context.patient.uuid, visit.uuid)} aria-label={`Finalizar visita ${visit.visitType?.display ?? visit.visitType?.name ?? "seleccionada"}`}><i className="pi pi-sign-out" aria-hidden="true" />{management.label}</Link>}
+    </article>;
+  })}</div>;
 }
 
 function NavigationControl(props: DashboardControlProps) {
@@ -731,13 +746,13 @@ function AppointmentsControl(props: DashboardControlProps) {
   useReport(props, loading, error, upcomingAppointments.length + pastAppointments.length);
   const domain = typeof appConfig.data?.config === "object" ? valueOf(asRecord(appConfig.data.config).teleConsultationDomain) : valueOf(appConfig.data?.teleConsultationDomain);
   const table = (items: DashboardAppointment[], upcomingTable: boolean) => items.length ? <div className="dashboard-matrix-scroll"><table className="dashboard-matrix"><thead><tr><th>Fecha</th><th>Horario</th><th>Detalle</th><th>Estado</th>{upcomingTable && <th>Teleconsulta</th>}</tr></thead><tbody>{items.map((appointment) => <tr key={appointment.uuid}><td>{appointment.date ? new Intl.DateTimeFormat(props.context.locale, { dateStyle: "medium" }).format(appointment.date) : "—"}</td><td>{appointment.slot}</td><td>{Object.entries(appointment.details).filter(([key]) => key !== "DASHBOARD_APPOINTMENTS_STATUS_KEY").map(([, value]) => valueOf(value)).filter((value) => value !== "—").join(" · ") || "—"}</td><td>{appointment.status || "—"}</td>{upcomingTable && <td>{appointment.kind === "Virtual" && appointment.status === "Scheduled" ? <Button text icon="pi pi-video" label="Unirse" onClick={() => { const url = appointmentMeetingUrl(appointment, domain); if (url) window.open(url, "_blank", "noopener,noreferrer"); }} /> : "—"}</td>}</tr>)}</tbody></table></div> : <p className="muted-text">No hay citas.</p>;
-  return <QueryFrame loading={loading} error={error} empty={false} retry={() => { void upcoming.refetch(); void past.refetch(); void appConfig.refetch(); }}><h3>Próximas citas</h3>{table(upcomingAppointments, true)}<h3>Citas pasadas</h3>{table(pastAppointments, false)}<a className="p-button p-component p-button-outlined" href="/appointments/#/home/manage/appointments/list" target="_blank" rel="noreferrer">Gestionar citas</a></QueryFrame>;
+  return <QueryFrame loading={loading} error={error} empty={false} retry={() => { void upcoming.refetch(); void past.refetch(); void appConfig.refetch(); }}><h3>Próximas citas</h3>{table(upcomingAppointments, true)}<h3>Citas pasadas</h3>{table(pastAppointments, false)}<a className="p-button p-component p-button-outlined" href={`/bahmni/appointments/list?patientUuid=${encodeURIComponent(props.context.patient.uuid)}`}>Gestionar citas</a></QueryFrame>;
 }
 
 function GesControl(props: DashboardControlProps) {
   const query = useQuery({ queryKey: ["clinical-dashboard", "ges", props.context.patient.identifier], queryFn: () => getGesNotifications(props.context.patient.identifier) });
   const data = query.data ?? [];
-  const practitioner = Cookies.get("bahmni.user") ?? "";
+  const practitioner = getPersistedUsername() ?? "";
   const discard = useMutation({ mutationFn: (id: string) => discardGesNotification(id, practitioner), onSuccess: () => query.refetch() });
   useReport(props, query.isLoading, query.error, data.length);
   const statuses: Record<string, string> = { P: "Pendiente", N: "Notificada", D: "Descartada", F: "Firmada por paciente" };

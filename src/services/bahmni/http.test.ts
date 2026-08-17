@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BahmniApiError, bahmniRequest, getBahmniErrorTechnicalDetails } from "./http";
+import { abortPendingBahmniRequests, BahmniApiError, bahmniRequest, getBahmniErrorTechnicalDetails } from "./http";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -45,6 +45,17 @@ describe("getBahmniErrorTechnicalDetails", () => {
 });
 
 describe("bahmniRequest response compatibility", () => {
+  it("aborts authenticated requests that are still in flight when logout begins", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+    }));
+
+    const pending = bahmniRequest("/ws/rest/v1/user");
+    abortPendingBahmniRequests();
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  });
+
   it("preserves plain text when HCSBA declares an invalid JSON content type", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("Consultation", { status: 200, headers: { "Content-Type": "application/json" } }));
     await expect(bahmniRequest("/ws/rest/v1/bahmnicore/sql/globalproperty?property=bahmni.encounterType.default")).resolves.toBe("Consultation");

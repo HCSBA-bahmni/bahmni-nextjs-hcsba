@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { addBedTag, assignBed, dischargePatient, endVisitAndCreateEncounter, getWardListRows, normalizeBed, removeBedTag, updateBedStatus } from "./ipd";
+import { addBedTag, assignBed, dischargePatient, endVisitAndCreateEncounter, getWardListRows, normalizeBed, removeBedTag, unassignBed, updateBedStatus } from "./ipd";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -62,5 +62,13 @@ describe("IPD service mappers", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/openmrs/ws/rest/v1/beds/7");
     expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "POST", body: JSON.stringify({ patientUuid: "patient", encounterUuid: "encounter" }) });
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe("/openmrs/ws/rest/v1/bahmnicore/discharge");
+  });
+
+  it("uses the bed-management contract to release an orphaned assignment", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await unassignBed(7, "patient/uuid");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/openmrs/ws/rest/v1/beds/7?patientUuid=patient%2Fuuid");
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "DELETE" });
   });
 });

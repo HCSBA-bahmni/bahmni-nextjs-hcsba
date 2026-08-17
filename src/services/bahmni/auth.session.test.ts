@@ -2,6 +2,7 @@ import Cookies from "js-cookie";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getProviderForUser,
+  getPersistedUsername,
   getCurrentUser,
   login,
   loadAuthenticatedContext,
@@ -42,9 +43,10 @@ describe("legacy authentication persistence", () => {
     await expect(login("doctor", "correcta")).resolves.toBeUndefined();
   });
 
-  it("stores the username string expected by AngularJS instead of a user JSON object", () => {
+  it("stores the JSON string expected by AngularJS cookieStore", () => {
     persistCurrentUser(user);
-    expect(Cookies.get("bahmni.user")).toBe("doctor");
+    expect(Cookies.get("bahmni.user")).toBe(JSON.stringify("doctor"));
+    expect(getPersistedUsername()).toBe("doctor");
   });
 
   it("accepts privileges and roles without UUID while requesting UUIDs when available", async () => {
@@ -66,9 +68,9 @@ describe("legacy authentication persistence", () => {
   it("keeps the last login location when the server session is destroyed", async () => {
     persistLocation({ uuid: "location-1", display: "Urgencia" });
     Cookies.set("bahmni.user", "doctor", { path: "/" });
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(undefined, { status: 204 }));
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(undefined, { status: 204, headers: { Location: "https://sso.example/logout" } }));
 
-    await logout();
+    await expect(logout()).resolves.toBe("https://sso.example/logout");
 
     expect(Cookies.get("bahmni.user")).toBeUndefined();
     expect(JSON.parse(Cookies.get("bahmni.user.location") ?? "{}")).toEqual({ uuid: "location-1", name: "Urgencia" });

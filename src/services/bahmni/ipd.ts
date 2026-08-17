@@ -122,6 +122,10 @@ export async function assignBed(bedId: number, patientUuid: string, encounterUui
   await bahmniRequest(`/ws/rest/v1/beds/${bedId}`, { method: "POST", body: JSON.stringify({ patientUuid, encounterUuid }) });
 }
 
+export async function unassignBed(bedId: number, patientUuid: string): Promise<void> {
+  await bahmniRequest(`/ws/rest/v1/beds/${bedId}${queryString({ patientUuid })}`, { method: "DELETE" });
+}
+
 export async function updateBedStatus(bedUuid: string, status: "AVAILABLE" | "RESERVED" | "BLOCKED"): Promise<void> {
   await bahmniRequest(`/ws/rest/v1/bed/${encodeURIComponent(bedUuid)}`, { method: "POST", body: JSON.stringify({ status }) });
 }

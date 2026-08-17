@@ -21,7 +21,8 @@ describe("dashboard navigation", () => {
     ["../bedmanagement/#/bedManagement", "/bahmni/bedmanagement/manage", "next"],
     ["../adt/#/patient/p1/visit/v1/", "/bahmni/adt/patient/p1/visit/v1", "next"],
     ["../orders/#/search", "/bahmni/orders/#/search", "legacy"],
-    ["../../appointments", "/appointments", "service"],
+    ["../../appointments", "/bahmni/appointments/summary", "next"],
+    ["/bahmni/appointments", "/bahmni/appointments", "next"],
     ["/implementer-interface", "/implementer-interface", "service"],
   ])("resolves %s", (input, href, kind) => expect(resolveExtensionUrl(input)).toEqual({ href, kind }));
 

@@ -17,7 +17,18 @@ test.beforeEach(async ({ page }) => {
 
 test("renders configured queues and the coordinate-based ward map without legacy bundles", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
-  await page.route("**/openmrs/ws/rest/v1/bahmnicore/sql**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ uuid: "patient", identifier: "SYN-1", name: "Paciente Sintético", activeVisitUuid: "visit" }]) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/sql**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([
+    { uuid: "patient", identifier: "SYN-1", name: "Paciente Sintético", activeVisitUuid: "visit", hasBeenAdmitted: true },
+    { uuid: "patient-without-bed", identifier: "SYN-2", name: "Paciente Sin Cama", activeVisitUuid: "visit-2", hasBeenAdmitted: true },
+  ]) }));
+  await page.route("**/openmrs/ws/rest/v1/beds?**", (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    expect(params.has("visitUuid")).toBe(false);
+    expect(params.has("s")).toBe(false);
+    const patientUuid = params.get("patientUuid");
+    const results = patientUuid === "patient" ? [{ bedId: 2, bedUuid: "bed-2", bedNumber: "A-2", physicalLocation: { name: "Sala 1", parentLocation: { uuid: "ward", display: "Medicina" } } }] : [];
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ results }) });
+  });
   await page.route("**/openmrs/ws/rest/v1/admissionLocation/", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ ward: { uuid: "ward", name: "Medicina" } }] }) }));
   await page.route("**/openmrs/ws/rest/v1/admissionLocation/ward**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ ward: { uuid: "ward", name: "Medicina" }, bedLayouts: [
     { bedId: 1, bedUuid: "bed-1", bedNumber: "A-1", status: "AVAILABLE", rowNumber: 1, columnNumber: 1, location: "Sala 1", patients: [], bedTagMaps: [] },
@@ -33,6 +44,8 @@ test("renders configured queues and the coordinate-based ward map without legacy
   await expect(page.getByRole("heading", { name: "Hospitalización" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Buscar paciente" })).toBeVisible();
   await expect(page.getByText("Paciente Sintético")).toBeVisible();
+  await expect(page.getByLabel("Cama asignada: A-2")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Paciente Sin Cama/ }).locator(".clinical-bed-badge")).toHaveCount(0);
   await page.getByRole("textbox", { name: "Buscar paciente" }).fill("sin coincidencia");
   await expect(page.getByText("Sin pacientes encontrados")).toBeVisible();
   await page.getByRole("textbox", { name: "Buscar paciente" }).fill("");
@@ -119,6 +132,36 @@ test("renders the configured IPD dashboard with translated typed controls", asyn
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
   expect(await page.locator("script[src*='angular'],script[src*='/ipd/']").count()).toBe(0);
+});
+
+test("treats an admitted patient without a current bed as pending bed assignment", async ({ page }) => {
+  await page.route("**/bahmni_config/openmrs/apps/adt/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { dashboard: { sections: {
+    patient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY", displayOrder: 0 },
+  } } } }) }));
+  await page.route("**/implementation_config/openmrs/apps/adt/*.json", (route) => route.fulfill({ status: 404 }));
+  await page.route("**/bahmni_config/openmrs/apps/adt/extension.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    admit: { extensionPointId: "org.bahmni.adt.admit.action", order: 1, extensionParams: { action: "admit", display: "Admitir" } },
+    transfer: { extensionPointId: "org.bahmni.adt.transfer.action", order: 2, extensionParams: { action: "transfer", display: "Transferir" } },
+    discharge: { extensionPointId: "org.bahmni.adt.discharge.action", order: 3, extensionParams: { action: "discharge", display: "Dar de alta" } },
+  }) }));
+  await page.route("**/openmrs/ws/rest/v1/patientprofile/patient**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { identifiers: [{ identifier: "SYN-1" }], person: { names: [{ display: "Paciente Sin Cama" }], age: 30, gender: "F", addresses: [] } } }) }));
+  await page.route("**/openmrs/ws/rest/v1/visit?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "visit", startDatetime: "2026-08-05T10:00:00.000-04:00", stopDatetime: null, visitType: { display: "IPD" } }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ admissionDetails: { uuid: "admission" }, dischargeDetails: null, stopDateTime: null }) }));
+  await page.route("**/openmrs/ws/rest/v1/beds?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/concept?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ answers: [
+    { uuid: "admit", name: "Admitir", mappings: [{ conceptReferenceTerm: { code: "ADMIT", conceptSource: { name: "org.openmrs.module.emrapi" } } }] },
+    { uuid: "transfer", name: "Transferir", mappings: [{ conceptReferenceTerm: { code: "TRANSFER", conceptSource: { name: "org.openmrs.module.emrapi" } } }] },
+    { uuid: "discharge", name: "Dar de alta", mappings: [{ conceptReferenceTerm: { code: "DISCHARGE", conceptSource: { name: "org.openmrs.module.emrapi" } } }] },
+  ] }] }) }));
+
+  await page.goto("/bahmni/adt/patient/patient/visit/visit");
+
+  await expect(page.getByText("Admitido sin cama")).toBeVisible();
+  await expect(page.getByLabel("Cama asignada")).toHaveCount(0);
+  await page.getByRole("button", { name: "Seleccionar" }).click();
+  await expect(page.getByRole("option", { name: "Admitir" })).toBeVisible();
+  await expect(page.getByRole("option", { name: "Transferir" })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Dar de alta" })).toHaveCount(0);
 });
 
 test("keeps the legacy administrative mode when a bed is selected without a patient", async ({ page }) => {
@@ -253,6 +296,7 @@ test("does not create an encounter when another user occupied the transfer desti
 
 test("discharges an admitted patient with the legacy payload and confirms that the bed was released", async ({ page }) => {
   let assigned = true;
+  let discharged = false;
   let dischargePayload: Record<string, unknown> | undefined;
   const bed = () => ({ bedId: 1, bedUuid: "bed-1", bedNumber: "A-1", status: assigned ? "OCCUPIED" : "AVAILABLE", rowNumber: 1, columnNumber: 1, location: "Sala 1", patients: assigned ? [{ uuid: "patient", display: "Paciente Sintético" }] : [], bedTagMaps: [], physicalLocation: { name: "Sala 1", parentLocation: { uuid: "ward", name: "Medicina" } } });
   await page.route("**/openmrs/ws/rest/v1/admissionLocation/", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ ward: { uuid: "ward", name: "Medicina" } }] }) }));
@@ -260,10 +304,12 @@ test("discharges an admitted patient with the legacy payload and confirms that t
   await page.route("**/openmrs/ws/rest/v1/beds?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: assigned ? [bed()] : [] }) }));
   await page.route("**/openmrs/ws/rest/v1/patientprofile/patient**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { identifier: "SYN-1", person: { display: "Paciente Sintético", age: 30, gender: "F" } } }) }));
   await page.route("**/openmrs/ws/rest/v1/visit**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "visit", startDatetime: "2026-08-07T10:00:00.000-0400", stopDatetime: null, visitType: { uuid: "ipd", display: "IPD" } }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ admissionDetails: { uuid: "admission" }, dischargeDetails: discharged ? { uuid: "discharge-encounter" } : null, stopDateTime: null }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/config/bahmniencounter**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ encounterTypes: { ADMISSION: "admission", TRANSFER: "transfer", DISCHARGE: "discharge" }, visitTypes: { IPD: "ipd" } }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/discharge", (route) => {
     dischargePayload = route.request().postDataJSON() as Record<string, unknown>;
     assigned = false;
+    discharged = true;
     return route.fulfill({ contentType: "application/json", body: "{}" });
   });
 
@@ -280,6 +326,7 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   let assigned = false;
   let careTeamPayload: Record<string, unknown> | undefined;
   let careSearchKeys: string[] = [];
+  let careSearchRequests = 0;
   await page.route("**/bahmni_config/openmrs/apps/careViewDashboard/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ pageSizeOptions: [10, 20], defaultPageSize: 10, timeframeLimitInHours: 2 }) }));
   await page.route("**/implementation_config/openmrs/apps/careViewDashboard/app.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/bahmni_config/openmrs/apps/ipdDashboard/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
@@ -299,6 +346,7 @@ test("renders the native Care View workflow and confirms a current-shift care-te
     careTeamDetails: { participants: assigned ? [{ uuid: "participant", providerUuid: "provider", providerName: "Super Man" }] : [] },
   }], totalPatients: 1 }) }));
   await page.route("**/openmrs/ws/rest/v1/ipd/wards/ward/patients/search?**", (route) => {
+    careSearchRequests += 1;
     const url = new URL(route.request().url());
     careSearchKeys = url.searchParams.getAll("searchKeys");
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ admittedPatients: [{
@@ -321,8 +369,13 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   await page.route("**/openmrs/ws/rest/v1/tasks?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([]) }));
   await page.route("**/openmrs/ws/rest/v1/ipd/careteam/participants", (route) => {
     careTeamPayload = route.request().postDataJSON() as Record<string, unknown>;
+    const request = (careTeamPayload.careTeamParticipantsRequest as Array<Record<string, number | string>>)[0];
     assigned = true;
-    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: "participant" }) });
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({
+      uuid: "care-team",
+      patientUuid: "patient",
+      participants: [{ uuid: "participant", provider: { uuid: "provider", display: "Super Man" }, startTime: Number(request.startTime) * 1_000, endTime: Number(request.endTime) * 1_000, voided: false }],
+    }) });
   });
 
   await page.goto("/bahmni/bedmanagement/care-view");
@@ -341,7 +394,15 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   expect(careSearchKeys).toEqual(["bedNumber", "patientIdentifier", "patientName"]);
   await page.getByRole("button", { name: "Asignarme" }).click();
   await expect(page.locator(".p-toast-message-success")).toContainText("Paciente asignado para el turno vigente.");
-  expect(careTeamPayload).toMatchObject({ patientUuid: "patient", careTeamParticipantsRequest: [{ providerUuid: "provider" }] });
+  expect(careTeamPayload).toMatchObject({ patientUuid: "patient", visitUuid: "visit", careTeamParticipantsRequest: [{ providerUuid: "provider" }] });
+  const participantRequest = (careTeamPayload?.careTeamParticipantsRequest as Array<Record<string, unknown>>)[0];
+  expect(participantRequest.startTime).toEqual(expect.any(Number));
+  expect(participantRequest.endTime).toEqual(expect.any(Number));
+  expect(Number(participantRequest.startTime)).toBeLessThan(10_000_000_000);
+  expect(Number(participantRequest.endTime) - Number(participantRequest.startTime)).toBe(86_340);
+  await expect(page.getByText("Responsable:").locator("strong")).toHaveText("Super Man");
+  await expect(page.getByRole("button", { name: "Retirarme" })).toBeVisible();
+  expect(careSearchRequests).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   // PrimeReact fades the Toast in; inspect accessibility after its temporary
   // opacity no longer alters the effective contrast reported by Axe.
