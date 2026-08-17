@@ -21,7 +21,7 @@ import { documentUploadPatientDestination, filterDocumentUploadPatients, parseDo
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { loadAppFile, loadTranslations } from "@/services/bahmni/config";
 import { getClinicalQueuePatients, searchAllClinicalPatients } from "@/services/bahmni/clinical";
-import { attachDocumentUploadFiles, getDocumentUploadConcepts, getDocumentUploadEncounters, getEncounterTypeUuid, saveVisitDocument, uploadVisitDocumentFile, type DocumentUploadVisit, type PendingDocumentUploadFile } from "@/services/bahmni/documentUpload";
+import { attachDocumentUploadFiles, canModifyDocumentUploadFile, getDocumentUploadConcepts, getDocumentUploadEncounters, getEncounterTypeUuid, saveVisitDocument, uploadVisitDocumentFile, type DocumentUploadVisit, type PendingDocumentUploadFile } from "@/services/bahmni/documentUpload";
 import { getVisitTypes } from "@/services/bahmni/metadata";
 import { getPatientProfile } from "@/services/bahmni/patients";
 import { getPatientVisits } from "@/services/bahmni/visits";
@@ -418,6 +418,8 @@ function ExistingFiles({
   conceptsLoading,
   conceptsError,
   edits,
+  currentUserPersonUuid,
+  currentProviderUuid,
   onChange,
   onPreview,
 }: {
@@ -426,6 +428,8 @@ function ExistingFiles({
   conceptsLoading: boolean;
   conceptsError: boolean;
   edits: Record<string, ExistingDocumentEdit>;
+  currentUserPersonUuid?: string;
+  currentProviderUuid?: string;
   onChange(fileId: string, edit: ExistingDocumentEdit): void;
   onPreview(file: DocumentPreview): void;
 }) {
@@ -453,12 +457,13 @@ function ExistingFiles({
     const voided = edit.voided ?? file.voided ?? false;
     const notesVisible = openNotes.has(file.id);
     const fileName = documentImageName(file.encodedValue);
+    const canModify = canModifyDocumentUploadFile(file, currentUserPersonUuid, currentProviderUuid);
     return <li key={file.id} className={`${notesVisible ? "notes-open " : ""}${voided ? "voided" : ""}`.trim() || undefined}>
       <button type="button" className="document-upload-preview" onClick={() => onPreview({ title: conceptName, url: file.encodedValue, mimeType: file.encodedValue.toLocaleLowerCase().includes(".pdf") ? "application/pdf" : "image/*" })}>{file.encodedValue.toLocaleLowerCase().includes(".pdf") ? <i className="pi pi-file-pdf" aria-hidden="true" /> : <img src={file.encodedValue} alt="" />}</button>
       <div className="document-upload-file-main">
         <div className="field document-upload-type-field">
           <label className="document-upload-sr-only">Tipo de documento</label>
-          <Dropdown value={conceptUuid} options={optionsFor(file)} loading={conceptsLoading} disabled={conceptsLoading || conceptsError || voided} onChange={(event) => {
+          <Dropdown value={conceptUuid} options={optionsFor(file)} loading={conceptsLoading} disabled={!canModify || conceptsLoading || conceptsError || voided} onChange={(event) => {
             const concept = conceptByUuid.get(String(event.value));
             onChange(file.id, { ...edit, conceptUuid: concept?.uuid ?? String(event.value), conceptName: concept?.name ?? concept?.display ?? conceptName, dirty: true });
           }} filter scrollHeight="16rem" virtualScrollerOptions={baseOptions.length > 80 ? { itemSize: 38 } : undefined} placeholder={conceptsLoading ? "Cargando tipos..." : "Seleccione tipo"} panelClassName="document-upload-type-panel" />
@@ -468,11 +473,11 @@ function ExistingFiles({
       </div>
       <div className="document-upload-file-actions">
         <Button outlined severity={notesVisible ? "info" : "secondary"} icon={comment ? "pi pi-file-edit" : "pi pi-file-plus"} aria-label={notesVisible ? "Ocultar notas" : "Agregar notas"} title={notesVisible ? "Ocultar notas" : "Agregar notas"} onClick={() => toggleNotes(file.id)} className={comment ? "document-upload-note-toggle has-notes" : "document-upload-note-toggle"} />
-        <Button outlined severity={voided ? "secondary" : "danger"} icon={voided ? "pi pi-undo" : "pi pi-times"} aria-label={voided ? "Restaurar archivo" : "Quitar archivo"} title={voided ? "Restaurar archivo" : "Quitar archivo"} onClick={() => onChange(file.id, { ...edit, voided: !voided, dirty: true })} className="document-upload-remove" />
+        {canModify && <Button outlined severity={voided ? "secondary" : "danger"} icon={voided ? "pi pi-undo" : "pi pi-times"} aria-label={voided ? "Restaurar archivo" : "Quitar archivo"} title={voided ? "Restaurar archivo" : "Quitar archivo"} onClick={() => onChange(file.id, { ...edit, voided: !voided, dirty: true })} className="document-upload-remove" />}
       </div>
       {notesVisible && <div className="field document-upload-notes-field">
         <label className="document-upload-sr-only">Notas</label>
-        <InputTextarea rows={2} value={comment} disabled={voided} onChange={(event) => onChange(file.id, { ...edit, comment: event.target.value, dirty: true })} maxLength={255} placeholder="Notas" />
+        <InputTextarea rows={2} value={comment} disabled={!canModify || voided} onChange={(event) => onChange(file.id, { ...edit, comment: event.target.value, dirty: true })} maxLength={255} placeholder="Notas" />
       </div>}
     </li>;
   })}</ul>;
@@ -515,6 +520,7 @@ function DocumentUploadPatient({ patientUuid, encounterType, topLevelConcept, de
   const loading = profile.isLoading || visitTypes.isLoading || encounterTypeUuid.isLoading || visits.isLoading || encounters.isLoading;
   const failed = profile.isError || visitTypes.isError || encounterTypeUuid.isError || visits.isError || encounters.isError || encounterTypeUuid.data === undefined;
   const backHref = `/document-upload?${new URLSearchParams({ encounterType, topLevelConcept, ...(defaultOption ? { defaultOption } : {}) }).toString()}#/search`;
+  const currentUserPersonUuid = user?.person?.uuid;
 
   useEffect(() => {
     if (message?.type !== "success") return undefined;
@@ -554,6 +560,8 @@ function DocumentUploadPatient({ patientUuid, encounterType, topLevelConcept, de
       const visitStartDate = visitKey === "new" ? toIsoDate(newVisitStart) : visit?.startDatetime ?? null;
       const visitEndDate = visitKey === "new" ? toIsoDate(newVisitEnd) : visit?.stopDatetime ?? null;
       const encounterDateTime = visitEndDate ? visitStartDate : null;
+      const newVisitType = visitTypes.data?.find((type) => type.uuid === newVisitTypeUuid);
+      const visitTypeName = visitKey === "new" ? newVisitType?.name ?? newVisitType?.display : visit?.visitType?.name ?? visit?.visitType?.display;
       const existingDocuments = (visit?.files ?? []).flatMap((file) => {
         const edit = visitExistingEdits[file.id];
         if (!edit?.dirty) return [];
@@ -575,6 +583,8 @@ function DocumentUploadPatient({ patientUuid, encounterType, topLevelConcept, de
         providerUuid: provider?.uuid,
         visitUuid: visitKey === "new" ? undefined : visit?.uuid,
         locationUuid: location?.uuid,
+        visitTypeName,
+        encounterTypeName: encounterType,
         documents: [...existingDocuments, ...uploaded.map((image, index) => ({
           testUuid: files[index]?.conceptUuid ?? defaultConcept?.uuid,
           image,
@@ -667,7 +677,7 @@ function DocumentUploadPatient({ patientUuid, encounterType, topLevelConcept, de
                   <label htmlFor={`document-upload-file-${visit.uuid}`} className="p-button p-component p-button-outlined document-upload-file-button"><i className="pi pi-plus" /> Agregar documento</label>
                   <Button icon="pi pi-save" label="Guardar" disabled={!canSave(visitKey, visit) || save.isPending} loading={save.isPending} onClick={() => save.mutate({ visitKey, visit })} />
                 </div>
-                <ExistingFiles visit={visit} concepts={concepts.data ?? []} conceptsLoading={concepts.isLoading} conceptsError={concepts.isError} edits={existingEdits[visitKey] ?? {}} onChange={(fileId, edit) => updateExistingFile(visitKey, fileId, edit)} onPreview={setPreview} />
+                <ExistingFiles visit={visit} concepts={concepts.data ?? []} conceptsLoading={concepts.isLoading} conceptsError={concepts.isError} edits={existingEdits[visitKey] ?? {}} currentUserPersonUuid={currentUserPersonUuid} currentProviderUuid={provider?.uuid} onChange={(fileId, edit) => updateExistingFile(visitKey, fileId, edit)} onPreview={setPreview} />
                 <FileTiles files={pending} concepts={concepts.data ?? []} defaultConcept={defaultConcept} conceptsLoading={concepts.isLoading} conceptsError={concepts.isError} onChange={(file) => updateFile(visitKey, file)} onRemove={(fileId) => removeFile(visitKey, fileId)} onPreview={setPreview} />
                 {!visit.files.length && !pending.length && <p className="ipd-empty">Esta visita no tiene documentos cargados.</p>}
               </div>}

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { audit } from "./audit";
 import { bahmniRequest, queryString } from "./http";
 import type { Reference, Visit } from "@/types/bahmni";
 
@@ -44,6 +45,8 @@ export interface VisitDocumentPayload {
   providerUuid?: string;
   visitUuid?: string;
   locationUuid?: string;
+  visitTypeName?: string;
+  encounterTypeName?: string;
   documents: Array<{
     testUuid?: string;
     image: string;
@@ -52,6 +55,17 @@ export interface VisitDocumentPayload {
     voided?: boolean;
     comment?: string;
   }>;
+}
+
+export function canModifyDocumentUploadFile(file: Pick<DocumentUploadFile, "new" | "provider">, currentUserPersonUuid?: string, currentProviderUuid?: string): boolean {
+  if (file.new) return true;
+  const creatorUuid = file.provider?.uuid;
+  if (!creatorUuid) return false;
+  return creatorUuid === currentUserPersonUuid || creatorUuid === currentProviderUuid;
+}
+
+function auditMessage(message: string, params?: Record<string, unknown>): string {
+  return params ? `${message}~${JSON.stringify(params)}` : message;
 }
 
 function text(value: unknown): string | undefined {
@@ -151,9 +165,16 @@ export async function uploadVisitDocumentFile(file: PendingDocumentUploadFile, p
 
 export async function saveVisitDocument(payload: VisitDocumentPayload): Promise<Record<string, unknown>> {
   await Promise.all(payload.documents.filter((document) => document.voided && document.image).map((document) => bahmniRequest(`/ws/rest/v1/bahmnicore/visitDocument${queryString({ filename: document.image })}`, { method: "DELETE" })));
-  return await bahmniRequest("/ws/rest/v1/bahmnicore/visitDocument", {
+  const { visitTypeName, encounterTypeName, ...documentPayload } = payload;
+  const response = await bahmniRequest<Record<string, unknown>>("/ws/rest/v1/bahmnicore/visitDocument", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(documentPayload),
     schema: record,
   });
+  const auditModule = encounterTypeName ?? "MODULE_LABEL_HOME_KEY";
+  if (!payload.visitUuid) {
+    await audit("OPEN_VISIT", auditMessage("OPEN_VISIT_MESSAGE", { visitUuid: response.visitUuid, visitType: visitTypeName }), payload.patientUuid, auditModule);
+  }
+  await audit("EDIT_ENCOUNTER", auditMessage("EDIT_ENCOUNTER_MESSAGE", { encounterUuid: response.encounterUuid, encounterType: encounterTypeName }), payload.patientUuid, auditModule);
+  return response;
 }

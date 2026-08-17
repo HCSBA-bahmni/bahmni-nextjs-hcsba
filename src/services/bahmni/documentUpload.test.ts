@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { attachDocumentUploadFiles, documentFileType, getDocumentUploadConcepts, saveVisitDocument } from "./documentUpload";
+import { attachDocumentUploadFiles, canModifyDocumentUploadFile, documentFileType, getDocumentUploadConcepts, saveVisitDocument } from "./documentUpload";
 import type { Visit } from "@/types/bahmni";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -77,6 +77,14 @@ describe("document upload service", () => {
     expect(documentFileType("text/plain")).toBe("not_supported");
   });
 
+  it("allows modifying persisted files only for the creating provider or matching user person", () => {
+    expect(canModifyDocumentUploadFile({ new: true }, undefined, undefined)).toBe(true);
+    expect(canModifyDocumentUploadFile({ provider: { uuid: "provider-1" } }, "person-2", "provider-1")).toBe(true);
+    expect(canModifyDocumentUploadFile({ provider: { uuid: "person-1" } }, "person-1", "provider-2")).toBe(true);
+    expect(canModifyDocumentUploadFile({ provider: { uuid: "provider-1" } }, "person-2", "provider-2")).toBe(false);
+    expect(canModifyDocumentUploadFile({ provider: {} }, "person-1", "provider-1")).toBe(false);
+  });
+
   it("deletes voided document files before saving the visit document payload", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }))
@@ -98,5 +106,63 @@ describe("document upload service", () => {
     expect(deleteUrl.searchParams.get("filename")).toBe("image-a.png");
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "POST" });
     expect(postUrl.pathname).toBe("/openmrs/ws/rest/v1/bahmnicore/visitDocument");
+  });
+
+  it("audits open visit and edit encounter when document upload creates a visit", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ visitUuid: "visit-1", encounterUuid: "encounter-1" }), { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveVisitDocument({
+      patientUuid: "patient-1",
+      visitTypeUuid: "visit-type-1",
+      visitTypeName: "OPD",
+      encounterTypeUuid: "encounter-type-1",
+      encounterTypeName: "RADIOLOGY",
+      documents: [{ testUuid: "concept-1", image: "image-a.png" }],
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty("visitTypeName");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty("encounterTypeName");
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      eventType: "OPEN_VISIT",
+      message: 'OPEN_VISIT_MESSAGE~{"visitUuid":"visit-1","visitType":"OPD"}',
+      patientUuid: "patient-1",
+      module: "RADIOLOGY",
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body))).toEqual({
+      eventType: "EDIT_ENCOUNTER",
+      message: 'EDIT_ENCOUNTER_MESSAGE~{"encounterUuid":"encounter-1","encounterType":"RADIOLOGY"}',
+      patientUuid: "patient-1",
+      module: "RADIOLOGY",
+    });
+  });
+
+  it("audits only edit encounter when document upload updates an existing visit", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ encounterUuid: "encounter-1" }), { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await saveVisitDocument({
+      patientUuid: "patient-1",
+      visitUuid: "visit-1",
+      visitTypeUuid: "visit-type-1",
+      visitTypeName: "OPD",
+      encounterTypeUuid: "encounter-type-1",
+      encounterTypeName: "RADIOLOGY",
+      documents: [{ testUuid: "concept-1", image: "image-a.png" }],
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toMatchObject({
+      eventType: "EDIT_ENCOUNTER",
+      message: 'EDIT_ENCOUNTER_MESSAGE~{"encounterUuid":"encounter-1","encounterType":"RADIOLOGY"}',
+      patientUuid: "patient-1",
+      module: "RADIOLOGY",
+    });
   });
 });
