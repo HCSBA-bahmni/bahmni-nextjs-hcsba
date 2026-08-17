@@ -4,7 +4,7 @@ const patientUuid = "patient-orders";
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=", "base64");
 const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 
-interface Scenario { save?: "success" | "confirmed-failure" | "ambiguous-committed" }
+interface Scenario { upload?: "failure"; save?: "success" | "confirmed-failure" | "ambiguous-committed" }
 
 async function mockOrders(page: Page, scenario: Scenario = {}) {
   const captured = { uploads: 0, deletes: [] as string[], saves: [] as Array<Record<string, unknown>>, audits: [] as Array<Record<string, unknown>> };
@@ -27,7 +27,11 @@ async function mockOrders(page: Page, scenario: Scenario = {}) {
       if (scenario.save === "ambiguous-committed" && findCalls >= 3) return json(route, { encounterUuid: "encounter-reconciled", visitUuid: "visit-1", observations: [{ orderUuid: "order-1", concept: { uuid: "form" }, groupMembers: [{ orderUuid: "order-1", concept: { uuid: "summary" }, groupMembers: [{ orderUuid: "order-1", concept: { uuid: "notes" }, value: "Informe actualizado" }, { orderUuid: "order-1", concept: { uuid: "image" }, value: "patient/old.jpg", comment: "Frontal" }] }] }] });
       return json(route, existing);
     }
-    if (path.endsWith("/bahmnicore/visitDocument/uploadDocument") && method === "POST") { captured.uploads += 1; return json(route, { url: `patient/uploaded-${captured.uploads}.png` }); }
+    if (path.endsWith("/bahmnicore/visitDocument/uploadDocument") && method === "POST") {
+      captured.uploads += 1;
+      if (scenario.upload === "failure") return json(route, { error: { message: "upload rejected" } }, 500);
+      return json(route, { url: `patient/uploaded-${captured.uploads}.png` });
+    }
     if (path.endsWith("/bahmnicore/visitDocument") && method === "DELETE") { captured.deletes.push(url.searchParams.get("filename") ?? ""); return json(route, {}); }
     if (path.endsWith("/bahmnicore/bahmniencounter") && method === "POST") {
       captured.saves.push(JSON.parse(request.postData() ?? "{}") as Record<string, unknown>);
@@ -81,6 +85,18 @@ test("orders cleans an upload after a confirmed pre-commit failure", async ({ pa
   await expect(page.getByText("rejected", { exact: true })).toBeVisible();
   expect(captured.uploads).toBe(1); expect(captured.saves).toHaveLength(1);
   await expect.poll(() => captured.deletes).toEqual(["patient/uploaded-1.png"]); expect(captured.audits).toHaveLength(0);
+});
+
+test("orders stops without encounter persistence when the file upload fails", async ({ page }) => {
+  const captured = await mockOrders(page, { upload: "failure" });
+  await openForm(page);
+  await page.locator("input[type=file]").setInputFiles({ name: "new.png", mimeType: "image/png", buffer: png });
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByText("upload rejected", { exact: true })).toBeVisible();
+  expect(captured.uploads).toBe(1);
+  expect(captured.saves).toHaveLength(0);
+  expect(captured.deletes).toHaveLength(0);
+  expect(captured.audits).toHaveLength(0);
 });
 
 test("orders reconciles an ambiguous post-commit timeout without delete or retry", async ({ page }) => {

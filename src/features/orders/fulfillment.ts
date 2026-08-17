@@ -64,7 +64,7 @@ export async function loadOrderFulfillment(patientUuid: string, orderType: strin
   const formMembers = fulfillmentFormMembers(formConcept);
   const [rawOrders, encounterResult] = await Promise.all([
     getDashboardOrders({ patientUuid, orderTypeUuid, conceptNames, includeObs: false }),
-    context?.locationUuid ? findActiveOrderEncounter({ patientUuid, locationUuid: context.locationUuid, providerUuid: context.providerUuid }).catch(() => ({})) : Promise.resolve({}),
+    context?.locationUuid ? findActiveOrderEncounter({ patientUuid, locationUuid: context.locationUuid, providerUuid: context.providerUuid }) : Promise.resolve({}),
   ]);
   const encounter: RecordValue = encounterResult;
   const formConceptUuid = text(formConcept?.uuid);
@@ -169,7 +169,10 @@ async function reconcileAmbiguousSave(params: { patientUuid: string; locationUui
 export async function persistOrderFulfillment(params: { patientUuid: string; locationUuid: string; providerUuid?: string; orderType: string; formConceptUuid: string; members: FulfillmentFormMember[]; orders: OrderFulfillmentRecord[]; drafts: Record<string, FulfillmentDraft> }, dependencies: FulfillmentPersistenceDependencies = persistenceDependencies): Promise<RecordValue> {
   const hasContent = Object.values(params.drafts).some((draft) => draft.changed === true);
   if (!hasContent) throw new Error("Debe ingresar al menos un resultado antes de guardar.");
-  const previous: RecordValue = await dependencies.findEncounter({ patientUuid: params.patientUuid, locationUuid: params.locationUuid, providerUuid: params.providerUuid }).catch(() => ({}));
+  // Existing observation UUIDs are required to update/void the legacy tree safely.
+  // If OpenMRS cannot provide the current encounter, stop before uploading or saving;
+  // treating that failure as an empty encounter could create duplicate observations.
+  const previous: RecordValue = await dependencies.findEncounter({ patientUuid: params.patientUuid, locationUuid: params.locationUuid, providerUuid: params.providerUuid });
   const uploaded: string[] = [];
   let saveAttempted = false;
   let cleanupHandled = false;

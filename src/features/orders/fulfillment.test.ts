@@ -85,6 +85,16 @@ describe("legacy order fulfillment configuration", () => {
     expect(dependencies.cleanup).not.toHaveBeenCalled();
   });
 
+  it("stops before uploads and saves when OpenMRS cannot load the existing encounter", async () => {
+    const { dependencies, params } = persistenceFixture();
+    dependencies.findEncounter.mockRejectedValue(new Error("encounter lookup failed"));
+    await expect(persistOrderFulfillment(params, dependencies)).rejects.toThrow("encounter lookup failed");
+    expect(dependencies.upload).not.toHaveBeenCalled();
+    expect(dependencies.saveEncounter).not.toHaveBeenCalled();
+    expect(dependencies.cleanup).not.toHaveBeenCalled();
+    expect(dependencies.writeAudit).not.toHaveBeenCalled();
+  });
+
   it("removes uploaded files after a confirmed pre-commit rejection", async () => {
     const { dependencies, params } = persistenceFixture();
     dependencies.saveEncounter.mockRejectedValue(new BahmniApiError(400, "encounter rejected"));
