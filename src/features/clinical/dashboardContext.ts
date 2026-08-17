@@ -8,6 +8,9 @@ export interface ClinicalDashboardContext {
   visits: Visit[];
   visitSummary?: Record<string, unknown>;
   enrollmentUuid?: string;
+  programUuid?: string;
+  dateEnrolled?: string;
+  dateCompleted?: string;
   user: BahmniUser | null;
   provider: BahmniProvider | null;
   location: BahmniLocation | null;

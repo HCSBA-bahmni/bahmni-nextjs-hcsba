@@ -34,6 +34,9 @@ export default function ClinicalDashboardPage() {
   const requestedVisitUuid = typeof router.query.visitUuid === "string" ? router.query.visitUuid : "";
   const requestedTab = typeof router.query.tab === "string" ? router.query.tab : "";
   const enrollmentUuid = typeof router.query.enrollment === "string" ? router.query.enrollment : undefined;
+  const programUuid = typeof router.query.programUuid === "string" ? router.query.programUuid : undefined;
+  const dateEnrolled = typeof router.query.dateEnrolled === "string" ? router.query.dateEnrolled : undefined;
+  const dateCompleted = typeof router.query.dateCompleted === "string" ? router.query.dateCompleted : undefined;
   const pendingConsultation = router.query.pending === "consultation";
   const allowed = hasPrivilege(user, "app:clinical");
   const profile = useQuery({ queryKey: ["patient", patientUuid], queryFn: () => getPatientProfile(patientUuid), enabled: allowed && Boolean(patientUuid) });
@@ -53,7 +56,7 @@ export default function ClinicalDashboardPage() {
   const locale = user?.userProperties?.defaultLocale ?? "es";
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Santiago";
   const privilegeNames = useMemo(() => new Set(user?.privileges.map((privilege) => privilege.name ?? privilege.display).filter((value): value is string => Boolean(value)) ?? []), [user]);
-  const dashboardContext = patient ? ({ patient, visit: selectedVisit, visits: visits.data ?? [], visitSummary: visitSummary.data as Record<string, unknown> | undefined, enrollmentUuid, user, provider, location, locale, timeZone, privilegeNames, tabs }) : undefined;
+  const dashboardContext = patient ? ({ patient, visit: selectedVisit, visits: visits.data ?? [], visitSummary: visitSummary.data as Record<string, unknown> | undefined, enrollmentUuid, programUuid, dateEnrolled, dateCompleted, user, provider, location, locale, timeZone, privilegeNames, tabs }) : undefined;
   const loading = profile.isLoading || dashboard.isLoading || visits.isLoading || visitLocation.isLoading || visitSummary.isLoading;
   const consultationEnabled = runtimeConfig.data?.features.clinicalConsultationEnabled === true;
   const canAccessAdt = hasPrivilege(user, "app:adt");
@@ -67,11 +70,11 @@ export default function ClinicalDashboardPage() {
     const domain = query.queryKey[0];
     return domain === "clinical-dashboard" || domain === "clinical" || domain === "encounter-config" || domain === "app-config" || domain === "runtime-config";
   } });
-  const scrollKey = `${patientUuid}:${selectedVisit?.uuid ?? ""}:${currentTab?.id ?? ""}`;
+  const scrollKey = `${patientUuid}:${selectedVisit?.uuid ?? ""}:${enrollmentUuid ?? ""}:${currentTab?.id ?? ""}`;
   const dashboardReady = readyScrollKey === scrollKey;
   const visibleTabs = getVisibleDashboardTabs(tabs, openedTabIds, currentTab?.id);
   const unopenedTabs = getUnopenedDashboardTabs(tabs, openedTabIds, currentTab?.id);
-  const navigateToTab = (tabId: string) => void router.push({ pathname: `/clinical/patient/${patientUuid}/dashboard`, query: { ...(selectedVisit?.uuid ? { visitUuid: selectedVisit.uuid } : {}), tab: tabId } }, undefined, { shallow: true });
+  const navigateToTab = (tabId: string) => void router.push({ pathname: `/clinical/patient/${patientUuid}/dashboard`, query: { ...(selectedVisit?.uuid ? { visitUuid: selectedVisit.uuid } : {}), ...(enrollmentUuid ? { enrollment: enrollmentUuid } : {}), ...(programUuid ? { programUuid } : {}), ...(dateEnrolled ? { dateEnrolled } : {}), ...(dateCompleted ? { dateCompleted } : {}), tab: tabId } }, undefined, { shallow: true });
   const openTab = (tabId: string) => {
     setOpenedTabIds((current) => current.includes(tabId) ? current : [...current, tabId]);
     navigateToTab(tabId);

@@ -12,7 +12,7 @@ const standardLinks = [
   { name: "home", label: "Inicio", url: "/home", internal: true },
   { name: "visit", label: "Visita", url: "/clinical/patient/{{patientUuid}}/visit/{{visitUuid}}", internal: true },
   { name: "inpatient", label: "Hospitalización", url: "/adt/patient/{{patientUuid}}/visit/{{visitUuid}}", internal: true },
-  { name: "enrolment", label: "Programas", url: "/bahmni/clinical/index.html#/programs/patient/{{patientUuid}}/consultationContext", internal: false },
+  { name: "enrolment", label: "Programas", url: "/clinical/programs/patient/{{patientUuid}}", internal: true },
   { name: "visitAttribute", label: "Atributos de visita", url: "/registration/patient/{{patientUuid}}/visit?visitUuid={{visitUuid}}", internal: true },
   { name: "registration", label: "Registro", url: "/registration/patient/{{patientUuid}}", internal: true },
 ] as const;
@@ -21,14 +21,38 @@ export function patientAdtUrl(patientUuid: string, visitUuid: string) {
   return `/adt/patient/${encodeURIComponent(patientUuid)}/visit/${encodeURIComponent(visitUuid)}`;
 }
 
-export function activeConsultationRoute(patientUuid: string, visitUuid?: string, enrollmentUuid?: string) {
+export interface ProgramConsultationContext {
+  enrollmentUuid?: string;
+  programUuid?: string;
+  dateEnrolled?: string;
+  dateCompleted?: string;
+}
+
+function programContextFromCurrentUrl(): ProgramConsultationContext {
+  if (typeof window === "undefined") return {};
+  const params = new URLSearchParams(window.location.search);
+  return {
+    ...(params.get("programUuid") ? { programUuid: params.get("programUuid")! } : {}),
+    ...(params.get("enrollment") ? { enrollmentUuid: params.get("enrollment")! } : {}),
+    ...(params.get("dateEnrolled") ? { dateEnrolled: params.get("dateEnrolled")! } : {}),
+    ...(params.get("dateCompleted") ? { dateCompleted: params.get("dateCompleted")! } : {}),
+  };
+}
+
+/** Carries the same program scope through Next consultation boards as legacy Bahmni. */
+export function activeConsultationRoute(patientUuid: string, visitUuid?: string, program?: ProgramConsultationContext | string) {
+  const context = typeof program === "string" ? { ...programContextFromCurrentUrl(), enrollmentUuid: program } : program;
+  const programScoped = Boolean(context?.programUuid || context?.enrollmentUuid);
   return {
     pathname: `/clinical/patient/${patientUuid}/consultation/observations`,
     query: {
       encounterUuid: "active",
       ...(visitUuid ? { visitUuid } : {}),
-      configName: enrollmentUuid ? "programs" : "default",
-      ...(enrollmentUuid ? { enrollment: enrollmentUuid } : {}),
+      configName: programScoped ? "programs" : "default",
+      ...(context?.programUuid ? { programUuid: context.programUuid } : {}),
+      ...(context?.enrollmentUuid ? { enrollment: context.enrollmentUuid } : {}),
+      ...(context?.dateEnrolled ? { dateEnrolled: context.dateEnrolled } : {}),
+      ...(context?.dateCompleted ? { dateCompleted: context.dateCompleted } : {}),
     },
   };
 }

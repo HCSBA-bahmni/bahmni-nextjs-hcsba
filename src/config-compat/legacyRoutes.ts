@@ -12,6 +12,12 @@ export function resolveLegacyRoute(pathname: string, hash: string): string {
     return "/registration";
   }
   if (pathname.includes("/clinical/index.html")) {
+    if (cleanHash === "programs/patient/search") return "/clinical/programs";
+    const programPatient = cleanHash.match(/^programs\/patient\/([^/]+)\/consultationContext(?:\?([^#]+))?/);
+    if (programPatient?.[1]) {
+      const query = programPatient[2] ? `?${programPatient[2]}` : "";
+      return `/clinical/programs/patient/${programPatient[1]}${query}`;
+    }
     const ipdDashboard = cleanHash.match(/^(?:[^/]+)\/patient\/([^/]+)\/dashboard\/visit\/ipd\/([^/?]+)(?:\?([^#]+))?/);
     if (ipdDashboard?.[1] && ipdDashboard[2]) {
       const query = ipdDashboard[3] ? `?${ipdDashboard[3]}` : "";
@@ -102,6 +108,9 @@ export function resolveExtensionUrl(rawUrl?: string): ResolvedExtensionUrl {
     return { href, kind: "next" };
   }
   if (/^\/bahmni\/clinical(?:\/index\.html)?/i.test(resolved.pathname)) {
+    if (resolved.hash.replace(/^#\/?/, "") === "programs/patient/search") {
+      return { href: "/bahmni/clinical/programs", kind: "next" };
+    }
     const nextRoute = resolveLegacyRoute(resolved.pathname, resolved.hash);
     return { href: `/bahmni${nextRoute}${resolved.search}`, kind: "next" };
   }
