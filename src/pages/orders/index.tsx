@@ -8,8 +8,7 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { filterClinicalPatients } from "@/features/clinical/patientSearch";
 import { ordersPatientDestination, parseOrdersPatientSearchTabs } from "@/features/orders/patientSearch";
-import { hasAssignedBedFlag } from "@/features/adt/adtRules";
-import { BedIcon } from "@/features/ipd/BedIcon";
+import { AssignedBedBadge } from "@/features/ipd/AssignedBedBadge";
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { getClinicalQueuePatients } from "@/services/bahmni/clinical";
 import { loadExtensions } from "@/services/bahmni/config";
@@ -47,7 +46,7 @@ export default function OrdersSearchPage() {
         {selectedQueue?.data && patients.length === 0 && <div className="clinical-search-empty"><i className="pi pi-user-minus" aria-hidden="true" /><strong>Sin pacientes encontrados</strong><span>No hay pacientes que coincidan con este criterio.</span></div>}
         {selectedQueue?.data && patients.length > 0 && <div className="clinical-patient-results">{patients.map((patient) => {
           const name = String(patient.name ?? [patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ") ?? patient.identifier);
-          return <Link key={patient.uuid} href={ordersPatientDestination(selected, patient)}><span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span><span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span><span className="clinical-result-badges"><span className="clinical-result-context">{patient.activeVisitUuid ? "Visita activa" : "Sin visita activa"}</span>{hasAssignedBedFlag(patient) && <span className="clinical-bed-badge" title="Paciente con cama asignada" aria-label="Paciente con cama asignada"><BedIcon /></span>}</span><i className="pi pi-chevron-right" aria-hidden="true" /></Link>;
+          return <Link key={patient.uuid} href={ordersPatientDestination(selected, patient)}><span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span><span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span><span className="clinical-result-badges"><span className="clinical-result-context">{patient.activeVisitUuid ? "Visita activa" : "Sin visita activa"}</span><AssignedBedBadge patientUuid={String(patient.uuid ?? "")} /></span><i className="pi pi-chevron-right" aria-hidden="true" /></Link>;
         })}</div>}
       </>}
     </section>}

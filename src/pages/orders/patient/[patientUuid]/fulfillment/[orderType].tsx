@@ -6,7 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { toClinicalPatientContext } from "@/features/clinical/patientContext";
-import { loadOrderFulfillment, persistOrderFulfillment } from "@/features/orders/fulfillment";
+import { draftFromExistingObservations, loadOrderFulfillment, persistOrderFulfillment, type ClinicalOrderObservation } from "@/features/orders/fulfillment";
 import { FulfillmentForm, type PendingFulfillmentValues } from "@/features/orders/FulfillmentForm";
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { getPatientProfile } from "@/services/bahmni/patients";
@@ -25,7 +25,7 @@ export default function OrderFulfillmentPage() {
   const locale = user?.userProperties?.defaultLocale ?? "es";
   const allowed = hasPrivilege(user, "app:orders");
   const profile = useQuery({ queryKey: ["patient", patientUuid], queryFn: () => getPatientProfile(patientUuid), enabled: allowed && Boolean(patientUuid) });
-  const fulfillment = useQuery({ queryKey: ["orders", "fulfillment", patientUuid, orderType, locale], queryFn: () => loadOrderFulfillment(patientUuid, orderType, locale), enabled: allowed && Boolean(patientUuid && orderType) });
+  const fulfillment = useQuery({ queryKey: ["orders", "fulfillment", patientUuid, orderType, locale, location?.uuid, provider?.uuid], queryFn: () => loadOrderFulfillment(patientUuid, orderType, locale, { locationUuid: location?.uuid, providerUuid: provider?.uuid }), enabled: allowed && Boolean(patientUuid && orderType && location?.uuid) });
   const patient = profile.data ? toClinicalPatientContext(profile.data, patientUuid) : undefined;
   const loading = profile.isLoading || fulfillment.isLoading;
   const save = async () => {
@@ -50,7 +50,8 @@ export default function OrderFulfillmentPage() {
         {fulfillment.data.orders.length === 0 && <div className="clinical-search-empty"><i className="pi pi-inbox" aria-hidden="true" /><strong>Sin órdenes</strong><span>No hay {orderType} presentes para este paciente.</span></div>}
         <div className="orders-fulfillment-list">{fulfillment.data.orders.map((order) => {
           const source = order.source; const comment = text(source.commentToFulfiller);
-          return <details key={order.id} className="orders-fulfillment-order"><summary><span><i className="pi pi-chevron-right" aria-hidden="true" /><strong>{order.label}</strong></span><span>{order.hasObservations ? "Con resultados" : "Nueva"}</span></summary><div className="orders-fulfillment-summary"><dl className="clinical-details"><div><dt>Profesional</dt><dd>{order.provider || "—"}</dd></div><div><dt>Fecha de orden</dt><dd>{order.orderDate ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.orderDate)) : "—"}</dd></div><div><dt>Número de orden</dt><dd>{text(source.orderNumber) || "—"}</dd></div><div><dt>UUID de orden</dt><dd>{text(source.orderUuid ?? source.uuid) || "—"}</dd></div></dl>{comment && <p><i className="pi pi-comments" aria-hidden="true" /> {comment}</p>}<FulfillmentForm key={`${order.id}-${savedVersion}`} members={fulfillment.data.formMembers} onChange={(next) => setValues((current) => ({ ...current, [order.id]: next }))} /></div></details>;
+          const initialValues = draftFromExistingObservations(fulfillment.data.formMembers, order.observations as ClinicalOrderObservation[], fulfillment.data.formConceptUuid);
+          return <details key={order.id} className="orders-fulfillment-order"><summary><span><i className="pi pi-chevron-right" aria-hidden="true" /><strong>{order.label}</strong></span><span>{order.hasObservations ? "Con resultados" : "Nueva"}</span></summary><div className="orders-fulfillment-summary"><dl className="clinical-details"><div><dt>Profesional</dt><dd>{order.provider || "—"}</dd></div><div><dt>Fecha de orden</dt><dd>{order.orderDate ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(order.orderDate)) : "—"}</dd></div><div><dt>Número de orden</dt><dd>{text(source.orderNumber) || "—"}</dd></div><div><dt>UUID de orden</dt><dd>{text(source.orderUuid ?? source.uuid) || "—"}</dd></div></dl>{comment && <p><i className="pi pi-comments" aria-hidden="true" /> {comment}</p>}<FulfillmentForm key={`${order.id}-${savedVersion}`} members={fulfillment.data.formMembers} initialValues={initialValues} onChange={(next) => setValues((current) => ({ ...current, [order.id]: next }))} /></div></details>;
         })}</div>
         <div className="toolbar orders-save-toolbar"><Button icon="pi pi-save" label={saving ? "Guardando…" : "Guardar"} loading={saving} disabled={saving || !location?.uuid} onClick={() => void save()} /></div>
       </section>
