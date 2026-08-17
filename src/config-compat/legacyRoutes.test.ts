@@ -25,6 +25,8 @@ describe("dashboard navigation", () => {
     ["../orders/#/search", "/bahmni/orders", "next"],
     ["../../appointments", "/bahmni/appointments/summary", "next"],
     ["/bahmni/appointments", "/bahmni/appointments", "next"],
+    ["../document-upload/?encounterType=RADIOLOGY&topLevelConcept=All Radiology orders", "/bahmni/document-upload?encounterType=RADIOLOGY&topLevelConcept=All%20Radiology%20orders", "next"],
+    ["../document-upload/?encounterType=Patient Document&topLevelConcept=Patient Document&defaultOption=Patient file", "/bahmni/document-upload?encounterType=Patient%20Document&topLevelConcept=Patient%20Document&defaultOption=Patient%20file", "next"],
     ["/implementer-interface", "/implementer-interface", "service"],
   ])("resolves %s", (input, href, kind) => expect(resolveExtensionUrl(input)).toEqual({ href, kind }));
 

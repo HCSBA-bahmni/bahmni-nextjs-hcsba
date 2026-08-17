@@ -19,9 +19,12 @@ El proxy usa definiciones Apache declaradas en `NEXT_PROXY_DEFINES`. El valor ac
 - `NEXT_SHELL`: login, ubicación, Home, cambio de contraseña y logout.
 - `NEXT_REGISTRATION`: búsqueda, alta/edición, visita y segunda página de Registro.
 - `NEXT_APPOINTMENTS`: operación de Agenda en `/bahmni/appointments`; `/appointments` conserva la administración y el respaldo original. Sin el define, la ruta Next redirige al módulo original.
+- `NEXT_ORDERS`: búsqueda y cumplimiento de órdenes en `/bahmni/orders`; al retirar el define, el fallback general conserva el módulo AngularJS en la misma ruta.
 - `/bahmni/_next` y `/bahmni/api` permanecen siempre en Next.js mientras exista cualquier módulo migrado.
 - Las rutas sin interruptor continúan en `bahmni-web` por el fallback `/bahmni`.
 
 Para rollback de Registro se elimina solamente `-D NEXT_REGISTRATION` de `.env` y se recrea `proxy`. No se reinicia OpenMRS, no se modifica la base de datos y el contenedor Next puede seguir levantado. Cada módulo futuro añadirá su propia sección `<IfDefine NEXT_…>` antes del fallback.
 
 Para rollback de Agenda se elimina solamente `-D NEXT_APPOINTMENTS` y se recrea `proxy`. El acceso de Home seguirá funcionando porque Apache redirige `/bahmni/appointments` a `/appointments/`.
+
+Para rollback de Órdenes se elimina solamente `-D NEXT_ORDERS` y se recrea `proxy`. La configuración de Home no cambia: el mismo enlace volverá a resolverse mediante el fallback legacy.
