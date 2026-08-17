@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import Cookies from "js-cookie";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "primereact/button";
 import { Avatar } from "primereact/avatar";
@@ -11,6 +10,7 @@ import type { ComponentType } from "react";
 import type { JsonObject } from "@/config-compat/merge";
 import { ClinicalMfeHost } from "@/features/microfrontends/MfeHost";
 import { loadAppConfig, loadAppTextAsset } from "@/services/bahmni/config";
+import { getPersistedUsername } from "@/services/bahmni/auth";
 import { getPatientConditionHistory, getPatientDiagnoses, getPatientObservations, getPatientPrograms, type ClinicalRecord } from "@/services/bahmni/clinical";
 import { discardGesNotification, getAppointments, getAssignedBed, getBacteriologyResults, getDashboardOrders, getDiseaseSummaryData, getDispositions, getDrugOrderDetails, getDrugRegimen, getEncountersForEncounterType, getGesNotifications, getIpdVisitMedications, getLabOrderResults, getObservationEncounterUuid, getObservationFlowSheet, getOrderTypes, getPrescribedAndActiveDrugOrders, sendPatientEmail, type DashboardRecord } from "@/services/bahmni/dashboard";
 import { getEncounterConfiguration } from "@/services/bahmni/metadata";
@@ -731,13 +731,13 @@ function AppointmentsControl(props: DashboardControlProps) {
   useReport(props, loading, error, upcomingAppointments.length + pastAppointments.length);
   const domain = typeof appConfig.data?.config === "object" ? valueOf(asRecord(appConfig.data.config).teleConsultationDomain) : valueOf(appConfig.data?.teleConsultationDomain);
   const table = (items: DashboardAppointment[], upcomingTable: boolean) => items.length ? <div className="dashboard-matrix-scroll"><table className="dashboard-matrix"><thead><tr><th>Fecha</th><th>Horario</th><th>Detalle</th><th>Estado</th>{upcomingTable && <th>Teleconsulta</th>}</tr></thead><tbody>{items.map((appointment) => <tr key={appointment.uuid}><td>{appointment.date ? new Intl.DateTimeFormat(props.context.locale, { dateStyle: "medium" }).format(appointment.date) : "—"}</td><td>{appointment.slot}</td><td>{Object.entries(appointment.details).filter(([key]) => key !== "DASHBOARD_APPOINTMENTS_STATUS_KEY").map(([, value]) => valueOf(value)).filter((value) => value !== "—").join(" · ") || "—"}</td><td>{appointment.status || "—"}</td>{upcomingTable && <td>{appointment.kind === "Virtual" && appointment.status === "Scheduled" ? <Button text icon="pi pi-video" label="Unirse" onClick={() => { const url = appointmentMeetingUrl(appointment, domain); if (url) window.open(url, "_blank", "noopener,noreferrer"); }} /> : "—"}</td>}</tr>)}</tbody></table></div> : <p className="muted-text">No hay citas.</p>;
-  return <QueryFrame loading={loading} error={error} empty={false} retry={() => { void upcoming.refetch(); void past.refetch(); void appConfig.refetch(); }}><h3>Próximas citas</h3>{table(upcomingAppointments, true)}<h3>Citas pasadas</h3>{table(pastAppointments, false)}<a className="p-button p-component p-button-outlined" href="/appointments/#/home/manage/appointments/list" target="_blank" rel="noreferrer">Gestionar citas</a></QueryFrame>;
+  return <QueryFrame loading={loading} error={error} empty={false} retry={() => { void upcoming.refetch(); void past.refetch(); void appConfig.refetch(); }}><h3>Próximas citas</h3>{table(upcomingAppointments, true)}<h3>Citas pasadas</h3>{table(pastAppointments, false)}<a className="p-button p-component p-button-outlined" href={`/bahmni/appointments/list?patientUuid=${encodeURIComponent(props.context.patient.uuid)}`}>Gestionar citas</a></QueryFrame>;
 }
 
 function GesControl(props: DashboardControlProps) {
   const query = useQuery({ queryKey: ["clinical-dashboard", "ges", props.context.patient.identifier], queryFn: () => getGesNotifications(props.context.patient.identifier) });
   const data = query.data ?? [];
-  const practitioner = Cookies.get("bahmni.user") ?? "";
+  const practitioner = getPersistedUsername() ?? "";
   const discard = useMutation({ mutationFn: (id: string) => discardGesNotification(id, practitioner), onSuccess: () => query.refetch() });
   useReport(props, query.isLoading, query.error, data.length);
   const statuses: Record<string, string> = { P: "Pendiente", N: "Notificada", D: "Descartada", F: "Firmada por paciente" };
