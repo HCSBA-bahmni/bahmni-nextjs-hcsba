@@ -91,7 +91,7 @@ test("home loads HCSBA translations and normalizes legacy routes", async ({ page
 
 test("clinical dashboard uses HCSBA configuration and active visit context", async ({ page }) => {
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "login-location", display: "OPD-1" } }) }));
-  await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "clinical", name: "app:clinical" }], roles: [] }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "clinical", name: "app:clinical" }, { uuid: "close-visit", name: "app:common:closeVisit" }], roles: [] }] }) }));
   await page.route("**/openmrs/ws/rest/v1/provider**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "provider-1", display: "Super Man", attributes: [] }] }) }));
   await page.route("**/bahmni_config/openmrs/apps/clinical/dashboard.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ general: { translationKey: "DASHBOARD_TAB_GENERAL_KEY", displayByDefault: true, sections: { patientInformation: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY", displayOrder: 0, addressFields: ["cityVillage"] }, diagnosis: { type: "diagnosis", translationKey: "DASHBOARD_TITLE_DIAGNOSIS_KEY", displayOrder: 1 }, conditions: { type: "conditionsList", translationKey: "CONDITION_LIST_DISPLAY_CONTROL_TITLE", displayOrder: 3 }, treatments: { type: "treatment", translationKey: "DASHBOARD_TITLE_TREATMENTS_KEY", displayOrder: 4, dashboardConfig: { showFlowSheet: true, showListView: true, showRoute: true, showDrugForm: true, numberOfVisits: 5, showOtherActive: true, showDetailsButton: true } }, visits: { type: "visits", translationKey: "DASHBOARD_TITLE_VISITS_KEY", displayOrder: 7 }, labFulfillment: { type: "ordersControl", orderType: "Lab Order", translationKey: "DASHBOARD_TITLE_LAB_ORDERS_DISPLAY_CONTROL_KEY", displayOrder: 8, dashboardConfig: { conceptNames: [] }, expandedViewConfig: { conceptNames: [], showDetailsButton: true } }, forms: { type: "formsV2React", translationKey: "Observation Forms", displayOrder: 17, dashboardConfig: { maximumNoOfVisits: 10, showEditForActiveEncounter: true } } } }, trends: { translationKey: "DASHBOARD_TAB_TRENDS_KEY", displayByDefault: false, sections: { trendsPatient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY" } } }, patientSummary: { translationKey: "DASHBOARD_TAB_PATIENT_SUMMARY_KEY", displayByDefault: false, sections: { summaryPatient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY" } } } }) }));
   await page.route("**/implementation_config/openmrs/apps/clinical/dashboard.json", (route) => route.fulfill({ status: 404 }));
@@ -100,7 +100,7 @@ test("clinical dashboard uses HCSBA configuration and active visit context", asy
   await page.route("**/bahmni/i18n/clinical/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: "{}" }));
   await page.route("**/openmrs/ws/rest/v1/patientprofile/patient-1**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { identifiers: [{ identifier: "RUN*1-9" }], person: { gender: "F", age: 36, names: [{ givenName: "Ana", familyName: "Pérez" }], addresses: [{ address1: "No configurada", cityVillage: "Santiago" }] } } }) }));
   await page.route("**/openmrs/ws/rest/v1/visit**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "visit-1", startDatetime: "2026-08-03T10:00:00.000Z", stopDatetime: null, visitType: { uuid: "opd", display: "OPD" }, location: { uuid: "visit-location", display: "Consulta" }, encounters: [] }] }) }));
-  await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ admissionDetails: { uuid: "admission-1" }, startDateTime: "2026-08-03T10:00:00.000Z" }) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ admissionDetails: { uuid: "admission-1" }, dischargeDetails: { uuid: "discharge-1" }, startDateTime: "2026-08-03T10:00:00.000Z" }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/visitLocation/login-location", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: "visit-location", display: "Consulta" }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/diagnosis/search**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(Array.from({ length: 9 }, (_, index) => ({ uuid: `diagnosis-${index + 1}`, codedAnswer: { name: index === 0 ? "Hipertensión" : `Diagnóstico ${index + 1}` }, certainty: "CONFIRMED", order: "PRIMARY", diagnosisDateTime: `2026-08-${String(index + 1).padStart(2, "0")}T10:00:00.000Z` }))) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/drugOrders/prescribedAndActive**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
@@ -138,6 +138,8 @@ test("clinical dashboard uses HCSBA configuration and active visit context", asy
   await expect(page.getByText("Santiago", { exact: true })).toBeVisible();
   await expect(page.getByText("No configurada", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Visita activa")).toBeVisible();
+  await expect(page.getByText("Alta registrada · pendiente de cierre")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Finalizar visita OPD" })).toHaveAttribute("href", "/bahmni/registration/patient/patient-1/visit?visitUuid=visit-1");
   await expect(page.getByText("Signos vitales")).toBeVisible();
   await expect(page.getByText("Dra. HCSBA")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Cumplimiento de órdenes de Laboratorio" })).toBeVisible();
@@ -385,8 +387,9 @@ test("clinical search defaults to the active queue and keeps All as a distinct L
   await page.route("**/implementation_config/openmrs/i18n/clinical/locale_es.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/bahmni/i18n/clinical/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: "{}" }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/sql**", async (route) => {
-    sqlRequests += 1;
     const request = new URL(route.request().url());
+    if (request.pathname.endsWith("/globalproperty")) return route.fulfill({ contentType: "application/json", body: JSON.stringify("false") });
+    sqlRequests += 1;
     expect(request.searchParams.get("q")).toBe("emrapi.sqlSearch.activePatients");
     expect(request.searchParams.get("location_uuid")).toBe("login-location");
     expect(request.searchParams.get("provider_uuid")).toBe("provider-1");
@@ -396,12 +399,21 @@ test("clinical search defaults to the active queue and keeps All as a distinct L
     luceneRequest = new URL(route.request().url());
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({ pageOfResults: [{ uuid: "all-patient-1", identifier: "RUN*22-2", name: "Juan Todos" }, { uuid: "all-patient-2", identifier: "RUN*33-3", name: "Juana Todos" }] }) });
   });
+  await page.route("**/openmrs/ws/rest/v1/beds?**", (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    expect(params.has("visitUuid")).toBe(false);
+    expect(params.has("s")).toBe(false);
+    const patientUuid = params.get("patientUuid");
+    const results = patientUuid === "active-patient" ? [{ bedId: 7, bedUuid: "bed-7", bedNumber: "OPD-7", physicalLocation: { name: "Sala clínica", parentLocation: { uuid: "ward", display: "Medicina" } } }] : [];
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ results }) });
+  });
 
   await page.goto("/bahmni/clinical");
   await expect(page.getByRole("tab", { name: /Activos/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("Ana Activa")).toBeVisible();
   await expect(page.getByText("RUN*11-1")).toBeVisible();
   await expect(page.getByRole("link", { name: /Ana Activa/ })).toHaveAttribute("href", "/bahmni/clinical/patient/active-patient/dashboard?visitUuid=visit-active");
+  await expect(page.getByLabel("Cama asignada: OPD-7")).toBeVisible();
   expect(sqlRequests).toBe(1);
   await page.getByLabel("Paciente por nombre o identificador").fill("11-1");
   await expect(page.getByText("Ana Activa")).toBeVisible();
@@ -411,6 +423,7 @@ test("clinical search defaults to the active queue and keeps All as a distinct L
   await page.getByLabel("Paciente por nombre o identificador").fill("jua");
   await page.getByRole("button", { name: "Buscar" }).click();
   await expect(page.getByText("Juan Todos")).toBeVisible();
+  await expect(page.getByLabel(/Cama asignada/)).toHaveCount(0);
   const firstCard = await page.getByRole("link", { name: /Juan Todos/ }).boundingBox();
   const secondCard = await page.getByRole("link", { name: /Juana Todos/ }).boundingBox();
   expect(firstCard?.y).toBe(secondCard?.y);

@@ -8,9 +8,8 @@ import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { parseIpdConfig, parseIpdQueues } from "@/config-compat/ipdConfig";
-import { hasAssignedBedFlag } from "@/features/adt/adtRules";
 import { filterClinicalPatients } from "@/features/clinical/patientSearch";
-import { BedIcon } from "@/features/ipd/BedIcon";
+import { AssignedBedBadge } from "@/features/ipd/AssignedBedBadge";
 import { IpdModuleNavigation } from "@/features/ipd/IpdModuleNavigation";
 import { useIpdTranslations } from "@/features/ipd/useIpdTranslations";
 import { hasPrivilege } from "@/services/bahmni/auth";
@@ -30,7 +29,7 @@ function PatientRows({ patients }: { patients: PatientSearchResult[] }) {
       <span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span>
       <span className="clinical-result-badges">
         <span className="clinical-result-context">{patient.activeVisitUuid ? "Visita activa" : "Sin visita activa"}</span>
-        {hasAssignedBedFlag(patient) && <span className="clinical-bed-badge" title="Paciente con cama asignada" aria-label="Paciente con cama asignada"><BedIcon /></span>}
+        <AssignedBedBadge patientUuid={patient.uuid} />
       </span>
       <i className="pi pi-chevron-right" aria-hidden="true" />
     </Link>;

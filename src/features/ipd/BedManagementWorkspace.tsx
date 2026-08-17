@@ -22,7 +22,7 @@ import { hasPrivilege } from "@/services/bahmni/auth";
 import { loadAppConfig } from "@/services/bahmni/config";
 import { getEncounterConfiguration } from "@/services/bahmni/metadata";
 import { getPatientProfile } from "@/services/bahmni/patients";
-import { getActiveVisits } from "@/services/bahmni/visits";
+import { getActiveVisits, getVisitSummary } from "@/services/bahmni/visits";
 import { addBedTag, assignBed, createAdtEncounter, dischargePatient, endVisitAndCreateEncounter, getAdtConceptSet, getAssignedBed, getBed, getBedTags, getWard, getWardListRows, getWards, ipdQueryKeys, removeBedTag, updateBedStatus } from "@/services/bahmni/ipd";
 
 interface Props { patientUuid?: string; bedId?: number }
@@ -149,6 +149,7 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
       ...wardUuids.map((uuid) => client.invalidateQueries({ queryKey: ipdQueryKeys.ward(uuid) })),
       client.invalidateQueries({ queryKey: ipdQueryKeys.assignedBed(patientUuid) }),
       client.invalidateQueries({ queryKey: ipdQueryKeys.visit(patientUuid) }),
+      ...(activeVisit?.uuid ? [client.invalidateQueries({ queryKey: ["clinical-visit-summary", activeVisit.uuid] })] : []),
     ]);
   };
 
@@ -193,6 +194,12 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
       await reconcile([result.sourceWardUuid, result.destinationWardUuid]);
       const confirmedBed = patientUuid ? await getAssignedBed(patientUuid).catch(() => null) : null;
       let confirmed = current === "discharge" ? !confirmedBed : confirmedBed?.bedId === result.destinationBedId;
+      let dischargeConfirmed = current !== "discharge";
+      if (current === "discharge" && activeVisit?.uuid) {
+        const confirmedSummary = await getVisitSummary(activeVisit.uuid).catch(() => undefined);
+        if (confirmedSummary) client.setQueryData(["clinical-visit-summary", activeVisit.uuid], confirmedSummary);
+        dischargeConfirmed = Boolean(record(confirmedSummary?.dischargeDetails).uuid);
+      }
       const confirmationWardUuid = current === "discharge" ? result.sourceWardUuid : result.destinationWardUuid;
       if (!confirmed && confirmationWardUuid && patientUuid) {
         const confirmedWard = await getWard(confirmationWardUuid).catch(() => undefined);
@@ -203,7 +210,8 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
           confirmed = current === "discharge" ? !bedContainsPatient(confirmationBed, patientUuid) : bedContainsPatient(confirmationBed, patientUuid);
         }
       }
-      showNotice(confirmed ? "success" : "warning", confirmed ? (current === "admit" ? "Paciente admitido y cama confirmada." : current === "transfer" ? "Transferencia confirmada." : "Alta confirmada y cama liberada.") : "La escritura respondió, pero la relectura todavía no confirma el estado final. Recargue antes de repetir.");
+      confirmed = confirmed && dischargeConfirmed;
+      showNotice(confirmed ? "success" : "warning", confirmed ? (current === "admit" ? "Paciente admitido y cama confirmada." : current === "transfer" ? "Transferencia confirmada." : "Alta confirmada y cama liberada.") : current === "discharge" && !dischargeConfirmed ? "La cama quedó libre, pero OpenMRS todavía no confirmó el encuentro de alta. No cierre la visita hasta volver a verificarla." : "La escritura respondió, pero la relectura todavía no confirma el estado final. Recargue antes de repetir.");
       setAction(undefined);
       if (confirmed) setAdtObservations([]);
     },

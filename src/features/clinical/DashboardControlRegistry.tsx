@@ -27,7 +27,7 @@ import { resolveClinicalNavigationLinks } from "./navigationLinks";
 import { AllergyHeaderAction } from "./allergies/AllergyHeaderAction";
 import { AllergyDashboardControl } from "./allergies/AllergyDashboardControl";
 import { normalizeDashboardDiagnoses } from "./diagnosisRecords";
-import { BedIcon } from "./BedIcon";
+import { AssignedBedBadge } from "@/features/ipd/AssignedBedBadge";
 import { normalizeOrderFulfillmentRecords } from "./orderFulfillmentRecords";
 import { normalizeDashboardPrograms } from "./programRecords";
 import { normalizeAdmissionDetails } from "./admissionDetails";
@@ -35,6 +35,7 @@ import { renderTreatmentPdf, treatmentDocument } from "./treatmentDocument";
 import { IpdTreatmentScheduleDialog } from "@/features/ipd/ipd-dashboard/IpdTreatmentScheduleDialog";
 import { resolveTreatmentScheduleAction, type TreatmentScheduleAction, type TreatmentScheduleConfig } from "@/features/ipd/ipd-dashboard/treatmentSchedule";
 import { getPrnScheduledOrderUuids } from "@/services/bahmni/ipdTreatments";
+import { hasActiveAdmission, registrationVisitUrl, resolveVisitManagementAction } from "./visitManagement";
 
 export interface DashboardControlAdapter {
   type: string;
@@ -133,7 +134,7 @@ function PatientInformationControl(props: DashboardControlProps) {
     .filter((value): value is string => Boolean(value))
     .join(", ");
   const summary = asRecord(props.context.visitSummary);
-  const admitted = Boolean(props.context.visit && !props.context.visit.stopDatetime && Object.keys(asRecord(summary.admissionDetails)).length);
+  const admitted = Boolean(props.context.visit && !props.context.visit.stopDatetime && hasActiveAdmission(summary));
   useReport(props, false, null, 1);
   if (props.context.surface === "visit") {
     const address = patient.addressFields ?? {};
@@ -144,7 +145,7 @@ function PatientInformationControl(props: DashboardControlProps) {
         <Avatar image={patient.image} icon="pi pi-user" size="large" shape="circle" />
         <div><strong>{patient.name}</strong><span>{patient.identifier || "—"}</span></div>
         <span className="clinical-visit-demographics"><b>{gender}</b><b>{patient.age ?? "—"} años</b></span>
-        {admitted && <span className="clinical-admission-indicator" role="img" aria-label="Paciente hospitalizado" title="Paciente hospitalizado"><BedIcon /></span>}
+        {props.context.visit && !props.context.visit.stopDatetime && <AssignedBedBadge patientUuid={patient.uuid} showAdmittedWithoutBed={admitted} />}
       </header>
       <dl className="clinical-visit-patient-meta">
         <div><dt>Localidad</dt><dd>{address.cityVillage || "—"}</dd></div>
@@ -159,7 +160,7 @@ function PatientInformationControl(props: DashboardControlProps) {
     <div className="clinical-patient-profile-summary">
       <Avatar image={patient.image} icon="pi pi-user" size="xlarge" shape="circle" />
       <div><strong>{patient.name}</strong><span>{patient.identifier || "—"}</span><small>{[patient.gender, patient.age !== undefined ? `${patient.age} años` : undefined, patient.bloodGroup].filter(Boolean).join(" · ")}</small></div>
-      {admitted && <span className="clinical-admission-indicator" role="img" aria-label="Paciente hospitalizado" title="Paciente hospitalizado"><BedIcon /></span>}
+      {props.context.visit && !props.context.visit.stopDatetime && <AssignedBedBadge patientUuid={patient.uuid} showAdmittedWithoutBed={admitted} />}
     </div>
     <dl className="clinical-details">
       <div><dt>Identificador</dt><dd>{patient.identifier || "—"}</dd></div><div><dt>Nombre</dt><dd>{patient.name}</dd></div><div><dt>Sexo</dt><dd>{patient.gender || "—"}</dd></div><div><dt>Edad</dt><dd>{patient.age ?? "—"}{patient.birthDateEstimated ? " (est.)" : ""}</dd></div>
@@ -176,7 +177,21 @@ function VisitsControl(props: DashboardControlProps) {
   const maximum = Number(activeConfig(props).maximumNoOfVisits ?? 8);
   const visits = props.context.visits.slice(0, Number.isFinite(maximum) ? maximum : 8);
   useReport(props, false, null, visits.length);
-  return <div className="clinical-visits">{visits.map((visit: Visit) => <Link className={visit.uuid === props.context.visit?.uuid ? "selected" : ""} key={visit.uuid} href={{ pathname: `/clinical/patient/${props.context.patient.uuid}/dashboard`, query: { visitUuid: visit.uuid } }}><strong>{visit.visitType?.display ?? visit.visitType?.name ?? "Visita"}</strong><span>{dateOf(visit.startDatetime, props.context.locale, props.context.timeZone)}</span><small>{visit.stopDatetime ? `Cerrada ${dateOf(visit.stopDatetime, props.context.locale, props.context.timeZone)}` : "Activa"}</small></Link>)}</div>;
+  return <div className="clinical-visits">{visits.map((visit: Visit) => {
+    const selected = visit.uuid === props.context.visit?.uuid;
+    const management = resolveVisitManagementAction(visit, props.context.visit?.uuid, props.context.visitSummary, props.context.privilegeNames);
+    const status = visit.stopDatetime
+      ? `Cerrada ${dateOf(visit.stopDatetime, props.context.locale, props.context.timeZone)}`
+      : management?.pendingDischargeClosure ? "Alta registrada · pendiente de cierre" : "Activa";
+    return <article className={`clinical-visit-row ${selected ? "selected" : ""}`} key={visit.uuid}>
+      <Link className="clinical-visit-select" href={{ pathname: `/clinical/patient/${props.context.patient.uuid}/dashboard`, query: { visitUuid: visit.uuid } }} aria-current={selected ? "true" : undefined}>
+        <strong>{visit.visitType?.display ?? visit.visitType?.name ?? "Visita"}</strong>
+        <span>{dateOf(visit.startDatetime, props.context.locale, props.context.timeZone)}</span>
+        <small>{status}</small>
+      </Link>
+      {management && <Link className="clinical-visit-action" href={registrationVisitUrl(props.context.patient.uuid, visit.uuid)} aria-label={`Finalizar visita ${visit.visitType?.display ?? visit.visitType?.name ?? "seleccionada"}`}><i className="pi pi-sign-out" aria-hidden="true" />{management.label}</Link>}
+    </article>;
+  })}</div>;
 }
 
 function NavigationControl(props: DashboardControlProps) {
