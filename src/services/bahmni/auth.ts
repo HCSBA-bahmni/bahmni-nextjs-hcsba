@@ -114,7 +114,20 @@ export async function updateSessionLocation(location: BahmniLocation, locale?: s
 
 export function persistCurrentUser(user: BahmniUser, fallbackUsername?: string): void {
   const username = user.username ?? fallbackUsername ?? user.display;
-  if (username) Cookies.set(USER_COOKIE, username, { path: "/", sameSite: "lax", expires: 7 });
+  // Angular's $cookieStore always JSON-decodes this cookie. A plain username
+  // makes legacy applications fail during bootstrap with a JSON parse error.
+  if (username) Cookies.set(USER_COOKIE, JSON.stringify(username), { path: "/", sameSite: "lax", expires: 7 });
+}
+
+export function getPersistedUsername(): string | null {
+  const stored = Cookies.get(USER_COOKIE);
+  if (!stored) return null;
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    return typeof parsed === "string" ? parsed : null;
+  } catch {
+    return stored;
+  }
 }
 
 export async function getCurrentUser(username?: string): Promise<BahmniUser> {
