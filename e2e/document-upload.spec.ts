@@ -181,6 +181,16 @@ async function addImageFile(panel: ReturnType<Page["locator"]>, name = "nuevo.pn
   await expect(panel.getByText(name)).toBeVisible();
 }
 
+async function enterCalendarDate(panel: ReturnType<Page["locator"]>, value: string) {
+  const input = panel.locator(".p-calendar input").first();
+  await input.click();
+  await input.press("ControlOrMeta+A");
+  await input.press("Backspace");
+  await input.pressSequentially(value);
+  await expect(input).toHaveValue(value);
+  await input.press("Tab");
+}
+
 test("document upload lets the creating provider edit, remove and restore a persisted document", async ({ page }) => {
   const captured = await mockDocumentUpload(page, {
     currentProviderUuid: creatorProviderUuid,
@@ -274,8 +284,7 @@ test("document upload audits open visit and edit encounter when saving a new vis
 
   await panel.locator(".document-upload-form-grid .p-dropdown").click();
   await page.getByRole("option", { name: "OPD" }).click();
-  await panel.locator(".p-calendar input").first().fill("14/08/2026");
-  await panel.locator(".p-calendar input").first().press("Tab");
+  await enterCalendarDate(panel, "14/08/2026");
   await addImageFile(panel, "nueva-visita.png");
 
   await expect(panel.getByRole("button", { name: "Guardar" })).toBeEnabled();
