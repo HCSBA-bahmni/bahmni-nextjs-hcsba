@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getClinicalQueuePatients, getPatientDiagnoses, getPatientObservations, searchAllClinicalPatients } from "./clinical";
+import { getClinicalQueuePatients, getPatientDiagnoses, getPatientObservations, getPatientPrograms, searchAllClinicalPatients } from "./clinical";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -40,5 +40,13 @@ describe("clinical read contracts", () => {
     expect(Object.fromEntries(url.searchParams)).toEqual({ filterOnAllIdentifiers: "true", q: "Ana", startIndex: "0", identifier: "Ana", loginLocationUuid: "location", attributeToFilterOut: "archive", attributeValueToFilterOut: "true" });
     expect(url.searchParams.has("s")).toBe(false);
     expect(url.searchParams.has("limit")).toBe(false);
+  });
+
+  it("loads the complete legacy enrollment representation for a patient", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [{ uuid: "enrollment-1" }] }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getPatientPrograms("patient uuid")).resolves.toEqual([{ uuid: "enrollment-1" }]);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe("/openmrs/ws/rest/v1/bahmniprogramenrollment?patient=patient+uuid&v=full");
   });
 });

@@ -8,11 +8,11 @@ describe("legacy dashboard navigation links", () => {
     expect(links[1]?.href).toBe("/registration/patient/patient%2F1");
   });
 
-  it("uses the migrated ADT route while retaining other legacy and custom links", () => {
+  it("uses the migrated ADT and Programs routes while retaining custom links", () => {
     const links = resolveClinicalNavigationLinks({ showLinks: ["inpatient", "enrolment"], customLinks: [{ name: "external", title: "Portal", url: "https://portal.example/patient/{{patientUuid}}" }] }, "p1", "v1");
     expect(links).toEqual([
       expect.objectContaining({ name: "inpatient", href: "/adt/patient/p1/visit/v1", internal: true }),
-      expect.objectContaining({ name: "enrolment", href: "/bahmni/clinical/index.html#/programs/patient/p1/consultationContext", internal: false }),
+      expect.objectContaining({ name: "enrolment", href: "/clinical/programs/patient/p1", internal: true }),
       expect.objectContaining({ name: "external", href: "https://portal.example/patient/p1", internal: false }),
     ]);
   });
@@ -31,5 +31,15 @@ describe("legacy dashboard navigation links", () => {
       pathname: "/clinical/patient/patient/consultation/observations",
       query: { encounterUuid: "active", visitUuid: "visit", configName: "programs", enrollment: "enrollment" },
     });
+  });
+
+  it("keeps the program context when a historical dashboard opens consultation", () => {
+    const originalUrl = window.location.href;
+    window.history.replaceState({}, "", "/clinical/patient/patient/dashboard?programUuid=program&enrollment=enrollment&dateEnrolled=2025-01-01&dateCompleted=2025-03-01");
+    expect(activeConsultationRoute("patient", "visit", "enrollment")).toEqual({
+      pathname: "/clinical/patient/patient/consultation/observations",
+      query: { encounterUuid: "active", visitUuid: "visit", configName: "programs", programUuid: "program", enrollment: "enrollment", dateEnrolled: "2025-01-01", dateCompleted: "2025-03-01" },
+    });
+    window.history.replaceState({}, "", originalUrl);
   });
 });
