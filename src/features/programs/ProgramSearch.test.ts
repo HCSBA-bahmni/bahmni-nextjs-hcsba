@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { legacyProgramPatientUrl } from "./ProgramSearch";
-import { displayAttributeValue, hasProgramAttributeValue, maximumEnrollmentDate, programChronologyError, programDashboardUrl, programEnrollmentAttributes, programUpdateAttributes, requiredProgramAttributesComplete } from "./ProgramPatientDetail";
+import { displayAttributeValue, hasProgramAttributeValue, maximumEnrollmentDate, programChronologyError, programDashboardUrl, programEnrollmentAttributes, programUpdateAttributes, requiredProgramAttributesComplete, todayInputDate } from "./ProgramPatientDetail";
 
 describe("program search navigation", () => {
   it("opens the native program-management detail", () => {
@@ -55,6 +55,11 @@ describe("program attribute payloads", () => {
 });
 
 describe("program enrollment chronology", () => {
+  it("uses the browser local calendar day instead of the UTC date", () => {
+    const localLateEvening = new Date(2026, 7, 17, 23, 30);
+    expect(todayInputDate(localLateEvening)).toBe("2026-08-17");
+  });
+
   it("does not allow an enrollment date after an existing state", () => {
     expect(maximumEnrollmentDate([{ startDate: "2026-08-12T00:00:00.000-0400" }, { startDate: "2026-08-14T00:00:00.000-0400" }], "2026-08-17")).toBe("2026-08-12");
   });
