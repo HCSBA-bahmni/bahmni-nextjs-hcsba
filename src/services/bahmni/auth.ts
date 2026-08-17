@@ -1,7 +1,7 @@
 import Cookies from "js-cookie";
 import { z } from "zod";
 import { locationSchema, providerSchema, sessionSchema, userSchema, type BahmniLocation, type BahmniProvider, type BahmniSession, type BahmniUser } from "@/types/bahmni";
-import { BahmniApiError, bahmniRequest, bahmniRequestWithResponse, basicAuthorization, queryString } from "./http";
+import { abortPendingBahmniRequests as abortPendingRequests, BahmniApiError, bahmniRequest, bahmniRequestWithResponse, basicAuthorization, queryString } from "./http";
 
 const resourceList = <T extends z.ZodTypeAny>(item: T) => z.object({ results: z.array(item) }).loose();
 const USER_COOKIE = "bahmni.user";
@@ -56,9 +56,18 @@ export function clearAuthenticationCookies(): void {
   // Legacy intentionally keeps the location cookie for seven days.
 }
 
-export async function logout(): Promise<void> {
+export function abortPendingBahmniRequests(): void {
+  abortPendingRequests();
+}
+
+export async function logout(): Promise<string | null> {
   try {
-    await bahmniRequest("/ws/rest/v1/session?v=custom:(uuid)", { method: "DELETE", skipUnauthorizedEvent: true });
+    const response = await bahmniRequestWithResponse<unknown>("/ws/rest/v1/session?v=custom:(uuid)", {
+      method: "DELETE",
+      skipUnauthorizedEvent: true,
+      cache: "no-store",
+    });
+    return response.headers.get("Location");
   } finally {
     clearAuthenticationCookies();
   }

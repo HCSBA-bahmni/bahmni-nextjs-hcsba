@@ -40,7 +40,7 @@ Las respuestas se validan con Zod y las fechas se convierten con Luxon usando la
 
 `NEXT_APPOINTMENTS` publica `/bahmni/appointments` en `bahmni-next-web`. `/appointments` continúa apuntando al contenedor original. Al retirar `-D NEXT_APPOINTMENTS` y recrear sólo `proxy`, `/bahmni/appointments` responde con una redirección temporal a `/appointments/`.
 
-El acceso de Home usa `/bahmni/appointments`; el dashboard clínico enlaza la lista nueva con el paciente seleccionado. El botón Administración abre la ruta nativa `/bahmni/appointments/admin` únicamente para `app:appointments:adminTab` o `app:admin`.
+El acceso de Home conserva la URL legacy configurada `../../appointments`, pero la capa de compatibilidad Next la traduce a `/bahmni/appointments/summary`; el dashboard clínico enlaza la lista nueva con el paciente seleccionado. El botón Administración abre la ruta nativa `/bahmni/appointments/admin` únicamente para `app:appointments:adminTab` o `app:admin`.
 
 ## Certificación
 

@@ -15,8 +15,7 @@ import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
-import { BedIcon } from "@/features/ipd/BedIcon";
-import { hasAssignedBedFlag } from "@/features/adt/adtRules";
+import { AssignedBedBadge } from "@/features/ipd/AssignedBedBadge";
 import { documentUploadPatientDestination, filterDocumentUploadPatients, parseDocumentUploadSearchTabs, type DocumentUploadSearchTab } from "@/features/document-upload/patientSearch";
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { loadAppFile, loadTranslations } from "@/services/bahmni/config";
@@ -266,7 +265,7 @@ function PatientResults({ tab, patients, encounterType, topLevelConcept, default
     return <Link key={patient.uuid} href={documentUploadPatientDestination(tab, patient, { encounterType, topLevelConcept, defaultOption })}>
       <span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span>
       <span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span>
-      <span className="clinical-result-badges">{hasAssignedBedFlag(patient) && <span className="clinical-bed-badge" title="Paciente con cama asignada" aria-label="Paciente con cama asignada"><BedIcon /></span>}</span>
+      <span className="clinical-result-badges"><AssignedBedBadge patientUuid={patient.uuid} /></span>
       <i className="pi pi-chevron-right" aria-hidden="true" />
     </Link>;
   })}</div>;

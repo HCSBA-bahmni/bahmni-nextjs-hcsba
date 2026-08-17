@@ -16,6 +16,7 @@ import { getDispositionActionConcepts, undoDischarge } from "@/services/bahmni/a
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { loadAppConfig, loadExtensions } from "@/services/bahmni/config";
 import { getPatientProfile } from "@/services/bahmni/patients";
+import { getAssignedBed, ipdQueryKeys } from "@/services/bahmni/ipd";
 import { getPatientVisits, getVisitSummary } from "@/services/bahmni/visits";
 
 const extensionPoint: Record<AdtActionCode, string> = {
@@ -40,13 +41,14 @@ export default function AdtPatientPage() {
   const profile = useQuery({ queryKey: ["patient", patientUuid], queryFn: () => getPatientProfile(patientUuid), enabled: allowed && Boolean(patientUuid) });
   const visits = useQuery({ queryKey: ["clinical-visits", patientUuid], queryFn: () => getPatientVisits(patientUuid, true), enabled: allowed && Boolean(patientUuid) });
   const summary = useQuery({ queryKey: ["clinical-visit-summary", visitUuid], queryFn: () => getVisitSummary(visitUuid), enabled: allowed && Boolean(visitUuid) });
+  const assignedBed = useQuery({ queryKey: ipdQueryKeys.assignedBed(patientUuid), queryFn: () => getAssignedBed(patientUuid), enabled: allowed && Boolean(patientUuid), staleTime: 30_000 });
   const app = useQuery({ queryKey: ["app-config", "adt"], queryFn: () => loadAppConfig("adt"), enabled: allowed });
   const extensions = useQuery({ queryKey: ["extensions", "adt"], queryFn: () => loadExtensions("adt"), enabled: allowed });
   const concepts = useQuery({ queryKey: ["adt", "disposition-actions"], queryFn: getDispositionActionConcepts, enabled: allowed });
   const config = record(app.data?.config ?? app.data);
   const dashboard = record(config.dashboard);
   const tab = useMemo(() => parseClinicalDashboardConfig({ adt: dashboard })[0], [dashboard]);
-  const allowedCodes = configuredAdtActionCodes(summary.data as Record<string, unknown> | undefined);
+  const allowedCodes = assignedBed.isSuccess ? configuredAdtActionCodes(summary.data as Record<string, unknown> | undefined, Boolean(assignedBed.data)) : [];
   const options = (concepts.data ?? []).flatMap((concept) => concept.code && allowedCodes.includes(concept.code as AdtActionCode) ? [{ label: spanishLabel[concept.code as AdtActionCode] ?? concept.label, value: concept.code as AdtActionCode }] : []);
   const patient = profile.data ? toClinicalPatientContext(profile.data, patientUuid) : undefined;
   const visit = (visits.data ?? []).find((candidate) => candidate.uuid === visitUuid);
@@ -75,8 +77,8 @@ export default function AdtPatientPage() {
     if (action === "undoDischarge") { reversal.mutate(); return; }
     void router.push({ pathname: `/bedmanagement/patient/${patientUuid}`, query: { visitUuid, action: selectedCode?.toLocaleLowerCase() } });
   };
-  const loading = profile.isLoading || visits.isLoading || summary.isLoading || app.isLoading || extensions.isLoading || concepts.isLoading;
-  const failed = profile.isError || visits.isError || summary.isError || app.isError || extensions.isError || concepts.isError;
+  const loading = profile.isLoading || visits.isLoading || summary.isLoading || assignedBed.isLoading || app.isLoading || extensions.isLoading || concepts.isLoading;
+  const failed = profile.isError || visits.isError || summary.isError || assignedBed.isError || app.isError || extensions.isError || concepts.isError;
 
   return <AuthGuard><AppShell mainClassName="adt-page"><Toast ref={toast} position="top-right" />
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:adt requerido por la configuración legacy.</p>}
@@ -85,7 +87,8 @@ export default function AdtPatientPage() {
     {allowed && !loading && patient && context && <>
       <section className="clinical-patient-header panel"><div><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div><div className="clinical-visit-status"><strong>{visit?.visitType?.display ?? visit?.visitType?.name ?? "IPD"}</strong><span>{visit?.stopDatetime ? "Visita cerrada" : "Visita activa"}</span></div><div className="toolbar"><Button outlined label="Dashboard" icon="pi pi-home" onClick={() => void router.push({ pathname: `/clinical/patient/${patientUuid}/dashboard`, query: { visitUuid } })} /><Button label="Mapa de camas" icon="pi pi-building" onClick={() => void router.push({ pathname: `/bedmanagement/patient/${patientUuid}`, query: { visitUuid } })} /></div></section>
       <section className="panel adt-action-panel"><label htmlFor="adt-action">Movimiento del paciente</label><Dropdown inputId="adt-action" value={selectedCode} options={options} placeholder="Seleccionar" onChange={(event) => setSelectedCode(event.value as AdtActionCode)} />{selectedCode && <span className="toolbar">{actionExtensions.map((extension) => { const params = record(extension.extensionParams); const action = String(params.action ?? ""); const label = action === "cancel" ? "Cancelar" : selectedCode === "UNDO_DISCHARGE" ? "Deshacer alta" : String(params.display ?? spanishLabel[selectedCode]); return <Button key={extension.id} outlined={action === "cancel"} severity={selectedCode === "DISCHARGE" || selectedCode === "UNDO_DISCHARGE" ? "danger" : undefined} label={label} loading={reversal.isPending && action === "undoDischarge"} onClick={() => invoke(action)} />; })}</span>}</section>
-      {options.length === 0 && <p className="warning-banner">La visita tiene un estado que no corresponde a ninguna acción configurada en el concepto Disposition.</p>}
+      {assignedBed.isError && <p className="warning-banner">No fue posible confirmar la cama actual; las acciones ADT están deshabilitadas.</p>}
+      {!assignedBed.isError && options.length === 0 && <p className="warning-banner">La visita tiene un estado que no corresponde a ninguna acción configurada en el concepto Disposition.</p>}
       <div className="adt-dashboard-layout">{(tab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege)).map((section) => <ClinicalDashboardSectionCard key={section.id} section={section} context={context} />)}</div>
     </>}
   </AppShell></AuthGuard>;

@@ -11,6 +11,10 @@ NEXT_PUBLIC_LEGACY_BAHMNI_BASE=/bahmni
 NEXT_PUBLIC_DEFAULT_LOCALE=es
 NEXT_PUBLIC_CLINICAL_CONSULTATION_ENABLED=true
 
+# openmrs conserva el login HCSBA actual (incluido su OTP). keycloak delega
+# el login y MFA a OpenMRS OAuth2 + Keycloak, sin exponer secretos al browser.
+NEXT_PUBLIC_AUTH_MODE=openmrs
+
 # IPS permanece deshabilitado hasta disponer de un mediador same-origin.
 # Nunca agregue credenciales a variables NEXT_PUBLIC_*.
 NEXT_PUBLIC_IPS_ENABLED=false

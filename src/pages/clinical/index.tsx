@@ -10,8 +10,7 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { clinicalPatientDestination, filterClinicalPatients, parseClinicalPatientSearchTabs, type ClinicalPatientSearchTab } from "@/features/clinical/patientSearch";
 import { useClinicalTranslations } from "@/features/clinical/useClinicalTranslations";
-import { hasAssignedBedFlag } from "@/features/adt/adtRules";
-import { BedIcon } from "@/features/ipd/BedIcon";
+import { AssignedBedBadge } from "@/features/ipd/AssignedBedBadge";
 import { resolveLegacyRoute } from "@/config-compat/legacyRoutes";
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { audit } from "@/services/bahmni/audit";
@@ -41,7 +40,7 @@ function PatientResults({ tab, patients }: { tab: ClinicalPatientSearchTab; pati
     return <Link key={patient.uuid} href={clinicalPatientDestination(tab, patient)}>
       <span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span>
       <span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span>
-      <span className="clinical-result-badges"><span className="clinical-result-context">{patient.activeVisitUuid ? "Visita activa" : "Sin visita activa"}</span>{hasAssignedBedFlag(patient) && <span className="clinical-bed-badge" title="Paciente con cama asignada" aria-label="Paciente con cama asignada"><BedIcon /></span>}</span>
+      <span className="clinical-result-badges"><span className="clinical-result-context">{patient.activeVisitUuid ? "Visita activa" : "Sin visita activa"}</span><AssignedBedBadge patientUuid={patient.uuid} /></span>
       <i className="pi pi-chevron-right" aria-hidden="true" />
     </Link>;
   })}</div>;

@@ -56,6 +56,18 @@ export const openmrsBase = process.env.NEXT_PUBLIC_OPENMRS_BASE ?? "/openmrs";
 export interface BahmniResponse<T> {
   data: T;
   status: number;
+  headers: Headers;
+}
+
+let pendingRequestsController = new AbortController();
+
+/**
+ * Stops responses from an authenticated page from racing with session
+ * destruction. A fresh controller is installed for the logout request itself.
+ */
+export function abortPendingBahmniRequests(): void {
+  pendingRequestsController.abort();
+  pendingRequestsController = new AbortController();
 }
 
 export async function bahmniRequestWithResponse<T>(
@@ -70,7 +82,10 @@ export async function bahmniRequestWithResponse<T>(
     headers.set("Content-Type", "application/json");
   }
   const response = await fetch(path.startsWith("http") ? path : `${openmrsBase}${path}`, {
-    ...requestOptions, headers, credentials: "include",
+    ...requestOptions,
+    headers,
+    credentials: "include",
+    signal: requestOptions.signal ?? pendingRequestsController.signal,
   });
   const contentType = response.headers.get("content-type") ?? "";
   let payload: unknown;
@@ -90,6 +105,7 @@ export async function bahmniRequestWithResponse<T>(
   return {
     data: schema ? schema.parse(payload) : payload as T,
     status: response.status,
+    headers: response.headers,
   };
 }
 
