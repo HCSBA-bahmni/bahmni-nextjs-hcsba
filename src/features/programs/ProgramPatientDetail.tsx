@@ -72,6 +72,61 @@ const rawAttributeValue = (attribute: Record<string, unknown>, type: ProgramAttr
   if (conceptAttribute(type)) return { conceptUuid: text(object(value).uuid ?? attribute.hydratedObject) };
   return typeof value === "boolean" ? value : text(object(value).uuid ?? value);
 };
+type ProgramAttributeValue = string | boolean | { conceptUuid: string } | undefined;
+
+/** `false` is a meaningful OpenMRS attribute value, not an empty response. */
+export function hasProgramAttributeValue(value: ProgramAttributeValue): boolean {
+  if (value === undefined || value === "") return false;
+  return typeof value !== "object" || Boolean(value.conceptUuid);
+}
+
+function booleanValue(value: ProgramAttributeValue): boolean | undefined {
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
+  return undefined;
+}
+
+function enrollmentAttributePayload(attribute: ProgramAttributeType, value: ProgramAttributeValue) {
+  if (!hasProgramAttributeValue(value)) return [];
+  if (conceptAttribute(attribute) && typeof value === "object") {
+    const selectedAnswer = answersOf(attribute).find((answer) => answerUuid(answer) === value.conceptUuid);
+    return selectedAnswer ? [{ attributeType: { uuid: text(attribute.uuid) }, value: answerLabel(selectedAnswer), hydratedObject: value.conceptUuid }] : [];
+  }
+  return [{ attributeType: { uuid: text(attribute.uuid) }, value: String(value) }];
+}
+
+/** Maps only answered attributes; preserves an explicit boolean `false` as "false". */
+export function programEnrollmentAttributes(attributes: ProgramAttributeType[], values: Record<string, ProgramAttributeValue>) {
+  return attributes.flatMap((attribute) => enrollmentAttributePayload(attribute, values[text(attribute.uuid)]));
+}
+
+/**
+ * Keeps persisted values intact unless they are explicitly cleared. An optional
+ * attribute that was never stored must not be sent back as a voided record.
+ */
+export function programUpdateAttributes(types: ProgramAttributeType[], rawAttributes: Record<string, unknown>[], values: Record<string, ProgramAttributeValue>): Array<Record<string, unknown>> {
+  return types.flatMap<Record<string, unknown>>((type) => {
+    const uuid = text(type.uuid);
+    const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === uuid);
+    const hasDraftValue = Object.prototype.hasOwnProperty.call(values, uuid);
+    const value = hasDraftValue ? values[uuid] : current ? rawAttributeValue(current, type) : undefined;
+    const base = { ...(current?.uuid ? { uuid: text(current.uuid) } : {}), attributeType: { uuid } };
+    if (!hasProgramAttributeValue(value)) return current?.uuid ? [{ ...base, voided: true }] : [];
+    if (conceptAttribute(type) && typeof value === "object") {
+      const answer = answersOf(type).find((item) => answerUuid(item) === value.conceptUuid);
+      return [{ ...base, value: answer ? answerLabel(answer) : "", hydratedObject: value.conceptUuid }];
+    }
+    return [{ ...base, value: String(value) }];
+  });
+}
+
+/** Legacy prevents the enrollment date from being after any existing state. */
+export function maximumEnrollmentDate(states: Record<string, unknown>[], today = new Date().toISOString().slice(0, 10)): string {
+  return states.reduce((maximum, state) => {
+    const date = text(state.startDate).match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+    return date && date < maximum ? date : maximum;
+  }, today);
+}
 
 /** Native counterpart of Bahmni's historical-program dashboard URL. */
 export function programDashboardUrl(patientUuid: string, program: DashboardProgram): string {
@@ -98,7 +153,7 @@ function ProgramEnrollmentPanel({ open, patientUuid, activeProgramUuids, onToggl
   const [programUuid, setProgramUuid] = useState("");
   const [stateUuid, setStateUuid] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [attributes, setAttributes] = useState<Record<string, string | boolean | { conceptUuid: string }>>({});
+  const [attributes, setAttributes] = useState<Record<string, ProgramAttributeValue>>({});
   const definitions = useQuery({ queryKey: ["program-definitions"], queryFn: getProgramDefinitions, enabled: open });
   const attributeTypes = useQuery({ queryKey: ["program-attribute-types"], queryFn: getProgramAttributeTypes, enabled: open });
   const config = useQuery({ queryKey: ["app-config", "clinical"], queryFn: () => loadAppConfig("clinical"), enabled: open });
@@ -109,18 +164,10 @@ function ProgramEnrollmentPanel({ open, patientUuid, activeProgramUuids, onToggl
   const visibleAttributes = (attributeTypes.data ?? []).filter((attribute) => !excludedFromProgram(attribute, selected, config.data));
   const requiredAttributesComplete = visibleAttributes.filter((attribute) => requiredAttribute(attribute, config.data)).every((attribute) => {
     const value = attributes[text(attribute.uuid)];
-    return value !== undefined && value !== "" && value !== false && (!(typeof value === "object") || Boolean(value.conceptUuid));
+    return hasProgramAttributeValue(value);
   });
   const enroll = useMutation({
-    mutationFn: async () => enrollPatientInProgram({ patientUuid, programUuid, dateEnrolled: localStartOfDay(date), stateUuid: stateUuid || undefined, attributes: visibleAttributes.flatMap((attribute) => {
-      const value = attributes[text(attribute.uuid)];
-      if (value === undefined || value === "" || value === false) return [];
-      if (conceptAttribute(attribute) && typeof value === "object") {
-        const selectedAnswer = answersOf(attribute).find((answer) => answerUuid(answer) === value.conceptUuid);
-        return selectedAnswer ? [{ attributeType: { uuid: text(attribute.uuid) }, value: answerLabel(selectedAnswer), hydratedObject: value.conceptUuid }] : [];
-      }
-      return [{ attributeType: { uuid: text(attribute.uuid) }, value: String(value) }];
-    }) }),
+    mutationFn: async () => enrollPatientInProgram({ patientUuid, programUuid, dateEnrolled: localStartOfDay(date), stateUuid: stateUuid || undefined, attributes: programEnrollmentAttributes(visibleAttributes, attributes) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["program-enrollments", patientUuid] }); setAttributes({}); onToggle(); },
   });
   const selectedAlreadyActive = programUuid && activeProgramUuids.has(programUuid);
@@ -130,7 +177,7 @@ function ProgramEnrollmentPanel({ open, patientUuid, activeProgramUuids, onToggl
       <label className="field"><span>Programa</span><select required value={programUuid} onChange={(event) => { setProgramUuid(event.target.value); setStateUuid(""); }}><option value="">Elegir Programa</option>{eligible.map((program) => <option key={text(program.uuid)} value={text(program.uuid)}>{nameOf(program)}</option>)}</select></label>
       {states.length > 0 && <label className="field"><span>Estado del Programa</span><select value={stateUuid} onChange={(event) => setStateUuid(event.target.value)}><option value="">Elegir estado del Programa</option>{states.map((state) => <option key={text(state.uuid)} value={text(state.uuid)}>{nameOf(object(state.concept)) || nameOf(state)}</option>)}</select></label>}
       <label className="field"><span>Fecha de inicio *</span><input required type="date" max={new Date().toISOString().slice(0, 10)} value={date} onChange={(event) => setDate(event.target.value)} /></label>
-      {visibleAttributes.map((attribute) => { const uuid = text(attribute.uuid); const answers = answersOf(attribute); const value = attributes[uuid]; const required = requiredAttribute(attribute, config.data); const format = attributeFormat(attribute); return <label className="field" key={uuid}><span>{attributeLabel(attribute)}{required ? " *" : ""}</span>{booleanAttribute(attribute) ? <input type="checkbox" checked={value === true} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: event.target.checked }))} /> : answers.length > 0 ? <select required={required} value={typeof value === "object" ? value.conceptUuid : String(value ?? "")} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: conceptAttribute(attribute) ? { conceptUuid: event.target.value } : event.target.value }))}><option value=""></option>{answers.map((answer) => <option key={answerUuid(answer)} value={answerUuid(answer)}>{answerLabel(answer)}</option>)}</select> : <input required={required} type={dateAttribute(attribute) ? "date" : numberAttribute(attribute) ? "number" : "text"} step={format === "java.lang.Float" ? "any" : undefined} pattern={format === "org.openmrs.customdatatype.datatype.RegexValidatedTextDatatype" ? text(attribute.datatypeConfig) : undefined} value={String(value ?? "")} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: event.target.value }))} />}</label>; })}
+      {visibleAttributes.map((attribute) => { const uuid = text(attribute.uuid); const answers = answersOf(attribute); const value = attributes[uuid]; const required = requiredAttribute(attribute, config.data); const format = attributeFormat(attribute); return <label className="field" key={uuid}><span>{attributeLabel(attribute)}{required ? " *" : ""}</span>{booleanAttribute(attribute) ? <select required={required} value={booleanValue(value) === undefined ? "" : String(booleanValue(value))} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: event.target.value === "" ? undefined : event.target.value === "true" }))}><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select> : answers.length > 0 ? <select required={required} value={typeof value === "object" ? value.conceptUuid : String(value ?? "")} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: conceptAttribute(attribute) ? { conceptUuid: event.target.value } : event.target.value }))}><option value=""></option>{answers.map((answer) => <option key={answerUuid(answer)} value={answerUuid(answer)}>{answerLabel(answer)}</option>)}</select> : <input required={required} type={dateAttribute(attribute) ? "date" : numberAttribute(attribute) ? "number" : "text"} step={format === "java.lang.Float" ? "any" : undefined} pattern={format === "org.openmrs.customdatatype.datatype.RegexValidatedTextDatatype" ? text(attribute.datatypeConfig) : undefined} value={String(value ?? "")} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: event.target.value }))} />}</label>; })}
     </div>
     {selectedAlreadyActive && <p className="error-banner">Paciente ya inscrito en el programa.</p>}{enroll.isError && <p className="error-banner">No fue posible inscribir al paciente. Revise los datos e intente nuevamente.</p>}
     <div className="program-enrollment-actions"><Button outlined label="Cancelar" onClick={onToggle} /><Button label="Incribir" icon="pi pi-check" loading={enroll.isPending} disabled={!canSubmit} onClick={() => enroll.mutate()} /></div></>}
@@ -149,7 +196,7 @@ function ActiveProgramEditor({ program }: { program: DashboardProgram }) {
   const [selectedState, setSelectedState] = useState("");
   const [outcome, setOutcome] = useState("");
   const [confirmRemoveState, setConfirmRemoveState] = useState(false);
-  const [attributes, setAttributes] = useState<Record<string, string | boolean | { conceptUuid: string }>>({});
+  const [attributes, setAttributes] = useState<Record<string, ProgramAttributeValue>>({});
   const definitions = useQuery({ queryKey: ["program-definitions"], queryFn: getProgramDefinitions, enabled: editing });
   const attributeTypes = useQuery({ queryKey: ["program-attribute-types"], queryFn: getProgramAttributeTypes, enabled: editing });
   const config = useQuery({ queryKey: ["app-config", "clinical"], queryFn: () => loadAppConfig("clinical"), enabled: editing });
@@ -157,6 +204,8 @@ function ActiveProgramEditor({ program }: { program: DashboardProgram }) {
   const definition = definitions.data?.find((item) => text(item.uuid) === programUuid) ?? object(program.raw.program);
   const rawStates = objects(program.raw.states).filter((state) => state.voided !== true);
   const activeState = rawStates.find((state) => state.endDate === null || state.endDate === undefined);
+  const maxEnrollmentDate = maximumEnrollmentDate(rawStates);
+  const enrollmentDateInvalid = dateEnrolled > maxEnrollmentDate;
   const stateOptions = objects(definition.allWorkflows).flatMap((workflow) => objects(workflow.states)).filter((state) => state.retired !== true);
   const outcomes = objects(object(definition.outcomesConcept).setMembers).filter((item) => item.retired !== true);
   const rawAttributes = objects(program.raw.attributes);
@@ -165,23 +214,13 @@ function ActiveProgramEditor({ program }: { program: DashboardProgram }) {
   const requiredAttributesComplete = visibleAttributes.filter((type) => requiredAttribute(type, config.data)).every((type) => {
     const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === text(type.uuid));
     const value = attributes[text(type.uuid)] ?? (current ? rawAttributeValue(current, type) : "");
-    return value !== "" && value !== false && (!(typeof value === "object") || Boolean(value.conceptUuid));
+    return hasProgramAttributeValue(value);
   });
   const save = useMutation({
     mutationFn: async () => {
       const states = rawStates.map((state) => ({ ...state }));
       if (selectedState && text(object(activeState?.state).uuid) !== selectedState) states.push({ state: { uuid: selectedState }, startDate: localStartOfDay(new Date().toISOString().slice(0, 10)) });
-      const mappedAttributes = visibleAttributes.map((type) => {
-        const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === text(type.uuid));
-        const value = attributes[text(type.uuid)] ?? (current ? rawAttributeValue(current, type) : "");
-        const base = { ...(current?.uuid ? { uuid: text(current.uuid) } : {}), attributeType: { uuid: text(type.uuid) } };
-        if (value === "" || value === false || (typeof value === "object" && !value.conceptUuid)) return { ...base, voided: true };
-        if (conceptAttribute(type) && typeof value === "object") {
-          const answer = answersOf(type).find((item) => answerUuid(item) === value.conceptUuid);
-          return { ...base, value: answer ? answerLabel(answer) : "", hydratedObject: value.conceptUuid };
-        }
-        return { ...base, value: String(value) };
-      });
+      const mappedAttributes = programUpdateAttributes(visibleAttributes, rawAttributes, attributes);
       await updatePatientProgram(program.uuid, {
         dateEnrolled: localStartOfDay(dateEnrolled), states, dateCompleted: outcome ? localStartOfDay(new Date().toISOString().slice(0, 10)) : null,
         outcome: outcome || null, attributes: mappedAttributes,
@@ -199,8 +238,8 @@ function ActiveProgramEditor({ program }: { program: DashboardProgram }) {
   });
   const beginEdit = () => { setDateEnrolled(inputDate(program.dateEnrolled)); setSelectedState(""); setOutcome(""); setAttributes({}); setEditing(true); };
 
-  return <section className="program-active-management"><div className="program-card-actions">{!editing ? <Button text label="Editar" icon="pi pi-pencil" onClick={beginEdit} /> : <><Button text label="Cancelar" icon="pi pi-times" onClick={() => setEditing(false)} /><Button label={outcome ? "Finalizar programa" : "Guardar cambios"} icon="pi pi-check" loading={save.isPending} disabled={editorLoading || !requiredAttributesComplete} onClick={() => save.mutate()} /></>}</div>
-    {editing && <div className="program-editor">{editorLoading && <p role="status" className="muted-text">Cargando atributos configurados…</p>}<div className="form-grid"><label className="field"><span>Fecha de inicio *</span><input required type="date" max={new Date().toISOString().slice(0, 10)} value={dateEnrolled} onChange={(event) => setDateEnrolled(event.target.value)} /></label>{stateOptions.length > 0 && <label className="field"><span>Estado del Programa</span><select value={selectedState} onChange={(event) => setSelectedState(event.target.value)}><option value="">Elegir estado del Programa</option>{stateOptions.map((state) => <option key={text(state.uuid)} value={text(state.uuid)}>{nameOf(object(state.concept)) || nameOf(state)}</option>)}</select></label>}{outcomes.length > 0 && <label className="field"><span>Resultado del Programa</span><select value={outcome} onChange={(event) => setOutcome(event.target.value)}><option value="">Elegir Resultado</option>{outcomes.map((item) => <option key={text(item.uuid)} value={text(item.uuid)}>{nameOf(item)}</option>)}</select><small>Elegir un resultado finalizará el programa hoy.</small></label>}{visibleAttributes.map((type) => { const uuid = text(type.uuid); const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === uuid); const value = attributes[uuid] ?? (current ? rawAttributeValue(current, type) : ""); const answers = answersOf(type); const format = attributeFormat(type); return <label className="field" key={uuid}><span>{attributeLabel(type)}{requiredAttribute(type, config.data) ? " *" : ""}</span>{booleanAttribute(type) ? <input type="checkbox" checked={value === true} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.checked }))} /> : answers.length > 0 ? <select required={requiredAttribute(type, config.data)} value={typeof value === "object" ? value.conceptUuid : String(value)} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: conceptAttribute(type) ? { conceptUuid: event.target.value } : event.target.value }))}><option value=""></option>{answers.map((answer) => <option key={answerUuid(answer)} value={answerUuid(answer)}>{answerLabel(answer)}</option>)}</select> : <input required={requiredAttribute(type, config.data)} type={dateAttribute(type) ? "date" : numberAttribute(type) ? "number" : "text"} step={format === "java.lang.Float" ? "any" : undefined} pattern={format === "org.openmrs.customdatatype.datatype.RegexValidatedTextDatatype" ? text(type.datatypeConfig) : undefined} value={String(value)} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.value }))} />}</label>; })}</div>{save.isError && <p className="error-banner">No fue posible guardar los cambios del programa.</p>}</div>}
+  return <section className="program-active-management"><div className="program-card-actions">{!editing ? <Button text label="Editar" icon="pi pi-pencil" onClick={beginEdit} /> : <><Button text label="Cancelar" icon="pi pi-times" onClick={() => setEditing(false)} /><Button label={outcome ? "Finalizar programa" : "Guardar cambios"} icon="pi pi-check" loading={save.isPending} disabled={editorLoading || !requiredAttributesComplete || enrollmentDateInvalid} onClick={() => save.mutate()} /></>}</div>
+    {editing && <div className="program-editor">{editorLoading && <p role="status" className="muted-text">Cargando atributos configurados…</p>}<div className="form-grid"><label className="field"><span>Fecha de inicio *</span><input required type="date" max={maxEnrollmentDate} value={dateEnrolled} onChange={(event) => setDateEnrolled(event.target.value)} /></label>{stateOptions.length > 0 && <label className="field"><span>Estado del Programa</span><select value={selectedState} onChange={(event) => setSelectedState(event.target.value)}><option value="">Elegir estado del Programa</option>{stateOptions.map((state) => <option key={text(state.uuid)} value={text(state.uuid)}>{nameOf(object(state.concept)) || nameOf(state)}</option>)}</select></label>}{outcomes.length > 0 && <label className="field"><span>Resultado del Programa</span><select value={outcome} onChange={(event) => setOutcome(event.target.value)}><option value="">Elegir Resultado</option>{outcomes.map((item) => <option key={text(item.uuid)} value={text(item.uuid)}>{nameOf(item)}</option>)}</select><small>Elegir un resultado finalizará el programa hoy.</small></label>}{visibleAttributes.map((type) => { const uuid = text(type.uuid); const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === uuid); const value = attributes[uuid] ?? (current ? rawAttributeValue(current, type) : ""); const answers = answersOf(type); const format = attributeFormat(type); return <label className="field" key={uuid}><span>{attributeLabel(type)}{requiredAttribute(type, config.data) ? " *" : ""}</span>{booleanAttribute(type) ? <select required={requiredAttribute(type, config.data)} value={booleanValue(value) === undefined ? "" : String(booleanValue(value))} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.value === "" ? undefined : event.target.value === "true" }))}><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select> : answers.length > 0 ? <select required={requiredAttribute(type, config.data)} value={typeof value === "object" ? value.conceptUuid : String(value)} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: conceptAttribute(type) ? { conceptUuid: event.target.value } : event.target.value }))}><option value=""></option>{answers.map((answer) => <option key={answerUuid(answer)} value={answerUuid(answer)}>{answerLabel(answer)}</option>)}</select> : <input required={requiredAttribute(type, config.data)} type={dateAttribute(type) ? "date" : numberAttribute(type) ? "number" : "text"} step={format === "java.lang.Float" ? "any" : undefined} pattern={format === "org.openmrs.customdatatype.datatype.RegexValidatedTextDatatype" ? text(type.datatypeConfig) : undefined} value={String(value)} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.value }))} />}</label>; })}</div>{enrollmentDateInvalid && <p role="alert" className="error-banner">La fecha de enrolamiento no puede ser posterior al inicio del estado más antiguo ({displayDate(maxEnrollmentDate)}).</p>}{save.isError && <p className="error-banner">No fue posible guardar los cambios del programa.</p>}</div>}
     {activeState && <div className="program-state-remove"><span>Estado vigente: <strong>{nameOf(object(object(activeState.state).concept)) || nameOf(object(activeState.state))}</strong></span>{confirmRemoveState ? <span className="program-state-confirm">¿Quitar este estado? <Button text label="Cancelar" onClick={() => setConfirmRemoveState(false)} /><Button severity="danger" label="Confirmar" loading={removeState.isPending} onClick={() => removeState.mutate()} /></span> : <Button text severity="danger" label="Quitar estado" icon="pi pi-trash" onClick={() => setConfirmRemoveState(true)} />}</div>}{removeState.isError && <p className="error-banner">No fue posible quitar el estado actual.</p>}
   </section>;
 }
@@ -230,7 +269,7 @@ function ProgramCard({ program, patientUuid }: { program: DashboardProgram; pati
   return <article className={`program-card ${program.active ? "is-active" : ""}`}>
     <header><div><h3>{program.name}</h3><span className={`program-status ${program.active ? "active" : ""}`}>{program.active ? "Activo" : "Finalizado"}</span></div>{program.location && <small><i className="pi pi-map-marker" aria-hidden="true" /> {program.location}</small>}</header>
     <dl className="program-card-details"><div><dt>Fecha de enrolamiento</dt><dd>{displayDate(program.dateEnrolled)}</dd></div>{!program.active && <div><dt>Fecha de término</dt><dd>{displayDate(program.dateCompleted)}</dd></div>}{program.outcome && <div><dt>Resultado</dt><dd>{program.outcome}</dd></div>}</dl>{program.active && <ActiveProgramEditor program={program} />}<div className="program-void-action"><ProgramVoidAction program={program} /></div>
-    {(program.attributes.length > 0 || program.states.length > 0) && <details><summary>Ver detalle</summary><div className="program-card-expanded">{program.attributes.length > 0 && <dl>{program.attributes.map((attribute) => <div key={`${attribute.name}:${attribute.value}`}><dt>{attribute.name}</dt><dd>{displayAttributeValue(attribute.value)}</dd></div>)}</dl>}{program.states.length > 0 && <section><h4>Estados</h4><ol>{program.states.map((state, index) => <li key={`${state.name}:${index}`}><strong>{state.name}</strong><span>{displayDate(state.startDate)}{state.endDate ? ` — ${displayDate(state.endDate)}` : " — vigente"}</span></li>)}</ol></section>}<ProgramStateTimeline program={program} /></div></details>}{!program.active && <a className="program-dashboard-link" href={programDashboardUrl(patientUuid, program)}><i className="pi pi-chart-line" aria-hidden="true" /> Abrir dashboard del programa <i className="pi pi-arrow-right" aria-hidden="true" /></a>}
+    {(program.attributes.length > 0 || program.states.length > 0) && <details><summary>Ver detalle</summary><div className="program-card-expanded">{program.attributes.length > 0 && <dl>{program.attributes.map((attribute) => <div key={`${attribute.name}:${attribute.value}`}><dt>{attribute.name}</dt><dd>{displayAttributeValue(attribute.value)}</dd></div>)}</dl>}{program.states.length > 0 && <section><h4>Estados</h4><ol>{program.states.map((state, index) => <li key={`${state.name}:${index}`}><strong>{state.name}</strong><span>{displayDate(state.startDate)}{state.endDate ? ` — ${displayDate(state.endDate)}` : " — vigente"}</span></li>)}</ol></section>}<ProgramStateTimeline program={program} /></div></details>}<a className="program-dashboard-link" href={programDashboardUrl(patientUuid, program)}><i className="pi pi-chart-line" aria-hidden="true" /> Abrir dashboard del programa <i className="pi pi-arrow-right" aria-hidden="true" /></a>
   </article>;
 }
 
