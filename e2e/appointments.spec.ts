@@ -16,6 +16,16 @@ async function selectedOptions(select: Locator): Promise<string[]> {
   return select.evaluate((element: HTMLSelectElement) => [...element.selectedOptions].map((option) => option.value));
 }
 
+function addMinutes(time: string, minutes: number): string {
+  const [hours, currentMinutes] = time.split(":").map(Number);
+  const total = hours * 60 + currentMinutes + minutes;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function santiagoIso(date: string, time: string): string {
+  return new Date(`${date}T${time}:00-04:00`).toISOString();
+}
+
 async function selectResourceSlot(page: Page, resourceName: string, slotIndex: number) {
   const headers = page.locator(".rbc-row-resource .rbc-header");
   await expect(headers.filter({ hasText: resourceName })).toBeVisible();
@@ -222,17 +232,22 @@ test("calendar sidebar preserves form data, honors resources and refreshes after
   await sidebar.locator("#appointment-location").selectOption("location-1");
   await sidebar.locator("#appointment-comments").fill("Conservar al cambiar bloque");
 
+  const initialStart = await sidebar.locator("#appointment-start").inputValue();
   await selectResourceSlot(page, "Dra. Soto", 4);
-  await expect(sidebar.locator("#appointment-start")).toHaveValue("11:00");
-  await expect(sidebar.locator("#appointment-end")).toHaveValue("11:30");
+  await expect.poll(() => sidebar.locator("#appointment-start").inputValue()).not.toBe(initialStart);
+  const providerStart = await sidebar.locator("#appointment-start").inputValue();
+  await expect(sidebar.locator("#appointment-date")).toHaveValue("2026-08-14");
+  await expect(sidebar.locator("#appointment-end")).toHaveValue(addMinutes(providerStart, 30));
   await expect.poll(() => selectedOptions(sidebar.locator("#appointment-providers"))).toEqual(["provider-1"]);
   await expect(sidebar.getByText("HCSBA-2", { exact: true })).toBeVisible();
   await expect(sidebar.locator("#appointment-service")).toHaveValue("service-1");
   await expect(sidebar.locator("#appointment-comments")).toHaveValue("Conservar al cambiar bloque");
 
   await selectResourceSlot(page, "Sin proveedor", 6);
-  await expect(sidebar.locator("#appointment-start")).toHaveValue("12:00");
-  await expect(sidebar.locator("#appointment-end")).toHaveValue("12:30");
+  await expect.poll(() => sidebar.locator("#appointment-start").inputValue()).not.toBe(providerStart);
+  const unassignedStart = await sidebar.locator("#appointment-start").inputValue();
+  await expect(sidebar.locator("#appointment-date")).toHaveValue("2026-08-14");
+  await expect(sidebar.locator("#appointment-end")).toHaveValue(addMinutes(unassignedStart, 30));
   await expect.poll(() => selectedOptions(sidebar.locator("#appointment-providers"))).toEqual([]);
   await expect(sidebar.getByText("HCSBA-2", { exact: true })).toBeVisible();
   await expect(sidebar.locator("#appointment-service")).toHaveValue("service-1");
@@ -259,6 +274,9 @@ test("calendar sidebar preserves form data, honors resources and refreshes after
 
   await selectResourceSlot(page, "Sin proveedor", 6);
   await expect(sidebar).toBeVisible();
+  const savedDate = await sidebar.locator("#appointment-date").inputValue();
+  const savedStart = await sidebar.locator("#appointment-start").inputValue();
+  const savedEnd = await sidebar.locator("#appointment-end").inputValue();
   await sidebar.getByPlaceholder("Nombre o identificador").fill("María");
   await sidebar.getByRole("button", { name: /María Rojas/ }).click();
   await sidebar.locator("#appointment-service").selectOption("service-1");
@@ -269,7 +287,7 @@ test("calendar sidebar preserves form data, honors resources and refreshes after
   await expect(page).toHaveURL(/\/bahmni\/appointments\/calendar$/);
   expect(savedAppointment).toMatchObject({
     patientUuid: "patient-2", serviceUuid: "service-1", locationUuid: "location-1", providers: [],
-    startDateTime: "2026-08-14T16:00:00.000Z", endDateTime: "2026-08-14T16:30:00.000Z",
+    startDateTime: santiagoIso(savedDate, savedStart), endDateTime: santiagoIso(savedDate, savedEnd),
   });
   expect(savedAppointment).not.toHaveProperty("providerUuid");
   await expect.poll(() => calendarReads).toBeGreaterThan(readsBeforeSave);
