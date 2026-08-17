@@ -2,6 +2,7 @@ import Cookies from "js-cookie";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getProviderForUser,
+  getPersistedUsername,
   getCurrentUser,
   login,
   loadAuthenticatedContext,
@@ -42,9 +43,10 @@ describe("legacy authentication persistence", () => {
     await expect(login("doctor", "correcta")).resolves.toBeUndefined();
   });
 
-  it("stores the username string expected by AngularJS instead of a user JSON object", () => {
+  it("stores the JSON string expected by AngularJS cookieStore", () => {
     persistCurrentUser(user);
-    expect(Cookies.get("bahmni.user")).toBe("doctor");
+    expect(Cookies.get("bahmni.user")).toBe(JSON.stringify("doctor"));
+    expect(getPersistedUsername()).toBe("doctor");
   });
 
   it("accepts privileges and roles without UUID while requesting UUIDs when available", async () => {
