@@ -63,9 +63,10 @@ const excludedFromProgram = (attribute: ProgramAttributeType, program: ProgramDe
   return Array.isArray(excluded) && excluded.map(text).includes(text(program?.name));
 };
 const requiredAttribute = (attribute: ProgramAttributeType, config: unknown) => settingFor(attribute, config).required === true;
+const todayInputDate = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const inputDate = (value: unknown) => {
   const match = text(value).match(/^(\d{4}-\d{2}-\d{2})/);
-  return match?.[1] ?? new Date().toISOString().slice(0, 10);
+  return match?.[1] ?? todayInputDate();
 };
 const rawAttributeValue = (attribute: Record<string, unknown>, type: ProgramAttributeType) => {
   const value = attribute.value;
@@ -120,12 +121,52 @@ export function programUpdateAttributes(types: ProgramAttributeType[], rawAttrib
   });
 }
 
+function editableProgramAttributeValue(type: ProgramAttributeType, rawAttributes: Record<string, unknown>[], values: Record<string, ProgramAttributeValue>): ProgramAttributeValue {
+  const uuid = text(type.uuid);
+  if (Object.prototype.hasOwnProperty.call(values, uuid)) return values[uuid];
+  const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === uuid);
+  return current ? rawAttributeValue(current, type) : undefined;
+}
+
+/** Required persisted attributes stay valid until the user explicitly clears them. */
+export function requiredProgramAttributesComplete(types: ProgramAttributeType[], rawAttributes: Record<string, unknown>[], values: Record<string, ProgramAttributeValue>, config: unknown): boolean {
+  return types
+    .filter((type) => requiredAttribute(type, config))
+    .every((type) => hasProgramAttributeValue(editableProgramAttributeValue(type, rawAttributes, values)));
+}
+
 /** Legacy prevents the enrollment date from being after any existing state. */
-export function maximumEnrollmentDate(states: Record<string, unknown>[], today = new Date().toISOString().slice(0, 10)): string {
+export function maximumEnrollmentDate(states: Record<string, unknown>[], today = todayInputDate()): string {
   return states.reduce((maximum, state) => {
     const date = text(state.startDate).match(/^\d{4}-\d{2}-\d{2}/)?.[0];
     return date && date < maximum ? date : maximum;
   }, today);
+}
+
+interface ProgramChronologyInput {
+  dateEnrolled: string;
+  maxEnrollmentDate: string;
+  activeStateStartDate?: unknown;
+  stateChanged: boolean;
+  completing: boolean;
+  actionDate?: string;
+}
+
+/** Mirrors the date guards in legacy manageProgramController.updatePatientProgram. */
+export function programChronologyError(input: ProgramChronologyInput): string | undefined {
+  if (!input.dateEnrolled) return "Ingrese la fecha de enrolamiento antes de guardar.";
+  if (input.dateEnrolled > input.maxEnrollmentDate) {
+    return `La fecha de enrolamiento no puede ser posterior al inicio del estado más antiguo (${displayDate(input.maxEnrollmentDate)}).`;
+  }
+  const activeStateDate = text(input.activeStateStartDate).match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  const actionDate = input.actionDate ?? todayInputDate();
+  if (input.stateChanged && activeStateDate && actionDate < activeStateDate) {
+    return `El nuevo estado no puede comenzar antes del estado vigente (${displayDate(activeStateDate)}).`;
+  }
+  if (input.completing && activeStateDate && actionDate < activeStateDate) {
+    return `El programa no puede finalizar antes del estado vigente (${displayDate(activeStateDate)}).`;
+  }
+  return undefined;
 }
 
 /** Native counterpart of Bahmni's historical-program dashboard URL. */
@@ -152,7 +193,7 @@ function ProgramEnrollmentPanel({ open, patientUuid, activeProgramUuids, onToggl
   const queryClient = useQueryClient();
   const [programUuid, setProgramUuid] = useState("");
   const [stateUuid, setStateUuid] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayInputDate());
   const [attributes, setAttributes] = useState<Record<string, ProgramAttributeValue>>({});
   const definitions = useQuery({ queryKey: ["program-definitions"], queryFn: getProgramDefinitions, enabled: open });
   const attributeTypes = useQuery({ queryKey: ["program-attribute-types"], queryFn: getProgramAttributeTypes, enabled: open });
@@ -162,10 +203,7 @@ function ProgramEnrollmentPanel({ open, patientUuid, activeProgramUuids, onToggl
   const states = workflows.flatMap((workflow) => Array.isArray(workflow.states) ? workflow.states.map(object).filter((state) => state.retired !== true) : []);
   const eligible = (definitions.data ?? []).filter((program) => !activeProgramUuids.has(text(program.uuid)));
   const visibleAttributes = (attributeTypes.data ?? []).filter((attribute) => !excludedFromProgram(attribute, selected, config.data));
-  const requiredAttributesComplete = visibleAttributes.filter((attribute) => requiredAttribute(attribute, config.data)).every((attribute) => {
-    const value = attributes[text(attribute.uuid)];
-    return hasProgramAttributeValue(value);
-  });
+  const requiredAttributesComplete = requiredProgramAttributesComplete(visibleAttributes, [], attributes, config.data);
   const enroll = useMutation({
     mutationFn: async () => enrollPatientInProgram({ patientUuid, programUuid, dateEnrolled: localStartOfDay(date), stateUuid: stateUuid || undefined, attributes: programEnrollmentAttributes(visibleAttributes, attributes) }),
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["program-enrollments", patientUuid] }); setAttributes({}); onToggle(); },
@@ -180,7 +218,7 @@ function ProgramEnrollmentPanel({ open, patientUuid, activeProgramUuids, onToggl
       {visibleAttributes.map((attribute) => { const uuid = text(attribute.uuid); const answers = answersOf(attribute); const value = attributes[uuid]; const required = requiredAttribute(attribute, config.data); const format = attributeFormat(attribute); return <label className="field" key={uuid}><span>{attributeLabel(attribute)}{required ? " *" : ""}</span>{booleanAttribute(attribute) ? <select required={required} value={booleanValue(value) === undefined ? "" : String(booleanValue(value))} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: event.target.value === "" ? undefined : event.target.value === "true" }))}><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select> : answers.length > 0 ? <select required={required} value={typeof value === "object" ? value.conceptUuid : String(value ?? "")} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: conceptAttribute(attribute) ? { conceptUuid: event.target.value } : event.target.value }))}><option value=""></option>{answers.map((answer) => <option key={answerUuid(answer)} value={answerUuid(answer)}>{answerLabel(answer)}</option>)}</select> : <input required={required} type={dateAttribute(attribute) ? "date" : numberAttribute(attribute) ? "number" : "text"} step={format === "java.lang.Float" ? "any" : undefined} pattern={format === "org.openmrs.customdatatype.datatype.RegexValidatedTextDatatype" ? text(attribute.datatypeConfig) : undefined} value={String(value ?? "")} onChange={(event) => setAttributes((current) => ({ ...current, [uuid]: event.target.value }))} />}</label>; })}
     </div>
     {selectedAlreadyActive && <p className="error-banner">Paciente ya inscrito en el programa.</p>}{enroll.isError && <p className="error-banner">No fue posible inscribir al paciente. Revise los datos e intente nuevamente.</p>}
-    <div className="program-enrollment-actions"><Button outlined label="Cancelar" onClick={onToggle} /><Button label="Incribir" icon="pi pi-check" loading={enroll.isPending} disabled={!canSubmit} onClick={() => enroll.mutate()} /></div></>}
+    <div className="program-enrollment-actions"><Button outlined label="Cancelar" onClick={onToggle} /><Button label="Enrolar" icon="pi pi-check" loading={enroll.isPending} disabled={!canSubmit} onClick={() => enroll.mutate()} /></div></>}
   </section>;
 }
 
@@ -205,24 +243,23 @@ function ActiveProgramEditor({ program }: { program: DashboardProgram }) {
   const rawStates = objects(program.raw.states).filter((state) => state.voided !== true);
   const activeState = rawStates.find((state) => state.endDate === null || state.endDate === undefined);
   const maxEnrollmentDate = maximumEnrollmentDate(rawStates);
-  const enrollmentDateInvalid = dateEnrolled > maxEnrollmentDate;
   const stateOptions = objects(definition.allWorkflows).flatMap((workflow) => objects(workflow.states)).filter((state) => state.retired !== true);
   const outcomes = objects(object(definition.outcomesConcept).setMembers).filter((item) => item.retired !== true);
   const rawAttributes = objects(program.raw.attributes);
   const visibleAttributes = (attributeTypes.data ?? []).filter((attribute) => !excludedFromProgram(attribute, definition, config.data));
   const editorLoading = definitions.isLoading || attributeTypes.isLoading || config.isLoading;
-  const requiredAttributesComplete = visibleAttributes.filter((type) => requiredAttribute(type, config.data)).every((type) => {
-    const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === text(type.uuid));
-    const value = attributes[text(type.uuid)] ?? (current ? rawAttributeValue(current, type) : "");
-    return hasProgramAttributeValue(value);
-  });
+  const requiredAttributesComplete = requiredProgramAttributesComplete(visibleAttributes, rawAttributes, attributes, config.data);
+  const actionDate = todayInputDate();
+  const stateChanged = Boolean(selectedState && text(object(activeState?.state).uuid) !== selectedState);
+  const chronologyError = programChronologyError({ dateEnrolled, maxEnrollmentDate, activeStateStartDate: activeState?.startDate, stateChanged, completing: Boolean(outcome), actionDate });
   const save = useMutation({
     mutationFn: async () => {
+      if (chronologyError) throw new Error(chronologyError);
       const states = rawStates.map((state) => ({ ...state }));
-      if (selectedState && text(object(activeState?.state).uuid) !== selectedState) states.push({ state: { uuid: selectedState }, startDate: localStartOfDay(new Date().toISOString().slice(0, 10)) });
+      if (stateChanged) states.push({ state: { uuid: selectedState }, startDate: localStartOfDay(actionDate) });
       const mappedAttributes = programUpdateAttributes(visibleAttributes, rawAttributes, attributes);
       await updatePatientProgram(program.uuid, {
-        dateEnrolled: localStartOfDay(dateEnrolled), states, dateCompleted: outcome ? localStartOfDay(new Date().toISOString().slice(0, 10)) : null,
+        dateEnrolled: localStartOfDay(dateEnrolled), states, dateCompleted: outcome ? localStartOfDay(actionDate) : null,
         outcome: outcome || null, attributes: mappedAttributes,
       });
     },
@@ -238,8 +275,8 @@ function ActiveProgramEditor({ program }: { program: DashboardProgram }) {
   });
   const beginEdit = () => { setDateEnrolled(inputDate(program.dateEnrolled)); setSelectedState(""); setOutcome(""); setAttributes({}); setEditing(true); };
 
-  return <section className="program-active-management"><div className="program-card-actions">{!editing ? <Button text label="Editar" icon="pi pi-pencil" onClick={beginEdit} /> : <><Button text label="Cancelar" icon="pi pi-times" onClick={() => setEditing(false)} /><Button label={outcome ? "Finalizar programa" : "Guardar cambios"} icon="pi pi-check" loading={save.isPending} disabled={editorLoading || !requiredAttributesComplete || enrollmentDateInvalid} onClick={() => save.mutate()} /></>}</div>
-    {editing && <div className="program-editor">{editorLoading && <p role="status" className="muted-text">Cargando atributos configurados…</p>}<div className="form-grid"><label className="field"><span>Fecha de inicio *</span><input required type="date" max={maxEnrollmentDate} value={dateEnrolled} onChange={(event) => setDateEnrolled(event.target.value)} /></label>{stateOptions.length > 0 && <label className="field"><span>Estado del Programa</span><select value={selectedState} onChange={(event) => setSelectedState(event.target.value)}><option value="">Elegir estado del Programa</option>{stateOptions.map((state) => <option key={text(state.uuid)} value={text(state.uuid)}>{nameOf(object(state.concept)) || nameOf(state)}</option>)}</select></label>}{outcomes.length > 0 && <label className="field"><span>Resultado del Programa</span><select value={outcome} onChange={(event) => setOutcome(event.target.value)}><option value="">Elegir Resultado</option>{outcomes.map((item) => <option key={text(item.uuid)} value={text(item.uuid)}>{nameOf(item)}</option>)}</select><small>Elegir un resultado finalizará el programa hoy.</small></label>}{visibleAttributes.map((type) => { const uuid = text(type.uuid); const current = rawAttributes.find((attribute) => text(object(attribute.attributeType).uuid) === uuid); const value = attributes[uuid] ?? (current ? rawAttributeValue(current, type) : ""); const answers = answersOf(type); const format = attributeFormat(type); return <label className="field" key={uuid}><span>{attributeLabel(type)}{requiredAttribute(type, config.data) ? " *" : ""}</span>{booleanAttribute(type) ? <select required={requiredAttribute(type, config.data)} value={booleanValue(value) === undefined ? "" : String(booleanValue(value))} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.value === "" ? undefined : event.target.value === "true" }))}><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select> : answers.length > 0 ? <select required={requiredAttribute(type, config.data)} value={typeof value === "object" ? value.conceptUuid : String(value)} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: conceptAttribute(type) ? { conceptUuid: event.target.value } : event.target.value }))}><option value=""></option>{answers.map((answer) => <option key={answerUuid(answer)} value={answerUuid(answer)}>{answerLabel(answer)}</option>)}</select> : <input required={requiredAttribute(type, config.data)} type={dateAttribute(type) ? "date" : numberAttribute(type) ? "number" : "text"} step={format === "java.lang.Float" ? "any" : undefined} pattern={format === "org.openmrs.customdatatype.datatype.RegexValidatedTextDatatype" ? text(type.datatypeConfig) : undefined} value={String(value)} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.value }))} />}</label>; })}</div>{enrollmentDateInvalid && <p role="alert" className="error-banner">La fecha de enrolamiento no puede ser posterior al inicio del estado más antiguo ({displayDate(maxEnrollmentDate)}).</p>}{save.isError && <p className="error-banner">No fue posible guardar los cambios del programa.</p>}</div>}
+  return <section className="program-active-management"><div className="program-card-actions">{!editing ? <Button text label="Editar" icon="pi pi-pencil" onClick={beginEdit} /> : <><Button text label="Cancelar" icon="pi pi-times" onClick={() => setEditing(false)} /><Button label={outcome ? "Finalizar programa" : "Guardar cambios"} icon="pi pi-check" loading={save.isPending} disabled={editorLoading || !requiredAttributesComplete || Boolean(chronologyError)} onClick={() => save.mutate()} /></>}</div>
+    {editing && <div className="program-editor">{editorLoading && <p role="status" className="muted-text">Cargando atributos configurados…</p>}<div className="form-grid"><label className="field"><span>Fecha de inicio *</span><input required type="date" max={maxEnrollmentDate} value={dateEnrolled} onChange={(event) => setDateEnrolled(event.target.value)} /></label>{stateOptions.length > 0 && <label className="field"><span>Estado del Programa</span><select value={selectedState} onChange={(event) => setSelectedState(event.target.value)}><option value="">Elegir estado del Programa</option>{stateOptions.map((state) => <option key={text(state.uuid)} value={text(state.uuid)}>{nameOf(object(state.concept)) || nameOf(state)}</option>)}</select></label>}{outcomes.length > 0 && <label className="field"><span>Resultado del Programa</span><select value={outcome} onChange={(event) => setOutcome(event.target.value)}><option value="">Elegir Resultado</option>{outcomes.map((item) => <option key={text(item.uuid)} value={text(item.uuid)}>{nameOf(item)}</option>)}</select><small>Elegir un resultado finalizará el programa hoy.</small></label>}{visibleAttributes.map((type) => { const uuid = text(type.uuid); const value = editableProgramAttributeValue(type, rawAttributes, attributes); const answers = answersOf(type); const format = attributeFormat(type); return <label className="field" key={uuid}><span>{attributeLabel(type)}{requiredAttribute(type, config.data) ? " *" : ""}</span>{booleanAttribute(type) ? <select required={requiredAttribute(type, config.data)} value={booleanValue(value) === undefined ? "" : String(booleanValue(value))} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.value === "" ? undefined : event.target.value === "true" }))}><option value="">Seleccionar</option><option value="true">Sí</option><option value="false">No</option></select> : answers.length > 0 ? <select required={requiredAttribute(type, config.data)} value={typeof value === "object" ? value.conceptUuid : String(value ?? "")} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: conceptAttribute(type) ? { conceptUuid: event.target.value } : event.target.value }))}><option value=""></option>{answers.map((answer) => <option key={answerUuid(answer)} value={answerUuid(answer)}>{answerLabel(answer)}</option>)}</select> : <input required={requiredAttribute(type, config.data)} type={dateAttribute(type) ? "date" : numberAttribute(type) ? "number" : "text"} step={format === "java.lang.Float" ? "any" : undefined} pattern={format === "org.openmrs.customdatatype.datatype.RegexValidatedTextDatatype" ? text(type.datatypeConfig) : undefined} value={String(value ?? "")} onChange={(event) => setAttributes((draft) => ({ ...draft, [uuid]: event.target.value }))} />}</label>; })}</div>{chronologyError && <p role="alert" className="error-banner">{chronologyError}</p>}{save.isError && <p className="error-banner">No fue posible guardar los cambios del programa.</p>}</div>}
     {activeState && <div className="program-state-remove"><span>Estado vigente: <strong>{nameOf(object(object(activeState.state).concept)) || nameOf(object(activeState.state))}</strong></span>{confirmRemoveState ? <span className="program-state-confirm">¿Quitar este estado? <Button text label="Cancelar" onClick={() => setConfirmRemoveState(false)} /><Button severity="danger" label="Confirmar" loading={removeState.isPending} onClick={() => removeState.mutate()} /></span> : <Button text severity="danger" label="Quitar estado" icon="pi pi-trash" onClick={() => setConfirmRemoveState(true)} />}</div>}{removeState.isError && <p className="error-banner">No fue posible quitar el estado actual.</p>}
   </section>;
 }
