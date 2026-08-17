@@ -16,14 +16,14 @@ import { BED_STATUSES, bedContainsPatient, bedHasOccupant, bedOccupantLabel, bed
 import { buildWardBedListRows, compareWardListValues, configuredWardListHeadings, wardListValue } from "./wardList";
 import { OirsPatientDialog } from "./OirsPatientDialog";
 import { BacteriologyConceptSetEditor as AdtConceptSetEditor } from "@/features/clinical/consultation/boards/BacteriologyConceptSetEditor";
-import { buildAdtEncounterPayload, encounterTypeName, type AdtAction } from "./workflow";
+import { buildAdtEncounterPayload, encounterTypeName, resolveIpdVisit, type AdtAction } from "./workflow";
 import { parseIpdConfig } from "@/config-compat/ipdConfig";
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { loadAppConfig } from "@/services/bahmni/config";
 import { getEncounterConfiguration } from "@/services/bahmni/metadata";
 import { getPatientProfile } from "@/services/bahmni/patients";
 import { getActiveVisits } from "@/services/bahmni/visits";
-import { addBedTag, assignBed, createAdtEncounter, dischargePatient, endVisitAndCreateEncounter, getAdtConceptSet, getAssignedBed, getBed, getBedTags, getWard, getWardListRows, getWards, ipdQueryKeys, removeBedTag, updateBedStatus } from "@/services/bahmni/ipd";
+import { addBedTag, assignBed, createAdtEncounter, dischargePatient, endVisitAndCreateEncounter, getAdtConceptSet, getAssignedBed, getBed, getBedTags, getWard, getWardListRows, getWards, ipdQueryKeys, removeBedTag, unassignBed, updateBedStatus } from "@/services/bahmni/ipd";
 
 interface Props { patientUuid?: string; bedId?: number }
 
@@ -84,6 +84,7 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
   const [convertVisit, setConvertVisit] = useState(true);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [oirsOpen, setOirsOpen] = useState(false);
+  const [repairOpen, setRepairOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sort, setSort] = useState<{ key: string; descending: boolean }>();
   const [listSearch, setListSearch] = useState("");
@@ -134,13 +135,16 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
   }), [ward.data?.beds]);
   const patient = patientView(profile.data);
   const administrativeMode = !patientUuid;
-  const activeVisit = visits.data?.at(-1);
+  const visitResolution = visits.data && config.data?.defaultVisitType
+    ? resolveIpdVisit(visits.data, config.data.defaultVisitType, Boolean(assigned.data))
+    : { orphanedBed: false };
+  const activeVisit = visitResolution.visit;
   const assignedHere = Boolean(assigned.data?.bedId && assigned.data.bedId === selectedBed?.bedId);
   const possibleActions = useMemo<AdtAction[]>(() => {
-    if (!patientUuid) return [];
+    if (!patientUuid || visitResolution.issue) return [];
     if (assigned.data) return ["transfer", "discharge"];
     return ["admit"];
-  }, [assigned.data, patientUuid]);
+  }, [assigned.data, patientUuid, visitResolution.issue]);
 
   const reconcile = async (affectedWardUuids: Array<string | undefined> = []) => {
     const wardUuids = [...new Set([inferredWardUuid, ...affectedWardUuids].filter((uuid): uuid is string => Boolean(uuid)))];
@@ -155,13 +159,14 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
   const execute = useMutation({
     mutationFn: async (current: AdtAction) => {
       if (!patientUuid || !location?.uuid || !metadata.data) throw new Error("Falta paciente, ubicación o configuración de encuentros.");
+      if (visitResolution.issue) throw new Error(visitResolution.issue);
       const encounterTypeUuid = metadata.data.encounterTypes[encounterTypeName(current)];
       if (!encounterTypeUuid) throw new Error(`No existe el tipo de encuentro ${encounterTypeName(current)}.`);
       const defaultVisitName = config.data?.defaultVisitType;
       const defaultVisitUuid = defaultVisitName ? metadata.data.visitTypes[defaultVisitName] : undefined;
       const currentVisitType = display(activeVisit?.visitType?.display) ?? display(activeVisit?.visitType?.name);
       const currentVisitTypeUuid = activeVisit?.visitType?.uuid;
-      const payload = buildAdtEncounterPayload({ action: current, patientUuid, locationUuid: location.uuid, encounterTypeUuid, visitTypeUuid: current === "discharge" ? undefined : currentVisitTypeUuid ?? defaultVisitUuid, providerUuid: provider?.uuid, observations: populatedObservations(adtObservations) });
+      const payload = buildAdtEncounterPayload({ action: current, patientUuid, locationUuid: location.uuid, encounterTypeUuid, visitTypeUuid: current === "discharge" ? undefined : currentVisitTypeUuid ?? defaultVisitUuid, visitUuid: activeVisit?.uuid, providerUuid: provider?.uuid, observations: populatedObservations(adtObservations) });
 
       if (current === "discharge") {
         if (!activeVisit || !assigned.data) throw new Error("El paciente no tiene visita IPD y cama activas.");
@@ -176,7 +181,9 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
       const mismatch = activeVisit && defaultVisitName && currentVisitType && currentVisitType !== defaultVisitName;
       if (current === "admit" && mismatch && (config.data?.enableAutoConvertToIPDVisit || config.data?.hideStartNewVisitPopUp || convertVisit)) {
         if (!defaultVisitUuid) throw new Error(`El tipo de visita ${defaultVisitName} no está configurado.`);
-        response = await endVisitAndCreateEncounter(activeVisit.uuid, { ...payload, visitTypeUuid: defaultVisitUuid });
+        const convertedPayload: Record<string, unknown> = { ...payload, visitTypeUuid: defaultVisitUuid };
+        delete convertedPayload.visitUuid;
+        response = await endVisitAndCreateEncounter(activeVisit.uuid, convertedPayload);
       } else response = await createAdtEncounter(payload);
       const createdEncounterUuid = encounterUuid(response);
       if (!createdEncounterUuid) throw new Error("OpenMRS no devolvió el encounterUuid requerido para asignar la cama.");
@@ -211,6 +218,25 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
       await reconcile();
       setAction(undefined);
       showNotice("error", error instanceof Error ? error.message : "No fue posible completar la operación ADT.");
+    },
+  });
+
+  const repairAssignment = useMutation({
+    mutationFn: async () => {
+      if (!patientUuid || !assigned.data?.bedId || !visitResolution.orphanedBed) throw new Error("La asignación ya no requiere reparación.");
+      await unassignBed(assigned.data.bedId, patientUuid);
+      return { wardUuid: assigned.data.wardUuid };
+    },
+    onSuccess: async ({ wardUuid: affectedWardUuid }) => {
+      await reconcile([affectedWardUuid]);
+      const confirmed = patientUuid ? await getAssignedBed(patientUuid).catch(() => null) : null;
+      setRepairOpen(false);
+      showNotice(confirmed ? "warning" : "success", confirmed ? "OpenMRS respondió, pero la cama aún aparece asignada. Recargue antes de repetir." : "Asignación de cama inconsistente liberada.");
+    },
+    onError: async (error) => {
+      await reconcile();
+      setRepairOpen(false);
+      showNotice("error", error instanceof Error ? error.message : "No fue posible liberar la asignación inconsistente.");
     },
   });
 
@@ -270,6 +296,7 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
       <aside className="panel ipd-context">
         <header className="ipd-context-header"><span className="ipd-context-avatar" aria-hidden="true">{patientUuid ? patient.name.charAt(0).toLocaleUpperCase() : <BedIcon />}</span><div><small>{patientUuid ? "Paciente seleccionado" : "Modo administrativo"}</small><h2>{patientUuid ? patient.name : "Gestión de cama"}</h2>{patientUuid && <span>{patient.identifier}</span>}</div></header>
         {patientUuid ? <><dl className="ipd-context-details"><dt>Edad / sexo</dt><dd>{patient.age} / {patient.gender}</dd><dt>Cama actual</dt><dd><span className={assigned.data ? "ipd-current-bed" : "ipd-no-bed"}>{assigned.data?.bedNumber ?? "Sin cama"}</span></dd></dl>
+          {visitResolution.issue && <div className="warning-banner" role="alert"><p>{visitResolution.issue}</p>{visitResolution.orphanedBed && canAssign && <Button outlined severity="danger" icon="pi pi-wrench" label="Liberar cama inconsistente" onClick={() => setRepairOpen(true)} />}</div>}
           <div className="ipd-actions">{possibleActions.map((item) => <Button key={item} disabled={!canAssign || execute.isPending || (item !== "discharge" && (!selectedBed || (item === "transfer" && assignedHere)))} label={item === "admit" ? "Admitir" : item === "transfer" ? "Transferir" : "Dar de alta"} severity={item === "discharge" ? "danger" : undefined} onClick={() => { setConvertVisit(true); setAction(item); }} />)}
           {config.data?.oirsApiBaseUrl && activeVisit && assigned.data && <Button outlined icon="pi pi-users" label="Paciente acostado / visitas" onClick={() => setOirsOpen(true)} />}</div>
           {activeVisit && <Link className="ipd-dashboard-link" href={`/bedmanagement/patient/${patientUuid}/visit/${activeVisit.uuid}/dashboard`}><i className="pi pi-chart-bar" aria-hidden="true" /> Abrir dashboard IPD <i className="pi pi-arrow-right" aria-hidden="true" /></Link>}
@@ -307,6 +334,7 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
     </div></>}
     <Dialog header="Confirmar operación ADT" visible={Boolean(action)} modal onHide={() => setAction(undefined)} footer={<><Button outlined label="Cancelar" onClick={() => setAction(undefined)} /><Button loading={execute.isPending} label="Confirmar" severity={action === "discharge" ? "danger" : undefined} onClick={() => action && execute.mutate(action)} /></>}><p>{confirmText}</p>{action === "admit" && activeVisit && config.data?.defaultVisitType && (display(activeVisit.visitType?.display) ?? display(activeVisit.visitType?.name)) !== config.data.defaultVisitType && !config.data.enableAutoConvertToIPDVisit && !config.data.hideStartNewVisitPopUp && <div className="ipd-visit-choice"><p>La visita activa no es {config.data.defaultVisitType}. El legacy permite elegir:</p><Button outlined={!convertVisit} label={`Cerrar visita e iniciar ${config.data.defaultVisitType}`} onClick={() => setConvertVisit(true)} /><Button outlined={convertVisit} label="Continuar con visita actual" onClick={() => setConvertVisit(false)} /></div>}{adtConcept.isLoading && <p>Cargando notas ADT configuradas…</p>}{adtConcept.data && <div className="ipd-adt-observations"><AdtConceptSetEditor concept={adtConcept.data} observations={adtObservations} conceptSetUI={record(config.data?.extensions.conceptSetUI)} onChange={setAdtObservations} /></div>}<p className="muted">Antes de escribir se releerá la cama destino y después se reconciliarán cama, visita y encuentro.</p></Dialog>
     <Dialog header={`Tags de cama ${selectedBed?.bedNumber ?? ""}`} visible={tagsOpen} modal onHide={() => setTagsOpen(false)}><div className="ipd-tag-editor">{tags.data?.map((tag) => { const map = selectedBed?.bedTagMaps.find((candidate) => candidate.bedTag.uuid === tag.uuid); return <button type="button" key={tag.uuid} className={map ? "selected" : ""} disabled={tagMutation.isPending} onClick={() => map?.uuid ? tagMutation.mutate({ mode: "remove", uuid: map.uuid }) : tagMutation.mutate({ mode: "add", uuid: tag.uuid })}><i className={`pi ${map ? "pi-check" : "pi-tag"}`} /> {tag.name}</button>; })}</div></Dialog>
+    <Dialog header="Reparar asignación de cama" visible={repairOpen} modal onHide={() => setRepairOpen(false)} footer={<><Button outlined label="Cancelar" onClick={() => setRepairOpen(false)} /><Button severity="danger" loading={repairAssignment.isPending} label="Liberar cama" onClick={() => repairAssignment.mutate()} /></>}><p>La cama {assigned.data?.bedNumber ?? "—"} está ligada a una visita cerrada. Se finalizará solamente la asignación de cama huérfana; no se creará ni cerrará una visita.</p></Dialog>
     {config.data?.oirsApiBaseUrl && patientUuid && activeVisit && <OirsPatientDialog visible={oirsOpen} onHide={() => setOirsOpen(false)} baseUrl={config.data.oirsApiBaseUrl} patientUuid={patientUuid} visitUuid={activeVisit.uuid} bedNumber={assigned.data?.bedNumber} identifier={patient.identifier} patientName={patient.name} age={patient.age} />}
   </AppShell></AuthGuard>;
 }

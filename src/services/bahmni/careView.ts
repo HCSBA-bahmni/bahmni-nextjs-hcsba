@@ -72,7 +72,7 @@ export function normalizeCareViewPatient(value: unknown): CareViewPatient {
   const composedName = [name.givenName, name.middleName, name.familyName]
     .filter((part): part is string => typeof part === "string" && Boolean(part))
     .join(" ");
-  const careTeam = object(source.careTeamDetails);
+  const careTeam = object(source.careTeam ?? source.careTeamDetails);
   const participantsSource = source.careTeamParticipants
     ?? source.careTeamParticipant
     ?? source.participants
@@ -438,15 +438,55 @@ export async function updateNonMedicationTasks(payload: NonMedicationTaskUpdateP
   });
 }
 
+type CareTeamParticipantMutation =
+  | { providerUuid: string; startTimeMillis: number; endTimeMillis: number }
+  | { uuid: string; voided: true };
+
+export interface CareTeamUpdateResult {
+  patientUuid?: string;
+  participants: CareTeamParticipant[];
+  extensions: Record<string, unknown>;
+}
+
+export function buildCareTeamParticipantRequest(participant: CareTeamParticipantMutation):
+  | { providerUuid: string; startTime: number; endTime: number }
+  | { uuid: string; voided: true } {
+  if ("providerUuid" in participant) {
+    return {
+      providerUuid: participant.providerUuid,
+      // The legacy IPD write contract consumes Unix seconds even though its
+      // participant responses expose startTime/endTime as epoch milliseconds.
+      startTime: Math.floor(participant.startTimeMillis / 1_000),
+      endTime: Math.floor(participant.endTimeMillis / 1_000),
+    };
+  }
+  return participant;
+}
+
+export function normalizeCareTeamUpdate(value: unknown): CareTeamUpdateResult {
+  const source = object(value);
+  return {
+    patientUuid: text(source.patientUuid),
+    participants: Array.isArray(source.participants) ? source.participants.map(providerParticipant) : [],
+    extensions: source,
+  };
+}
+
 export async function updateCareTeamParticipant(payload: {
   patientUuid: string;
-  participant: { providerUuid: string; startTime: number; endTime: number } | { uuid: string; voided: true };
-}): Promise<Record<string, unknown>> {
-  return bahmniRequest("/ws/rest/v1/ipd/careteam/participants", {
+  visitUuid: string;
+  participant: CareTeamParticipantMutation;
+}): Promise<CareTeamUpdateResult> {
+  const response = await bahmniRequest("/ws/rest/v1/ipd/careteam/participants", {
     method: "POST",
-    body: JSON.stringify({ patientUuid: payload.patientUuid, careTeamParticipantsRequest: [payload.participant] }),
+    body: JSON.stringify({
+      patientUuid: payload.patientUuid,
+      visitUuid: payload.visitUuid,
+      careTeamParticipantsRequest: [buildCareTeamParticipantRequest(payload.participant)],
+    }),
     schema: looseObject,
   });
+  return normalizeCareTeamUpdate(response);
 }
 
 export const careViewQueryKeys = {

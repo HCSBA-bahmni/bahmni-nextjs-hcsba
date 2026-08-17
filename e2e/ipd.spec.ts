@@ -280,6 +280,7 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   let assigned = false;
   let careTeamPayload: Record<string, unknown> | undefined;
   let careSearchKeys: string[] = [];
+  let careSearchRequests = 0;
   await page.route("**/bahmni_config/openmrs/apps/careViewDashboard/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ pageSizeOptions: [10, 20], defaultPageSize: 10, timeframeLimitInHours: 2 }) }));
   await page.route("**/implementation_config/openmrs/apps/careViewDashboard/app.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/bahmni_config/openmrs/apps/ipdDashboard/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
@@ -299,6 +300,7 @@ test("renders the native Care View workflow and confirms a current-shift care-te
     careTeamDetails: { participants: assigned ? [{ uuid: "participant", providerUuid: "provider", providerName: "Super Man" }] : [] },
   }], totalPatients: 1 }) }));
   await page.route("**/openmrs/ws/rest/v1/ipd/wards/ward/patients/search?**", (route) => {
+    careSearchRequests += 1;
     const url = new URL(route.request().url());
     careSearchKeys = url.searchParams.getAll("searchKeys");
     return route.fulfill({ contentType: "application/json", body: JSON.stringify({ admittedPatients: [{
@@ -321,8 +323,13 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   await page.route("**/openmrs/ws/rest/v1/tasks?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([]) }));
   await page.route("**/openmrs/ws/rest/v1/ipd/careteam/participants", (route) => {
     careTeamPayload = route.request().postDataJSON() as Record<string, unknown>;
+    const request = (careTeamPayload.careTeamParticipantsRequest as Array<Record<string, number | string>>)[0];
     assigned = true;
-    return route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: "participant" }) });
+    return route.fulfill({ contentType: "application/json", body: JSON.stringify({
+      uuid: "care-team",
+      patientUuid: "patient",
+      participants: [{ uuid: "participant", provider: { uuid: "provider", display: "Super Man" }, startTime: Number(request.startTime) * 1_000, endTime: Number(request.endTime) * 1_000, voided: false }],
+    }) });
   });
 
   await page.goto("/bahmni/bedmanagement/care-view");
@@ -341,7 +348,15 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   expect(careSearchKeys).toEqual(["bedNumber", "patientIdentifier", "patientName"]);
   await page.getByRole("button", { name: "Asignarme" }).click();
   await expect(page.locator(".p-toast-message-success")).toContainText("Paciente asignado para el turno vigente.");
-  expect(careTeamPayload).toMatchObject({ patientUuid: "patient", careTeamParticipantsRequest: [{ providerUuid: "provider" }] });
+  expect(careTeamPayload).toMatchObject({ patientUuid: "patient", visitUuid: "visit", careTeamParticipantsRequest: [{ providerUuid: "provider" }] });
+  const participantRequest = (careTeamPayload?.careTeamParticipantsRequest as Array<Record<string, unknown>>)[0];
+  expect(participantRequest.startTime).toEqual(expect.any(Number));
+  expect(participantRequest.endTime).toEqual(expect.any(Number));
+  expect(Number(participantRequest.startTime)).toBeLessThan(10_000_000_000);
+  expect(Number(participantRequest.endTime) - Number(participantRequest.startTime)).toBe(86_340);
+  await expect(page.getByText("Responsable:").locator("strong")).toHaveText("Super Man");
+  await expect(page.getByRole("button", { name: "Retirarme" })).toBeVisible();
+  expect(careSearchRequests).toBe(1);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   // PrimeReact fades the Toast in; inspect accessibility after its temporary
   // opacity no longer alters the effective contrast reported by Axe.

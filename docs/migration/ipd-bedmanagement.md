@@ -77,7 +77,7 @@ No existe retry automático de escrituras. Un resultado no confirmado deja un av
 - Carga sólo tareas de los pacientes visibles y tolera el fallo parcial de uno de los dos dominios.
 - Clasifica pendiente, administrada, administrada tarde, omitida, atrasada y detenida con los umbrales configurados.
 - Detecta pendientes `REQUESTED` creados por `daemon` en el turno anterior.
-- Permite asignar o retirar al proveedor actual sólo durante el turno vigente y confirma el estado mediante relectura antes de mostrar éxito.
+- Permite asignar o retirar al proveedor actual sólo durante el turno vigente. Como legacy, usa la `CareTeamResponse` del POST para actualizar inmediatamente el responsable y refresca aparte el resumen; no relee toda la sala como condición de éxito. El envelope real de pacientes expone esa respuesta bajo `careTeam`. El POST de alta a `ipd/careteam/participants` conserva la asimetría temporal legacy: `startTime` y `endTime` se escriben en segundos Unix, mientras que las respuestas de participantes se normalizan desde milisegundos. Next envía además el `visitUuid` de la asignación de cama para evitar que OpenMRS elija otra visita activa del paciente; el OMOD mantiene el fallback por `patientUuid` para consumidores legacy.
 - Paciente, tratamientos nuevos y pendientes enlazan al dashboard IPD nativo.
 - El dashboard IPD individual respeta las seis secciones y el orden de `ipdDashboard/app.json`; su compatibilidad con la URL legacy conserva `patientUuid`, `visitUuid` y `source=careViewDashboard`.
 - Registra `VIEWED_WARD_LEVEL_DASHBOARD` sin incluir información clínica en auditoría.

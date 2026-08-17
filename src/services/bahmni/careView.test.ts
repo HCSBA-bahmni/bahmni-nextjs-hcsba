@@ -14,7 +14,7 @@ describe("Care View OpenMRS contracts", () => {
         },
         bedDetails: { bedNumber: "CI-1" },
         visitDetails: { uuid: "visit", startDatetime: 1_780_000_000_000 },
-        careTeamDetails: { participants: [{ uuid: "participant", providerUuid: "provider", providerName: "Profesional" }] },
+        careTeam: { participants: [{ uuid: "participant", provider: { uuid: "provider", display: "Profesional" }, startTime: 1_780_000_000_000, endTime: 1_780_039_600_000 }] },
         newTreatments: [{ uuid: "treatment" }],
       }],
       totalPatients: 1,
@@ -68,13 +68,15 @@ describe("Care View OpenMRS contracts", () => {
 
   it("matches the care-team add and void payloads", async () => {
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }));
+      .mockResolvedValueOnce(new Response(JSON.stringify({ patientUuid: "patient", participants: [{ uuid: "participant", provider: { uuid: "provider", display: "Profesional" }, startTime: 1_710_662_400_000, endTime: 1_710_702_000_000 }] }), { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ patientUuid: "patient", participants: [] }), { status: 200, headers: { "content-type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
-    await updateCareTeamParticipant({ patientUuid: "patient", participant: { providerUuid: "provider", startTime: 1, endTime: 2 } });
-    await updateCareTeamParticipant({ patientUuid: "patient", participant: { uuid: "participant", voided: true } });
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ patientUuid: "patient", careTeamParticipantsRequest: [{ providerUuid: "provider", startTime: 1, endTime: 2 }] });
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ patientUuid: "patient", careTeamParticipantsRequest: [{ uuid: "participant", voided: true }] });
+    const assigned = await updateCareTeamParticipant({ patientUuid: "patient", visitUuid: "bed-visit", participant: { providerUuid: "provider", startTimeMillis: 1_710_662_400_999, endTimeMillis: 1_710_702_000_999 } });
+    const removed = await updateCareTeamParticipant({ patientUuid: "patient", visitUuid: "bed-visit", participant: { uuid: "participant", voided: true } });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ patientUuid: "patient", visitUuid: "bed-visit", careTeamParticipantsRequest: [{ providerUuid: "provider", startTime: 1_710_662_400, endTime: 1_710_702_000 }] });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ patientUuid: "patient", visitUuid: "bed-visit", careTeamParticipantsRequest: [{ uuid: "participant", voided: true }] });
+    expect(assigned).toEqual(expect.objectContaining({ patientUuid: "patient", participants: [expect.objectContaining({ uuid: "participant", providerUuid: "provider", providerName: "Profesional", startTime: 1_710_662_400_000, endTime: 1_710_702_000_000 })] }));
+    expect(removed).toEqual(expect.objectContaining({ patientUuid: "patient", participants: [] }));
   });
 
   it("normalizes nested task collections without dropping vendor fields", () => {
