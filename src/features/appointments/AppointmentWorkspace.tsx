@@ -28,6 +28,10 @@ import type { Appointment, AppointmentStatus, AppointmentSummary } from "./types
 
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek: (date: Date) => startOfWeek(date, { weekStartsOn: 1 }), getDay, locales: { es } });
 
+function clinicalWallTime(value: Date): DateTime {
+  return DateTime.fromJSDate(value).setZone(APPOINTMENTS_TIME_ZONE, { keepLocalTime: true });
+}
+
 function startAndEnd(date: Date, section: AppointmentSection, calendarView: "day" | "week") {
   const selected = DateTime.fromJSDate(date, { zone: APPOINTMENTS_TIME_ZONE });
   if (section === "calendar" && calendarView === "week" || section === "summary") return { start: selected.startOf("week"), end: selected.endOf("week") };
@@ -186,10 +190,10 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
   const openNew = (slot?: SlotInfo) => {
     if (section === "calendar") {
       const start = slot
-        ? DateTime.fromJSDate(slot.start, { zone: APPOINTMENTS_TIME_ZONE })
-        : DateTime.fromJSDate(date, { zone: APPOINTMENTS_TIME_ZONE }).startOf("day").plus({ minutes: minutesFromClock(calendarConfig?.startOfDay ?? "09:00") });
+        ? clinicalWallTime(slot.start)
+        : clinicalWallTime(date).startOf("day").plus({ minutes: minutesFromClock(calendarConfig?.startOfDay ?? "09:00") });
       const end = slot
-        ? DateTime.fromJSDate(slot.end, { zone: APPOINTMENTS_TIME_ZONE })
+        ? clinicalWallTime(slot.end)
         : start.plus({ minutes: minutesFromClock(calendarConfig?.calendarSlotDuration ?? "00:30") });
       const providerUuid = slot && typeof slot.resourceId === "string"
         ? slot.resourceId === "unassigned" ? null : slot.resourceId
