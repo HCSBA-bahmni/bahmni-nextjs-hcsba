@@ -64,7 +64,7 @@ const recurrenceDays: Array<[string, string]> = [["MONDAY", "Lun"], ["TUESDAY", 
 interface AppointmentFormProps {
   appointmentUuid?: string;
   embedded?: boolean;
-  initialSlot?: { start: Date; end: Date; providerUuid?: string };
+  initialSlot?: { start: Date; end: Date; providerUuid?: string | null };
   onCancel?: () => void;
   onSaved?: () => void | Promise<void>;
 }
@@ -106,8 +106,11 @@ export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot
     if (!router.isReady || appointmentUuid) return;
     const start = initialSlot ? DateTime.fromJSDate(initialSlot.start, { zone: APPOINTMENTS_TIME_ZONE }) : typeof router.query.start === "string" ? DateTime.fromISO(router.query.start).setZone(APPOINTMENTS_TIME_ZONE) : null;
     const end = initialSlot ? DateTime.fromJSDate(initialSlot.end, { zone: APPOINTMENTS_TIME_ZONE }) : typeof router.query.end === "string" ? DateTime.fromISO(router.query.end).setZone(APPOINTMENTS_TIME_ZONE) : null;
-    const selectedProvider = initialSlot?.providerUuid ?? (typeof router.query.provider === "string" ? router.query.provider : provider?.uuid);
-    const timer = window.setTimeout(() => setForm((current) => ({ ...current, ...(start?.isValid ? { date: start.toISODate()!, startTime: start.toFormat("HH:mm") } : {}), ...(end?.isValid ? { endTime: end.toFormat("HH:mm") } : {}), providerUuids: selectedProvider ? [selectedProvider] : current.providerUuids })), 0);
+    const selectedProvider = initialSlot?.providerUuid === null
+      ? undefined
+      : initialSlot?.providerUuid ?? (typeof router.query.provider === "string" ? router.query.provider : provider?.uuid);
+    const providerUuids = initialSlot?.providerUuid === null ? [] : selectedProvider ? [selectedProvider] : undefined;
+    const timer = window.setTimeout(() => setForm((current) => ({ ...current, ...(start?.isValid ? { date: start.toISODate()!, startTime: start.toFormat("HH:mm") } : {}), ...(end?.isValid ? { endTime: end.toFormat("HH:mm") } : {}), ...(providerUuids ? { providerUuids } : {}) })), 0);
     return () => window.clearTimeout(timer);
   }, [appointmentUuid, initialSlot, provider?.uuid, router.isReady, router.query.end, router.query.provider, router.query.start]);
 

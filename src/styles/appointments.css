@@ -15,14 +15,14 @@
 .appointment-summary-detailed{display:flex;flex-direction:column;gap:1.4rem;padding-bottom:1.5rem}.appointment-summary-section{min-width:0}.appointment-summary-section h2{margin:.25rem 0 .55rem;color:#263f48;font-size:1.1rem}.appointment-summary-table-scroll{overflow-x:auto}.appointment-summary-table{width:100%;min-width:980px;border-collapse:collapse;background:#fff}.appointment-summary-table th,.appointment-summary-table td{height:44px;padding:.55rem .7rem;border:1px solid #cfdadd;text-align:center}.appointment-summary-table thead th{background:#edf4f6;color:#294852;font-weight:750}.appointment-summary-table thead th:first-child,.appointment-summary-table tbody th{min-width:190px;text-align:left}.appointment-summary-table tbody th{background:#f8fbfc}.appointment-summary-table .current-date{background:#e8f6fb}.appointment-summary-table button{padding:.2rem .3rem;border:0;background:transparent;color:#08738c;font:inherit;cursor:pointer}.appointment-summary-table button:hover,.appointment-summary-table button:focus-visible{text-decoration:underline}.appointment-summary-table button span{color:#b42318;font-size:.82rem}.appointment-summary-total th,.appointment-summary-total td{background:#e8eef0!important;font-weight:750}.appointment-summary-empty{margin:0;padding:1rem;border:1px solid #cfdadd;background:#fafcfc;color:#607680}.appointment-patient-link{color:#08738c;font-weight:700;text-decoration:underline;text-underline-offset:2px}.appointment-patient-link:hover,.appointment-patient-link:focus-visible{color:#054d60}
 
 /* Creación de citas sin abandonar el calendario */
-.appointment-create-sidebar{width:min(44rem,48vw)}
-.appointment-create-sidebar .p-sidebar-header{padding-bottom:.65rem;border-bottom:1px solid #d7e2e5}
-.appointment-create-sidebar .p-sidebar-title{color:#263f48;font-size:1.25rem}
-.appointment-create-sidebar .p-sidebar-content{padding:1rem;overflow-y:auto}
+.appointment-create-sidebar{display:flex;flex:0 0 min(44rem,46vw);height:calc(100vh - 225px);min-width:0;flex-direction:column;border-left:1px solid #cfdadd;background:#fff;box-shadow:-5px 0 16px rgba(28,61,72,.08)}
+.appointment-create-sidebar-header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;padding:.65rem 1rem;border-bottom:1px solid #d7e2e5}
+.appointment-create-sidebar-header h2{margin:0;color:#263f48;font-size:1.25rem}
+.appointment-create-sidebar-content{min-height:0;flex:1;padding:1rem;overflow-y:auto}
 .appointment-form-embedded .appointment-form{max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none}
 .appointment-form-embedded .appointment-form .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
 .appointment-form-embedded .appointment-recurrence{align-items:flex-start;flex-direction:column}
 .appointment-form-embedded .appointment-recurrence fieldset{flex-wrap:wrap}
 .appointment-form-embedded .appointment-form .actions{position:sticky;z-index:2;bottom:-1rem;margin:1rem -1rem -1rem;padding:1rem;border-top:1px solid #d7e2e5;background:#fff}
-@media(max-width:1100px){.appointment-create-sidebar{width:min(38rem,58vw)}.appointment-form-embedded .appointment-form .form-grid{grid-template-columns:1fr}}
-@media(max-width:700px){.appointment-create-sidebar{width:100vw}}
+@media(max-width:1200px){.appointment-create-sidebar{flex-basis:min(36rem,52vw)}.appointment-form-embedded .appointment-form .form-grid{grid-template-columns:1fr}}
+@media(max-width:800px){.appointments-content:has(.appointment-create-sidebar){position:relative}.appointment-create-sidebar{position:absolute;z-index:20;inset:0 0 auto auto;width:100%;height:calc(100vh - 225px);border-left:0}.appointment-create-sidebar-content{padding-inline:.8rem}}

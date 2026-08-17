@@ -6,7 +6,6 @@ import { DateTime } from "luxon";
 import { Button } from "primereact/button";
 import { Calendar as DatePicker } from "primereact/calendar";
 import { Dialog } from "primereact/dialog";
-import { Sidebar } from "primereact/sidebar";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Calendar, dateFnsLocalizer, type SlotInfo, Views } from "react-big-calendar";
@@ -131,7 +130,7 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
   const [filters, setFilters] = useState<AppointmentFilterState>(() => initialAppointmentFilters(section, router.query));
   const [selected, setSelected] = useState<Appointment[]>([]);
   const [newAppointmentOpen, setNewAppointmentOpen] = useState(false);
-  const [newAppointmentSlot, setNewAppointmentSlot] = useState<{ start: Date; end: Date; providerUuid?: string }>();
+  const [newAppointmentSlot, setNewAppointmentSlot] = useState<{ start: Date; end: Date; providerUuid?: string | null }>();
   const calendarContainer = useRef<HTMLElement>(null);
   const privilegeNames = useMemo(() => new Set(user?.privileges.map((entry) => entry.name ?? entry.display).filter((value): value is string => Boolean(value)) ?? []), [user]);
   const routePatientUuid = typeof router.query.patientUuid === "string" ? router.query.patientUuid : undefined;
@@ -165,7 +164,7 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
   const providerOptions = useMemo(() => [...(providers.data ?? []), { uuid: "unassigned", display: "Sin proveedor" }], [providers.data]);
   const resourceIds = new Set(events.map((event) => event.resourceId));
   filters.providers.forEach((uuid) => resourceIds.add(uuid));
-  if (!resourceIds.size || events.some((event) => event.resourceId === "unassigned")) resourceIds.add("unassigned");
+  resourceIds.add("unassigned");
   const resources = [...resourceIds].map((id) => ({ id, title: id === "unassigned" ? "Sin proveedor" : displayName(providerOptions.find((entry) => entry.uuid === id)) }));
   const calendarConfig = config.data;
   const loading = config.isLoading || appointments.isLoading || services.isLoading || providers.isLoading || locations.isLoading || section === "summary" && summary.isLoading;
@@ -192,8 +191,10 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
       const end = slot
         ? DateTime.fromJSDate(slot.end, { zone: APPOINTMENTS_TIME_ZONE })
         : start.plus({ minutes: minutesFromClock(calendarConfig?.calendarSlotDuration ?? "00:30") });
-      const providerUuid = slot && typeof slot.resourceId === "string" && slot.resourceId !== "unassigned" ? slot.resourceId : undefined;
-      setNewAppointmentSlot({ start: start.toJSDate(), end: end.toJSDate(), ...(providerUuid ? { providerUuid } : {}) });
+      const providerUuid = slot && typeof slot.resourceId === "string"
+        ? slot.resourceId === "unassigned" ? null : slot.resourceId
+        : undefined;
+      setNewAppointmentSlot({ start: start.toJSDate(), end: end.toJSDate(), ...(slot ? { providerUuid } : {}) });
       setNewAppointmentOpen(true);
       return;
     }
@@ -252,11 +253,12 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
           </section>}
           {!loading && !failed && calendarConfig && (section === "list" || section === "waitlist") && <AppointmentTable appointments={visible} config={calendarConfig} />}
         </div>
+        {newAppointmentOpen && <aside className="appointment-create-sidebar" aria-label={appointmentText.newAppointment}>
+          <header className="appointment-create-sidebar-header"><h2>{appointmentText.newAppointment}</h2><Button text rounded icon="pi pi-times" aria-label="Cerrar nueva cita" onClick={() => setNewAppointmentOpen(false)} /></header>
+          <div className="appointment-create-sidebar-content"><AppointmentForm embedded initialSlot={newAppointmentSlot} onCancel={() => setNewAppointmentOpen(false)} onSaved={() => { setNewAppointmentOpen(false); setNewAppointmentSlot(undefined); }} /></div>
+        </aside>}
       </div>
     </>}
-    <Sidebar visible={newAppointmentOpen} position="right" modal={false} dismissable={false} blockScroll={false} className="appointment-create-sidebar" header={appointmentText.newAppointment} onHide={() => setNewAppointmentOpen(false)}>
-      {newAppointmentOpen && <AppointmentForm embedded initialSlot={newAppointmentSlot} onCancel={() => setNewAppointmentOpen(false)} onSaved={() => { setNewAppointmentOpen(false); setNewAppointmentSlot(undefined); }} />}
-    </Sidebar>
     <Dialog visible={selected.length > 0} header={selected.length > 1 ? `${selected.length} citas en el mismo horario` : "Detalle de cita"} onHide={() => setSelected([])} className="appointment-detail-dialog">{calendarConfig && selected.map((appointment) => <article key={appointment.uuid} className="appointment-group-detail"><dl className="appointment-details"><div><dt>Paciente</dt><dd>{patientName(appointment)}</dd></div><div><dt>Horario</dt><dd>{dateTimeOf(appointment.startDateTime).setLocale("es").toFormat("dd/MM/yyyy HH:mm")}–{dateTimeOf(appointment.endDateTime).toFormat("HH:mm")}</dd></div><div><dt>Servicio</dt><dd>{displayName(appointment.service)}</dd></div><div><dt>Proveedor</dt><dd>{providerNames(appointment)}</dd></div><div><dt>Ubicación</dt><dd>{displayName(appointment.location)}</dd></div><div><dt>Estado</dt><dd>{statusLabel(appointment.status)}</dd></div>{Boolean(appointment.additionalInfo.BED_NUMBER_KEY) && <div><dt>Cama</dt><dd>{String(appointment.additionalInfo.BED_NUMBER_KEY)}</dd></div>}<div><dt>Comentarios</dt><dd>{appointment.comments || "—"}</dd></div></dl><AppointmentActions appointment={appointment} config={calendarConfig} /></article>)}</Dialog>
   </AppShell></AuthGuard>;
 }
