@@ -135,6 +135,10 @@ export async function uploadForm2ComplexFile(params: {
   return response.url;
 }
 
+export async function deleteUploadedComplexFile(filename: string): Promise<void> {
+  await bahmniRequest(`/ws/rest/v1/bahmnicore/visitDocument${queryString({ filename })}`, { method: "DELETE" });
+}
+
 export async function findRegistrationEncounter(params: { patientUuid: string; locationUuid: string; providerUuid?: string; encounterTypeUuid: string }) {
   return bahmniRequest("/ws/rest/v1/bahmnicore/bahmniencounter/find", {
     method: "POST",
