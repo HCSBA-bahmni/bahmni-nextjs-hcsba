@@ -61,7 +61,15 @@ function patientLabel(patient: Partial<AppointmentPatient> & { givenName?: strin
 
 const recurrenceDays: Array<[string, string]> = [["MONDAY", "Lun"], ["TUESDAY", "Mar"], ["WEDNESDAY", "Mié"], ["THURSDAY", "Jue"], ["FRIDAY", "Vie"], ["SATURDAY", "Sáb"], ["SUNDAY", "Dom"]];
 
-export function AppointmentForm({ appointmentUuid }: { appointmentUuid?: string }) {
+interface AppointmentFormProps {
+  appointmentUuid?: string;
+  embedded?: boolean;
+  initialSlot?: { start: Date; end: Date; providerUuid?: string };
+  onCancel?: () => void;
+  onSaved?: () => void | Promise<void>;
+}
+
+export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot, onCancel, onSaved }: AppointmentFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, provider, location } = useAuth();
@@ -96,12 +104,12 @@ export function AppointmentForm({ appointmentUuid }: { appointmentUuid?: string 
 
   useEffect(() => {
     if (!router.isReady || appointmentUuid) return;
-    const start = typeof router.query.start === "string" ? DateTime.fromISO(router.query.start).setZone(APPOINTMENTS_TIME_ZONE) : null;
-    const end = typeof router.query.end === "string" ? DateTime.fromISO(router.query.end).setZone(APPOINTMENTS_TIME_ZONE) : null;
-    const selectedProvider = typeof router.query.provider === "string" ? router.query.provider : provider?.uuid;
+    const start = initialSlot ? DateTime.fromJSDate(initialSlot.start, { zone: APPOINTMENTS_TIME_ZONE }) : typeof router.query.start === "string" ? DateTime.fromISO(router.query.start).setZone(APPOINTMENTS_TIME_ZONE) : null;
+    const end = initialSlot ? DateTime.fromJSDate(initialSlot.end, { zone: APPOINTMENTS_TIME_ZONE }) : typeof router.query.end === "string" ? DateTime.fromISO(router.query.end).setZone(APPOINTMENTS_TIME_ZONE) : null;
+    const selectedProvider = initialSlot?.providerUuid ?? (typeof router.query.provider === "string" ? router.query.provider : provider?.uuid);
     const timer = window.setTimeout(() => setForm((current) => ({ ...current, ...(start?.isValid ? { date: start.toISODate()!, startTime: start.toFormat("HH:mm") } : {}), ...(end?.isValid ? { endTime: end.toFormat("HH:mm") } : {}), providerUuids: selectedProvider ? [selectedProvider] : current.providerUuids })), 0);
     return () => window.clearTimeout(timer);
-  }, [appointmentUuid, provider?.uuid, router.isReady, router.query.end, router.query.provider, router.query.start]);
+  }, [appointmentUuid, initialSlot, provider?.uuid, router.isReady, router.query.end, router.query.provider, router.query.start]);
 
   useEffect(() => {
     if (!config.data || appointmentUuid) return;
@@ -133,6 +141,10 @@ export function AppointmentForm({ appointmentUuid }: { appointmentUuid?: string 
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      if (onSaved) {
+        await onSaved();
+        return;
+      }
       const returnTo = typeof router.query.returnTo === "string" && router.query.returnTo.startsWith("/appointments") ? router.query.returnTo : "/appointments/calendar";
       await router.push(returnTo);
     },
@@ -165,9 +177,14 @@ export function AppointmentForm({ appointmentUuid }: { appointmentUuid?: string 
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((current) => ({ ...current, [key]: value }));
   const busy = config.isLoading || services.isLoading || providers.isLoading || locations.isLoading || existing.isLoading;
-  return <AuthGuard><AppShell mainClassName="appointments-page">
-    <header className="appointments-heading"><div><span className="clinical-eyebrow">HCSBA</span><h1>{appointmentUuid ? "Editar cita" : appointmentText.newAppointment}</h1></div></header>
-    <AppointmentNavigation active="calendar" />
+  const cancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    void router.push(typeof router.query.returnTo === "string" && router.query.returnTo.startsWith("/appointments") ? router.query.returnTo : "/appointments/calendar");
+  };
+  const content = <>
     {busy && <p role="status">Cargando formulario…</p>}
     {!busy && !authorized && <p role="alert" className="error-banner">No cuentas con permisos para crear o editar esta cita.</p>}
     {!busy && authorized && config.data && <form className="panel appointment-form" onSubmit={(event) => { event.preventDefault(); mutation.mutate(); }}>
@@ -187,7 +204,13 @@ export function AppointmentForm({ appointmentUuid }: { appointmentUuid?: string 
       <div className="field appointment-comments"><label htmlFor="appointment-comments">Comentarios</label><InputTextarea id="appointment-comments" rows={3} value={form.comments} onChange={(event) => set("comments", event.target.value)} /></div>
       {conflicts.length > 0 && <section role="alert" className="appointment-conflicts"><strong>{appointmentText.conflict}</strong><ul>{conflicts.map((conflict, index) => <li key={conflict.uuid ?? index}>{conflict.message ?? (conflict.appointment ? `${patientLabel(conflict.appointment.patient)} · ${dateTimeOf(conflict.appointment.startDateTime).toFormat("dd/MM/yyyy HH:mm")}` : "Conflicto de horario")}</li>)}</ul></section>}
       {formError && <p role="alert" className="error-banner">{formError}</p>}
-      <footer className="actions"><Button type="button" outlined label="Cancelar" onClick={() => void router.push(typeof router.query.returnTo === "string" && router.query.returnTo.startsWith("/appointments") ? router.query.returnTo : "/appointments/calendar")} /><Button type="submit" icon="pi pi-save" label="Guardar" loading={mutation.isPending} /></footer>
+      <footer className="actions"><Button type="button" outlined label="Cancelar" onClick={cancel} /><Button type="submit" icon="pi pi-save" label="Guardar" loading={mutation.isPending} /></footer>
     </form>}
+  </>;
+  if (embedded) return <section className="appointment-form-embedded">{content}</section>;
+  return <AuthGuard><AppShell mainClassName="appointments-page">
+    <header className="appointments-heading"><div><span className="clinical-eyebrow">HCSBA</span><h1>{appointmentUuid ? "Editar cita" : appointmentText.newAppointment}</h1></div></header>
+    <AppointmentNavigation active="calendar" />
+    {content}
   </AppShell></AuthGuard>;
 }
