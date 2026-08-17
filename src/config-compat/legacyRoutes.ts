@@ -113,6 +113,9 @@ export function resolveExtensionUrl(rawUrl?: string): ResolvedExtensionUrl {
     const nextRoute = resolveLegacyRoute(resolved.pathname, resolved.hash);
     return { href: `/bahmni${nextRoute}${resolved.search}`, kind: "next" };
   }
+  if (/^\/appointments\/?$/i.test(resolved.pathname)) {
+    return { href: `/bahmni/appointments/summary${resolved.search}${resolved.hash}`, kind: "next" };
+  }
   if (/^\/bahmni\/appointments(?:\/|$)/i.test(resolved.pathname)) {
     return { href, kind: "next" };
   }

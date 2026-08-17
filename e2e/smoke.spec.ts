@@ -75,15 +75,16 @@ test("successful login restores the last allowed location without asking again",
 
 test("home loads HCSBA translations and normalizes legacy routes", async ({ page }) => {
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "location-1", display: "HCSBA" } }) }));
-  await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [], roles: [] }] }) }));
-  await page.route("**/bahmni_config/openmrs/apps/home/extension.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ registration: { order: 1, translationKey: "MODULE_LABEL_REGISTRATION_KEY", url: "../registration/index.html", icon: "fa-user" }, clinical: { order: 2, translationKey: "MODULE_LABEL_CLINICAL_KEY", url: "../clinical/index.html#/default/patient/search", icon: "fa-stethoscope" } }) }));
+  await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "appointments", name: "app:appointments" }], roles: [] }] }) }));
+  await page.route("**/bahmni_config/openmrs/apps/home/extension.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ registration: { order: 1, translationKey: "MODULE_LABEL_REGISTRATION_KEY", url: "../registration/index.html", icon: "fa-user" }, clinical: { order: 2, translationKey: "MODULE_LABEL_CLINICAL_KEY", url: "../clinical/index.html#/default/patient/search", icon: "fa-stethoscope" }, appointments: { order: 3, translationKey: "MODULE_LABEL_APPOINTMENT_SCHEDULING_KEY", url: "../../appointments", icon: "fa-calendar", requiredPrivilege: "app:appointments" } }) }));
   await page.route("**/implementation_config/openmrs/apps/home/extension.json", (route) => route.fulfill({ status: 404 }));
-  await page.route("**/bahmni_config/openmrs/i18n/home/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ MODULE_LABEL_REGISTRATION_KEY: "Registro", MODULE_LABEL_CLINICAL_KEY: "Clínico" }) }));
+  await page.route("**/bahmni_config/openmrs/i18n/home/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ MODULE_LABEL_REGISTRATION_KEY: "Registro", MODULE_LABEL_CLINICAL_KEY: "Clínico", MODULE_LABEL_APPOINTMENT_SCHEDULING_KEY: "Calendarización de Cita" }) }));
   await page.route("**/implementation_config/openmrs/i18n/home/locale_es.json", (route) => route.fulfill({ status: 404 }));
   await page.goto("/bahmni/home");
   const main = page.getByRole("main");
   await expect(main.getByRole("link", { name: "Registro" })).toHaveAttribute("href", "/bahmni/registration");
   await expect(main.getByRole("link", { name: "Clínico" })).toHaveAttribute("href", "/bahmni/clinical");
+  await expect(main.getByRole("link", { name: "Calendarización de Cita" })).toHaveAttribute("href", "/bahmni/appointments/summary");
   await expect(page.getByText("HCSBA", { exact: true })).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
