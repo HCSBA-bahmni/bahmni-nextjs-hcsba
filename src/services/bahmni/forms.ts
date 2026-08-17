@@ -111,6 +111,8 @@ export async function uploadForm2ComplexFile(params: {
   dataUrl: string;
   patientUuid: string;
   fileType: "image" | "video" | "pdf";
+  fileName?: string;
+  encounterTypeName?: string;
 }): Promise<string> {
   const marker = ";base64,";
   const markerIndex = params.dataUrl.indexOf(marker);
@@ -123,12 +125,18 @@ export async function uploadForm2ComplexFile(params: {
       content: params.dataUrl.slice(markerIndex + marker.length),
       format,
       patientUuid: params.patientUuid,
+      encounterTypeName: params.encounterTypeName,
       fileType: params.fileType,
+      fileName: params.fileName?.replace(/\.[^.]+$/, ""),
     }),
     schema: complexUploadSchema,
   });
   if (response.error || !response.url) throw new Error(response.error?.message ?? "No fue posible cargar el archivo.");
   return response.url;
+}
+
+export async function deleteUploadedComplexFile(filename: string): Promise<void> {
+  await bahmniRequest(`/ws/rest/v1/bahmnicore/visitDocument${queryString({ filename })}`, { method: "DELETE" });
 }
 
 export async function findRegistrationEncounter(params: { patientUuid: string; locationUuid: string; providerUuid?: string; encounterTypeUuid: string }) {

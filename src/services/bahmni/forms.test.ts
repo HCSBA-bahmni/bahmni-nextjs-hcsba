@@ -1,9 +1,20 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { buildFormEncounterUpdate, getBahmniEncounter, getLatestPublishedForms, getPatientFormSummaries } from "./forms";
+import { buildFormEncounterUpdate, deleteUploadedComplexFile, getBahmniEncounter, getLatestPublishedForms, getPatientFormSummaries, uploadForm2ComplexFile } from "./forms";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Form 2 microfrontend contracts", () => {
+  it("uploads complex data and can compensate by deleting the returned filename", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ url: "patient/image.jpg" }), { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(undefined, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const filename = await uploadForm2ComplexFile({ dataUrl: "data:image/jpeg;base64,YWJj", patientUuid: "patient", fileType: "image", fileName: "image.jpg" });
+    await deleteUploadedComplexFile(filename);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({ content: "YWJj", patientUuid: "patient", fileType: "image", fileName: "image" });
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe("/openmrs/ws/rest/v1/bahmnicore/visitDocument?filename=patient%2Fimage.jpg");
+    expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("DELETE");
+  });
   it("loads patient forms using the exact React 16 MFE endpoint", async () => {
     const legacyTimestamp = 1693277657000;
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify([{

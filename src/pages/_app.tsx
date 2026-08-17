@@ -14,6 +14,7 @@ import "@/styles/globals.css";
 import "@/styles/consultation-documents.css";
 import "@/styles/consultation-diagnosis.css";
 import "@/styles/consultation-orders.css";
+import "@/styles/orders.css";
 import "@/styles/allergies.css";
 import "@/styles/medication.css";
 import "@/styles/ipd.css";

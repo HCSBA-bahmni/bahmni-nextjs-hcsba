@@ -54,6 +54,11 @@ export function resolveLegacyRoute(pathname: string, hash: string): string {
     if (patient?.[1] && patient[2]) return `/adt/patient/${patient[1]}/visit/${patient[2]}`;
     return "/clinical";
   }
+  if (pathname.includes("/orders/")) {
+    const fulfillment = cleanHash.match(/^patient\/([^/]+)\/fulfillment\/(.+)$/i);
+    if (fulfillment?.[1] && fulfillment[2]) return `/orders/patient/${encodeURIComponent(decodeURIComponent(fulfillment[1]))}/fulfillment/${encodeURIComponent(decodeURIComponent(fulfillment[2]))}`;
+    return "/orders";
+  }
   return "/home";
 }
 
@@ -119,6 +124,10 @@ export function resolveExtensionUrl(rawUrl?: string): ResolvedExtensionUrl {
     return { href: `/bahmni${nextRoute}${resolved.search}`, kind: "next" };
   }
   if (/^\/bahmni\/adt(?:\/index\.html)?/i.test(resolved.pathname)) {
+    const nextRoute = resolveLegacyRoute(resolved.pathname, resolved.hash);
+    return { href: `/bahmni${nextRoute}${resolved.search}`, kind: "next" };
+  }
+  if (/^\/bahmni\/orders(?:\/index\.html)?/i.test(resolved.pathname)) {
     const nextRoute = resolveLegacyRoute(resolved.pathname, resolved.hash);
     return { href: `/bahmni${nextRoute}${resolved.search}`, kind: "next" };
   }

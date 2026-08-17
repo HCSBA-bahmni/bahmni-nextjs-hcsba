@@ -10,6 +10,8 @@ describe("legacy bookmarks", () => {
     ["/bahmni/bedmanagement/index.html", "#/bedManagement/patient/p1", "/bedmanagement/patient/p1"],
     ["/bahmni/bedmanagement/index.html", "#/patient/p1/visit/v1/dashboard", "/bedmanagement/patient/p1/visit/v1/dashboard"],
     ["/bahmni/adt/index.html", "#/patient/p1/visit/v1/", "/adt/patient/p1/visit/v1"],
+    ["/bahmni/orders/index.html", "#/search", "/orders"],
+    ["/bahmni/orders/index.html", "#/patient/p1/fulfillment/Radiology Order", "/orders/patient/p1/fulfillment/Radiology%20Order"],
   ])("maps %s%s", (path, hash, expected) => expect(resolveLegacyRoute(path, hash)).toBe(expected));
 });
 
@@ -20,7 +22,7 @@ describe("dashboard navigation", () => {
     ["../clinical/index.html#/default/patient/search", "/bahmni/clinical", "next"],
     ["../bedmanagement/#/bedManagement", "/bahmni/bedmanagement/manage", "next"],
     ["../adt/#/patient/p1/visit/v1/", "/bahmni/adt/patient/p1/visit/v1", "next"],
-    ["../orders/#/search", "/bahmni/orders/#/search", "legacy"],
+    ["../orders/#/search", "/bahmni/orders", "next"],
     ["../../appointments", "/bahmni/appointments/summary", "next"],
     ["/bahmni/appointments", "/bahmni/appointments", "next"],
     ["/implementer-interface", "/implementer-interface", "service"],
