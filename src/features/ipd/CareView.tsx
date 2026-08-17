@@ -24,7 +24,7 @@ import {
   saveSelectedWard,
   taskThresholds,
 } from "@/features/ipd/care-view/domain";
-import type { CareTask, CareTaskFilter, CareTimeWindow, CareViewPatient } from "@/features/ipd/care-view/types";
+import type { CareTask, CareTaskFilter, CareTimeWindow, CareViewPatient, CareViewPatientPage } from "@/features/ipd/care-view/types";
 import { IpdModuleNavigation } from "@/features/ipd/IpdModuleNavigation";
 import { useIpdTranslations } from "@/features/ipd/useIpdTranslations";
 import { audit } from "@/services/bahmni/audit";
@@ -199,26 +199,39 @@ export function CareView() {
     retry: false,
     mutationFn: async ({ patient, action }: { patient: CareViewPatient; action: "assign" | "remove" }) => {
       if (!provider || !timeWindow) throw new Error("No hay un turno o proveedor vigente.");
+      if (!patient.visitUuid) throw new Error("OpenMRS no informó la visita asociada a la cama.");
+      let updatedCareTeam;
       if (action === "assign") {
-        await updateCareTeamParticipant({ patientUuid: patient.uuid, participant: { providerUuid: provider.uuid, startTime: timeWindow.shiftStart.toMillis(), endTime: timeWindow.shiftEnd.toMillis() } });
+        updatedCareTeam = await updateCareTeamParticipant({ patientUuid: patient.uuid, visitUuid: patient.visitUuid, participant: { providerUuid: provider.uuid, startTimeMillis: timeWindow.shiftStart.toMillis(), endTimeMillis: timeWindow.shiftEnd.toMillis() } });
       } else {
         const own = patient.careTeamParticipants.find((participant) => participant.providerUuid === provider.uuid && participant.uuid && !participant.voided);
         if (!own?.uuid) throw new Error("OpenMRS no informó la asignación que debe retirarse.");
-        await updateCareTeamParticipant({ patientUuid: patient.uuid, participant: { uuid: own.uuid, voided: true } });
+        updatedCareTeam = await updateCareTeamParticipant({ patientUuid: patient.uuid, visitUuid: patient.visitUuid, participant: { uuid: own.uuid, voided: true } });
       }
-      const confirmed = await loadPatients();
-      const refreshed = confirmed.patients.find((candidate) => candidate.uuid === patient.uuid);
-      const stillAssigned = refreshed?.careTeamParticipants.some((participant) => participant.providerUuid === provider.uuid && !participant.voided) ?? false;
-      if ((action === "assign" && !stillAssigned) || (action === "remove" && refreshed && stillAssigned)) throw new Error("OpenMRS no confirmó el nuevo responsable del turno.");
-      return confirmed;
+      const current = updatedCareTeam.participants.find((participant) => !participant.voided && (!participant.endTime || participant.endTime > Date.now()));
+      if ((action === "assign" && current?.providerUuid !== provider.uuid) || (action === "remove" && current?.providerUuid === provider.uuid)) {
+        throw new Error("OpenMRS no confirmó el nuevo responsable del turno.");
+      }
+      return updatedCareTeam;
     },
-    onSuccess: async (confirmed, variables) => {
-      queryClient.setQueryData(patientsQueryKey, confirmed);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: careViewQueryKeys.summary(selectedWard, provider?.uuid) }),
-        queryClient.invalidateQueries({ queryKey: ["ipd", "care-view", "patients", selectedWard] }),
-        queryClient.invalidateQueries({ queryKey: ["ipd", "care-view", "tasks"] }),
-      ]);
+    onSuccess: (updatedCareTeam, variables) => {
+      queryClient.setQueryData<CareViewPatientPage>(patientsQueryKey, (current) => {
+        if (!current) return current;
+        if (variables.action === "remove" && patientMode === "mine") {
+          return {
+            ...current,
+            patients: current.patients.filter((candidate) => candidate.uuid !== variables.patient.uuid),
+            totalCount: Math.max(0, current.totalCount - 1),
+          };
+        }
+        return {
+          ...current,
+          patients: current.patients.map((candidate) => candidate.uuid === variables.patient.uuid
+            ? { ...candidate, careTeamParticipants: updatedCareTeam.participants }
+            : candidate),
+        };
+      });
+      void queryClient.invalidateQueries({ queryKey: careViewQueryKeys.summary(selectedWard, provider?.uuid) });
       toast.current?.show({ severity: "success", summary: "Equipo de cuidados", detail: variables.action === "assign" ? "Paciente asignado para el turno vigente." : "Asignación retirada.", life: 4000 });
     },
     onError: (error) => toast.current?.show({ severity: "error", summary: "No fue posible actualizar", detail: error instanceof Error ? error.message : "OpenMRS rechazó la operación.", life: 6500 }),

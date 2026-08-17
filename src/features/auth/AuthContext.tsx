@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import type { BahmniLocation, BahmniProvider, BahmniSession, BahmniUser } from "@/types/bahmni";
 import { audit } from "@/services/bahmni/audit";
 import * as authApi from "@/services/bahmni/auth";
+import { clearKeycloakLoginRedirect, clearKeycloakReturnUrl, isKeycloakAuth, keycloakLogoutUrl } from "./authMode";
 
 export interface AuthenticationResult {
   session: BahmniSession;
@@ -142,6 +143,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (provider && typeof window !== "undefined") {
       const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       await authApi.rememberProviderContext(provider.uuid, currentPath);
+    }
+    if (isKeycloakAuth() && typeof window !== "undefined") {
+      clearKeycloakReturnUrl();
+      clearKeycloakLoginRedirect();
+      clearState();
+      authApi.abortPendingBahmniRequests();
+      const oidcLogoutUrl = await authApi.logout().catch(() => null);
+      window.location.replace(oidcLogoutUrl ?? keycloakLogoutUrl());
+      return;
     }
     await authApi.logout();
     clearState();

@@ -14,6 +14,8 @@ El control de diagnostico conserva la regla legacy de `showDetailsButton`: cuand
 
 Todas las tarjetas basadas en `ClinicalDashboardSectionCard` exponen una accion accesible para colapsar o mostrar su contenido. El estado es local a cada tarjeta, no altera `dashboard.json`, no oculta las acciones configuradas del encabezado y deja visible el titulo para reducir el desplazamiento vertical.
 
+El control `visits` mantiene la fila como selector del contexto clínico y sólo ofrece `Finalizar visita` para la visita activa actualmente seleccionada, cuando el usuario posee `app:common:closeVisit` o `Delete Visits`. Una admisión sin alta bloquea la acción. Cuando existen admisión y alta, la fila informa `Alta registrada · pendiente de cierre` y navega al flujo existente de Registro; el dashboard nunca ejecuta `endVisit` directamente, por lo que confirmación, auditoría y validación clínica permanecen centralizadas.
+
 ## Cumplimiento de órdenes
 
 El control `ordersControl` conserva el contrato específico de legacy y no se renderiza mediante la tabla genérica. Consume `orderType`, `dashboardConfig.conceptNames`, `numberOfVisits`, `obsIgnoreList`, `showHeader` y `expandedViewConfig`. El nombre visible prioriza `order.concept` —incluidas sus traducciones y nombre corto publicados— antes de `conceptName`; la primera orden aparece expandida y cada orden muestra profesional, fecha, observaciones de cumplimiento o `NO_FULFILMENT_MESSAGE`.

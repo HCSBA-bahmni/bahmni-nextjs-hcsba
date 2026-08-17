@@ -25,6 +25,7 @@ export function AppShell({ children, title, mainClassName }: { children: ReactNo
         <Link href="/home">Inicio</Link>
         <Link href="/registration">Registro</Link>
         <Link href="/clinical">Clínico</Link>
+        {hasPrivilege(user, "app:appointments") && <Link href="/appointments">Citas</Link>}
         {hasPrivilege(user, "app:adt") && <Link href="/bedmanagement">Camas</Link>}
       </nav>
       <div className="session-summary">

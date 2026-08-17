@@ -1,5 +1,5 @@
 import Cookies from "js-cookie";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { Button } from "primereact/button";
 import { useCallback, useState } from "react";
@@ -13,6 +13,7 @@ import type { Form2Observation } from "@/features/forms/form2";
 import { formatRegistrationDestination } from "@/features/registration/workflow";
 import { publishedFormIdentity, RegistrationFormSection } from "@/features/registration/RegistrationFormSection";
 import { useRegistrationTranslations } from "@/features/registration/useRegistrationTranslations";
+import { visitsAtEffectiveLocation } from "@/features/registration/visitLocation";
 import { audit } from "@/services/bahmni/audit";
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { loadAppConfig, loadExtensions } from "@/services/bahmni/config";
@@ -112,6 +113,13 @@ export default function VisitPage() {
     queryFn: () => getVisitLocation(location!.uuid),
     enabled: Boolean(location?.uuid),
   });
+  const activeVisitLocations = useQueries({
+    queries: (visits.data ?? []).map((visit) => ({
+      queryKey: ["visit-location", visit.location?.uuid],
+      queryFn: () => getVisitLocation(visit.location!.uuid),
+      enabled: Boolean(visit.location?.uuid),
+    })),
+  });
   const encounterConfig = useQuery({ queryKey: ["encounter-config"], queryFn: getEncounterConfiguration });
   const descriptor = useQuery({ queryKey: ["app-config", "registration"], queryFn: () => loadAppConfig("registration") });
   const extensions = useQuery({ queryKey: ["extensions", "registration"], queryFn: () => loadExtensions("registration") });
@@ -133,7 +141,7 @@ export default function VisitPage() {
     enabled: encounter.isSuccess,
   });
 
-  const visitsAtCurrentLocation = (visits.data ?? []).filter((visit) => visit.location?.uuid === visitLocation.data?.uuid);
+  const visitsAtCurrentLocation = visitsAtEffectiveLocation(visits.data ?? [], activeVisitLocations.map((query) => query.data), visitLocation.data?.uuid);
   const activeVisit = visitsAtCurrentLocation.find((visit) => visit.uuid === requestedVisitUuid) ?? visitsAtCurrentLocation[0];
   const formExtensions = (extensions.data ?? []).filter((extension) => extension.extensionPointId === "org.bahmni.registration.conceptSetGroup.observations" && extension.type === "forms" && hasPrivilege(user, extension.requiredPrivilege));
   const availableForms = formExtensions.flatMap((extension) => {
@@ -145,7 +153,7 @@ export default function VisitPage() {
   const summary = profile.data ? patientSummary(profile.data) : undefined;
   const canClose = hasPrivilege(user, "app:common:closeVisit") || hasPrivilege(user, "Delete Visits");
   const canGoClinical = hasPrivilege(user, "app:clinical") && Boolean(config?.enableDashboardRedirect);
-  const loading = [profile, visits, visitLocation, encounterConfig, descriptor, extensions, encounter, publishedForms].some((query) => query.isLoading);
+  const loading = [profile, visits, visitLocation, ...activeVisitLocations, encounterConfig, descriptor, extensions, encounter, publishedForms].some((query) => query.isLoading);
 
   const updateForm = useCallback((key: string, observations: Form2Observation[], valid: boolean) => {
     setFormResults((current) => ({ ...current, [key]: { observations, valid } }));

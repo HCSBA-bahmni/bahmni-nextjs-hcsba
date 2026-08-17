@@ -10,6 +10,7 @@ export default function handler(_request: NextApiRequest, response: NextApiRespo
     implementationConfigBase: process.env.NEXT_PUBLIC_IMPLEMENTATION_CONFIG_BASE ?? "/implementation_config/openmrs/apps",
     legacyBahmniBase: process.env.NEXT_PUBLIC_LEGACY_BAHMNI_BASE ?? "/bahmni",
     defaultLocale: process.env.NEXT_PUBLIC_DEFAULT_LOCALE ?? "es",
+    authMode: process.env.NEXT_PUBLIC_AUTH_MODE === "keycloak" ? "keycloak" : "openmrs",
     integrations: {
       ips: {
         enabled: enabled(process.env.NEXT_PUBLIC_IPS_ENABLED),

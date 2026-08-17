@@ -28,6 +28,7 @@ Este documento es la compuerta de avance del plan maestro. El inventario detalla
 | Pabellón | Sí | No | No | No | No |
 | Reportes | Sí | No | No | No | No |
 | Administración | Sí | No | No | No | No |
+| Agenda de citas | Sí | Caracterizada: rutas, configuración, endpoints, privilegios, estados, recurrencias y administración de servicios | Operación completa nativa; servicios pueden listarse, crearse, editarse y eliminarse en Next | Pendiente comparación con perfiles HCSBA reales | No; rollback por módulo disponible |
 
 Un dominio sólo cambia a “Caracterizado” cuando cada ruta, acción, privilegio, configuración, endpoint y escritura tiene una prueba o fixture. Sólo cambia a “Certificado” tras comparar el flujo contra HCSBA desarrollo.
 

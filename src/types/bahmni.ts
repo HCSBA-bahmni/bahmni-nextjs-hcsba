@@ -18,6 +18,7 @@ const userMembershipSchema = referenceSchema.extend({
 
 export const userSchema = z.object({
   uuid: z.string(), username: z.string().optional(), display: z.string().optional(),
+  person: referenceSchema.optional(),
   privileges: z.array(userMembershipSchema).default([]), roles: z.array(userMembershipSchema).default([]),
   userProperties: z.record(z.string(), z.string()).optional(),
 }).loose();

@@ -57,6 +57,7 @@ export function resolveLegacyRoute(pathname: string, hash: string): string {
 }
 
 export function isLegacyModuleUrl(url: string): boolean {
+  if (url.includes("/bahmni/appointments")) return false;
   return ["/adt/", "/document-upload/", "/orders/", "/reports/", "/appointments/", "/ot/"].some((part) => url.includes(part));
 }
 
@@ -120,6 +121,12 @@ export function resolveExtensionUrl(rawUrl?: string): ResolvedExtensionUrl {
   if (/^\/bahmni\/orders(?:\/index\.html)?/i.test(resolved.pathname)) {
     const nextRoute = resolveLegacyRoute(resolved.pathname, resolved.hash);
     return { href: `/bahmni${nextRoute}${resolved.search}`, kind: "next" };
+  }
+  if (/^\/appointments\/?$/i.test(resolved.pathname)) {
+    return { href: `/bahmni/appointments/summary${resolved.search}${resolved.hash}`, kind: "next" };
+  }
+  if (/^\/bahmni\/appointments(?:\/|$)/i.test(resolved.pathname)) {
+    return { href, kind: "next" };
   }
   if (/^\/bahmni\/home(?:\/index\.html)?/i.test(resolved.pathname)) {
     return { href: "/bahmni/home", kind: "next" };
