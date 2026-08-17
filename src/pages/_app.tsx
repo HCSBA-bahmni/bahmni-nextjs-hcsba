@@ -9,6 +9,7 @@ import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import "primeflex/primeflex.css";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 import "@/styles/globals.css";
 import "@/styles/consultation-documents.css";
 import "@/styles/consultation-diagnosis.css";
@@ -16,6 +17,7 @@ import "@/styles/consultation-orders.css";
 import "@/styles/allergies.css";
 import "@/styles/medication.css";
 import "@/styles/ipd.css";
+import "@/styles/appointments.css";
 
 export default function App({ Component, pageProps }: AppProps) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }));

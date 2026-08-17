@@ -21,6 +21,7 @@ describe("dashboard navigation", () => {
     ["../adt/#/patient/p1/visit/v1/", "/bahmni/adt/patient/p1/visit/v1", "next"],
     ["../orders/#/search", "/bahmni/orders/#/search", "legacy"],
     ["../../appointments", "/appointments", "service"],
+    ["/bahmni/appointments", "/bahmni/appointments", "next"],
     ["/implementer-interface", "/implementer-interface", "service"],
   ])("resolves %s", (input, href, kind) => expect(resolveExtensionUrl(input)).toEqual({ href, kind }));
 
