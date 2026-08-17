@@ -19,6 +19,7 @@ import { getAppointmentSummary, getAppointmentsForDate, loadAppointmentLocations
 import { loadAppointmentConfig, minutesFromClock } from "./config";
 import { APPOINTMENTS_TIME_ZONE, calendarEvents, canManageAppointments, canManageOwnAppointments, dateTimeOf, displayName, patientName, providerNames, statusLabel, type AppointmentCalendarEvent } from "./domain";
 import { AppointmentActions } from "./AppointmentActions";
+import { AppointmentForm } from "./AppointmentForm";
 import { AppointmentFilters, emptyAppointmentFilters, type AppointmentFilterState } from "./AppointmentFilters";
 import { AppointmentNavigation, type AppointmentSection } from "./AppointmentNavigation";
 import { appointmentText } from "./translations";
@@ -26,6 +27,10 @@ import { detailedSummaryRows, serviceSummaryRows, type AppointmentSummaryRow, ty
 import type { Appointment, AppointmentStatus, AppointmentSummary } from "./types";
 
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek: (date: Date) => startOfWeek(date, { weekStartsOn: 1 }), getDay, locales: { es } });
+
+function clinicalWallTime(value: Date): DateTime {
+  return DateTime.fromJSDate(value).setZone(APPOINTMENTS_TIME_ZONE, { keepLocalTime: true });
+}
 
 function startAndEnd(date: Date, section: AppointmentSection, calendarView: "day" | "week") {
   const selected = DateTime.fromJSDate(date, { zone: APPOINTMENTS_TIME_ZONE });
@@ -128,6 +133,8 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [filters, setFilters] = useState<AppointmentFilterState>(() => initialAppointmentFilters(section, router.query));
   const [selected, setSelected] = useState<Appointment[]>([]);
+  const [newAppointmentOpen, setNewAppointmentOpen] = useState(false);
+  const [newAppointmentSlot, setNewAppointmentSlot] = useState<{ start: Date; end: Date; providerUuid?: string | null }>();
   const calendarContainer = useRef<HTMLElement>(null);
   const privilegeNames = useMemo(() => new Set(user?.privileges.map((entry) => entry.name ?? entry.display).filter((value): value is string => Boolean(value)) ?? []), [user]);
   const routePatientUuid = typeof router.query.patientUuid === "string" ? router.query.patientUuid : undefined;
@@ -161,7 +168,7 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
   const providerOptions = useMemo(() => [...(providers.data ?? []), { uuid: "unassigned", display: "Sin proveedor" }], [providers.data]);
   const resourceIds = new Set(events.map((event) => event.resourceId));
   filters.providers.forEach((uuid) => resourceIds.add(uuid));
-  if (!resourceIds.size || events.some((event) => event.resourceId === "unassigned")) resourceIds.add("unassigned");
+  resourceIds.add("unassigned");
   const resources = [...resourceIds].map((id) => ({ id, title: id === "unassigned" ? "Sin proveedor" : displayName(providerOptions.find((entry) => entry.uuid === id)) }));
   const calendarConfig = config.data;
   const loading = config.isLoading || appointments.isLoading || services.isLoading || providers.isLoading || locations.isLoading || section === "summary" && summary.isLoading;
@@ -181,6 +188,20 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
   });
 
   const openNew = (slot?: SlotInfo) => {
+    if (section === "calendar") {
+      const start = slot
+        ? clinicalWallTime(slot.start)
+        : clinicalWallTime(date).startOf("day").plus({ minutes: minutesFromClock(calendarConfig?.startOfDay ?? "09:00") });
+      const end = slot
+        ? clinicalWallTime(slot.end)
+        : start.plus({ minutes: minutesFromClock(calendarConfig?.calendarSlotDuration ?? "00:30") });
+      const providerUuid = slot && typeof slot.resourceId === "string"
+        ? slot.resourceId === "unassigned" ? null : slot.resourceId
+        : undefined;
+      setNewAppointmentSlot({ start: start.toJSDate(), end: end.toJSDate(), ...(slot ? { providerUuid } : {}) });
+      setNewAppointmentOpen(true);
+      return;
+    }
     const query: Record<string, string> = { returnTo: router.asPath };
     if (slot) { query.start = slot.start.toISOString(); query.end = slot.end.toISOString(); if (typeof slot.resourceId === "string" && slot.resourceId !== "unassigned") query.provider = slot.resourceId; }
     void router.push({ pathname: "/appointments/new", query });
@@ -236,6 +257,10 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
           </section>}
           {!loading && !failed && calendarConfig && (section === "list" || section === "waitlist") && <AppointmentTable appointments={visible} config={calendarConfig} />}
         </div>
+        {newAppointmentOpen && <aside className="appointment-create-sidebar" aria-label={appointmentText.newAppointment}>
+          <header className="appointment-create-sidebar-header"><h2>{appointmentText.newAppointment}</h2><Button text rounded icon="pi pi-times" aria-label="Cerrar nueva cita" onClick={() => setNewAppointmentOpen(false)} /></header>
+          <div className="appointment-create-sidebar-content"><AppointmentForm embedded initialSlot={newAppointmentSlot} onCancel={() => setNewAppointmentOpen(false)} onSaved={() => { setNewAppointmentOpen(false); setNewAppointmentSlot(undefined); }} /></div>
+        </aside>}
       </div>
     </>}
     <Dialog visible={selected.length > 0} header={selected.length > 1 ? `${selected.length} citas en el mismo horario` : "Detalle de cita"} onHide={() => setSelected([])} className="appointment-detail-dialog">{calendarConfig && selected.map((appointment) => <article key={appointment.uuid} className="appointment-group-detail"><dl className="appointment-details"><div><dt>Paciente</dt><dd>{patientName(appointment)}</dd></div><div><dt>Horario</dt><dd>{dateTimeOf(appointment.startDateTime).setLocale("es").toFormat("dd/MM/yyyy HH:mm")}–{dateTimeOf(appointment.endDateTime).toFormat("HH:mm")}</dd></div><div><dt>Servicio</dt><dd>{displayName(appointment.service)}</dd></div><div><dt>Proveedor</dt><dd>{providerNames(appointment)}</dd></div><div><dt>Ubicación</dt><dd>{displayName(appointment.location)}</dd></div><div><dt>Estado</dt><dd>{statusLabel(appointment.status)}</dd></div>{Boolean(appointment.additionalInfo.BED_NUMBER_KEY) && <div><dt>Cama</dt><dd>{String(appointment.additionalInfo.BED_NUMBER_KEY)}</dd></div>}<div><dt>Comentarios</dt><dd>{appointment.comments || "—"}</dd></div></dl><AppointmentActions appointment={appointment} config={calendarConfig} /></article>)}</Dialog>
