@@ -175,7 +175,10 @@ rollback de los demás.
 
 ## Fase 3 — Migrar los módulos Angular que permanecen en alcance
 
-La fase 3 cubre **11 estados**: Reportes (3) y Administración (8). Los cuatro
+La fase 3 cubre originalmente **11 estados**: Reportes (3) y Administración (8).
+El dashboard de Administración y Audit Log ya disponen de implementación y
+corte selectivo, por lo que quedan **9 estados** en esta fase: Reportes (3) y
+Administración (6). Los cuatro
 estados de Pabellón/OT permanecen contabilizados como deuda legacy hasta que
 se sustituya su acceso, pero no se reimplementarán en Next.js.
 
@@ -189,7 +192,11 @@ ejecución, descarga, estados, errores y privilegios antes de implementar.
 
 Dividir en entregas revisables: auditoría, importación CSV, exportación CSV,
 exportación FHIR y conjuntos de órdenes. Mantener la OWA de camas fuera del
-alcance hasta que se decida migrarla explícitamente.
+alcance hasta que se decida migrarla explícitamente. El dashboard visual y
+Audit Log se migraron como primera entrega mediante `/bahmni/admin` y
+`/bahmni/admin/audit-log`, con el define independiente
+`NEXT_ADMIN_AUDIT_LOG`; las herramientas todavía legacy usan un alias aislado.
+Su contrato y rollback están documentados en `admin-audit-log.md`.
 
 ### Pabellón/Operation Theatre — fuera de alcance y pendiente de integración
 

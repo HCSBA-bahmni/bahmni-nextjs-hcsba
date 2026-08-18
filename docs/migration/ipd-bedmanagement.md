@@ -4,7 +4,7 @@
 
 La referencia ejecutable es `openmrs-module-bahmniapps-hcsba-2024/ui/app/bedmanagement`, con configuración combinada de `bahmni_config/openmrs/apps/ipd` e `implementation_config/openmrs/apps/ipd`. La implementación React no ejecuta templates AngularJS, jQuery, `react2angular`, React 16 ni el bundle remoto `/ipd`.
 
-La OWA administrativa `/openmrs/owa/bedmanagement/admissionLocations.html` queda fuera del corte: conserva la edición física de admission locations y coordenadas.
+La OWA administrativa `/openmrs/owa/bedmanagement/admissionLocations.html` pertenece a un corte separado, documentado en `admin-beds.md`; la operación clínica de este módulo permanece independiente de esa configuración física.
 
 ## Matriz de rutas
 
@@ -91,7 +91,7 @@ Se mantienen query keys independientes para wards, ward, lista SQL de habitació
 
 ## Corte y rollback
 
-Apache acepta `NEXT_BEDMANAGEMENT`. Con el define activo, `/bahmni/bedmanagement` se sirve desde Next; al retirarlo vuelve a `bahmni-web` sin cambios de datos. La OWA administrativa no cambia.
+Apache acepta `NEXT_BEDMANAGEMENT`. Con el define activo, `/bahmni/bedmanagement` se sirve desde Next; al retirarlo vuelve a `bahmni-web` sin cambios de datos. La migración de la OWA administrativa se revierte de forma independiente mediante el enlace Beds de Administración.
 
 ## Certificación de ambiente requerida
 
