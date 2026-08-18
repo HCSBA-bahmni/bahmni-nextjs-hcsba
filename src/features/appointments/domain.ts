@@ -39,6 +39,22 @@ function conflictClock(value: string | null | undefined): string | undefined {
   return match ? `${match[1]!.padStart(2, "0")}:${match[2]}` : undefined;
 }
 
+function serviceAvailabilityIntervals(conflict: AppointmentConflict): string[] {
+  const appointment = conflict.appointment;
+  if (!appointment) return [];
+  const weekdays = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
+  const weekday = weekdays[dateTimeOf(appointment.startDateTime).weekday - 1];
+  const weekly = appointment.service.weeklyAvailability.filter((availability) => availability.dayOfWeek === weekday && !availability.voided);
+  const source = weekly.length
+    ? weekly
+    : [{ startTime: appointment.service.startTime, endTime: appointment.service.endTime }];
+  return [...new Set(source.flatMap((availability) => {
+    const start = conflictClock(availability.startTime);
+    const end = conflictClock(availability.endTime);
+    return start && end ? [`${start} a ${end}`] : [];
+  }))];
+}
+
 function requestedAppointmentRange(conflict: AppointmentConflict): string | undefined {
   const appointment = conflict.appointment;
   if (!appointment) return undefined;
@@ -56,17 +72,14 @@ export function appointmentConflictMessage(conflict: AppointmentConflict): strin
   const requested = requestedAppointmentRange(conflict);
   if (kind === "SERVICE_UNAVAILABLE") {
     const serviceName = displayName(appointment?.service);
-    const weekday = appointment ? ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"][dateTimeOf(appointment.startDateTime).weekday - 1] : undefined;
-    const weeklyAvailability = appointment?.service.weeklyAvailability.find((availability) => availability.dayOfWeek === weekday);
-    const availableStart = conflictClock(appointment?.service.startTime) ?? conflictClock(weeklyAvailability?.startTime);
-    const availableEnd = conflictClock(appointment?.service.endTime) ?? conflictClock(weeklyAvailability?.endTime);
-    const availabilityText = availableStart && availableEnd
-      ? `«${serviceName}» funciona en el siguiente horario: ${availableStart} a ${availableEnd}.`
+    const intervals = serviceAvailabilityIntervals(conflict);
+    const availabilityText = intervals.length
+      ? `«${serviceName}» funciona en ${intervals.length === 1 ? "el siguiente horario" : "los siguientes horarios"}: ${intervals.join(" y ")}.`
       : `Revisa la disponibilidad configurada de «${serviceName}».`;
     const requestedText = requested ? ` La cita solicitada es ${requested}.` : "";
     return `Servicio no disponible. ${availabilityText}${requestedText}`;
   }
-  if (kind === "PATIENT") return `El paciente ya tiene otra cita que se superpone${requested ? ` con el horario solicitado ${requested}` : " con el horario solicitado"}.`;
+  if (kind === "PATIENT") return requested ? `El paciente ya tiene otra cita ${requested}.` : "El paciente ya tiene otra cita que se superpone con este horario.";
   if (kind && !/^[A-Z0-9_]+$/.test(kind)) return kind;
   if (appointment && requested) return `Existe un conflicto de disponibilidad ${requested} para ${displayName(appointment.service)}.`;
   return "Existe un conflicto de disponibilidad para el horario solicitado.";
