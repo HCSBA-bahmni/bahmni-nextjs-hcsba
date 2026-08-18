@@ -75,12 +75,31 @@ describe("appointment REST contracts", () => {
   it("accepts unsaved service-unavailable conflicts with a null UUID", async () => {
     const conflicting = {
       uuid: null,
-      patient: { uuid: "p", name: "Paciente" },
-      service: { uuid: "s", name: "awa", startTime: "14:00:00", endTime: "18:00:00" },
-      providers: [],
-      startDateTime: 1786723200000,
-      endDateTime: 1786728600000,
+      appointmentNumber: null,
+      dateCreated: null,
+      dateAppointmentScheduled: 1787078257574,
+      patient: { uuid: "p", name: "Paciente", identifier: "CL18753823-8", customAttributes: {} },
+      service: {
+        appointmentServiceId: 7, uuid: "s", name: "awa", description: "asdad", startTime: "15:56:00", endTime: "18:56:00",
+        speciality: { name: "General Medicine", uuid: "speciality" }, location: { name: "OPD-2", uuid: "service-location" },
+        maxAppointmentsLimit: 4, durationMins: 15, color: "#DC143C", initialAppointmentStatus: null, creatorName: null,
+      },
+      serviceType: null,
+      provider: null,
+      location: { name: "OPD-1", uuid: "appointment-location" },
+      startDateTime: 1787068800000,
+      endDateTime: 1787074200000,
+      appointmentKind: "Scheduled",
       status: "Requested",
+      comments: null,
+      additionalInfo: null,
+      teleconsultation: null,
+      providers: [{ uuid: "provider", name: "Neha Anand", comments: null, response: "ACCEPTED" }],
+      voided: false,
+      extensions: { patientEmailDefined: false },
+      teleconsultationLink: null,
+      priority: null,
+      recurring: false,
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ SERVICE_UNAVAILABLE: [conflicting] }), { status: 200, headers: { "content-type": "application/json" } })));
     await expect(findAppointmentConflicts(payload)).resolves.toEqual([
