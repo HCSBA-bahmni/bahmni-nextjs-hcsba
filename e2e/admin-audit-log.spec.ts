@@ -23,7 +23,7 @@ async function mockAuthenticatedAdmin(page: Page) {
     csvExport: { id: "bahmni.admin.csvExport", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "CSV Export", url: "#/csvExport", icon: "fa-download", order: 1, requiredPrivilege: "app:admin" },
     auditLog: { id: "bahmni.admin.auditLog", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Audit Log", url: "/bahmni/admin/audit-log", icon: "fa-eye", order: 1, requiredPrivilege: "app:admin" },
     orderSet: { id: "bahmni.admin.orderSet", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Order Set", url: "#/ordersetdashboard", icon: "fa-upload", order: 1, requiredPrivilege: "app:admin" },
-    beds: { id: "bahmni.admin.adt", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Beds", url: "/openmrs/owa/bedmanagement/admissionLocations.html", icon: "icon-bahmni-inpatient", order: 1, requiredPrivilege: "app:admin" },
+    beds: { id: "bahmni.admin.adt", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Beds", url: "/bahmni/admin/beds", icon: "icon-bahmni-inpatient", order: 1, requiredPrivilege: "app:admin" },
   }));
   await page.route("**/implementation_config/openmrs/apps/admin/extension.json", (route) => json(route, {}, 404));
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAdminBedLayout, normalizeAdminBed, normalizeAdminLocation, saveAdminBed, saveAdminBedLayout } from "./adminBeds";
+import { deleteAdminBed, deleteAdminBedTag, deleteAdminBedType, deleteAdminLocation, getAdminBedLayout, getManagingLocationsEnabled, normalizeAdminBed, normalizeAdminLocation, saveAdminBed, saveAdminBedLayout, saveAdminBedTag, saveAdminBedType, saveAdminLocation } from "./adminBeds";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -14,6 +14,24 @@ describe("servicio Beds de OpenMRS", () => {
     await expect(getAdminBedLayout("ward")).resolves.toMatchObject({ rows: 1, columns: 2, beds: [{ bedUuid: "bed", rowNumber: 1, columnNumber: 2 }] });
   });
 
+  it.each([
+    ["true", true],
+    ["false", false],
+  ])("normaliza enableManagingLocations=%s", async (value, expected) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [{ property: "bedmanagement.owa.enableManagingLocations", value }] }), { status: 200, headers: { "content-type": "application/json" } })));
+    await expect(getManagingLocationsEnabled()).resolves.toBe(expected);
+  });
+
+  it("usa false cuando la propiedad no existe", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [] }), { status: 200, headers: { "content-type": "application/json" } })));
+    await expect(getManagingLocationsEnabled()).resolves.toBe(false);
+  });
+
+  it("usa false cuando OpenMRS no permite leer el setting", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { message: "Forbidden" } }), { status: 403, headers: { "content-type": "application/json" } })));
+    await expect(getManagingLocationsEnabled()).resolves.toBe(false);
+  });
+
   it("envía exactamente los payloads de distribución y cama", async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response("{}", { status: 200, headers: { "content-type": "application/json" } })));
     vi.stubGlobal("fetch", fetchMock);
@@ -21,5 +39,40 @@ describe("servicio Beds de OpenMRS", () => {
     await saveAdminBed({ locationUuid: "ward", bedNumber: "A-1", bedType: "Cama", row: 1, column: 2 });
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ bedLayout: { row: 2, column: 4 } });
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ bedNumber: "A-1", bedType: "Cama", row: 1, column: 2, locationUuid: "ward" });
+  });
+
+  it("conserva contratos de creación, edición y eliminación de todos los recursos", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response("{}", { status: 200, headers: { "content-type": "application/json" } })));
+    vi.stubGlobal("fetch", fetchMock);
+    await saveAdminLocation({ parentLocationUuid: null, name: "Urgencia", description: "Principal" });
+    await saveAdminLocation({ uuid: "location", parentLocationUuid: "hospital", name: "Urgencia 2", description: "Editada" });
+    await deleteAdminLocation("location");
+    await saveAdminBedLayout("ward", 2, 3);
+    await saveAdminBed({ locationUuid: "ward", bedNumber: "A-1", bedType: "Cama", row: 1, column: 1 });
+    await saveAdminBed({ bedUuid: "bed", locationUuid: "ward", bedNumber: "A-2", bedType: "Cuna", row: 2, column: 1 });
+    await deleteAdminBed("bed");
+    await saveAdminBedType({ name: "Cama", displayName: "Cama", description: "Adulto" });
+    await saveAdminBedType({ uuid: "type", name: "Cuna", displayName: "Cuna", description: "Pediátrica" });
+    await deleteAdminBedType("type");
+    await saveAdminBedTag({ name: "Aislamiento" });
+    await saveAdminBedTag({ uuid: "tag", name: "Oxígeno" });
+    await deleteAdminBedTag("tag");
+
+    const requests = fetchMock.mock.calls.map(([url, options]) => ({ url: String(url), method: options?.method ?? "GET", body: options?.body ? JSON.parse(String(options.body)) : undefined }));
+    expect(requests).toEqual([
+      { url: "/openmrs/ws/rest/v1/admissionLocation", method: "POST", body: { parentLocationUuid: null, name: "Urgencia", description: "Principal" } },
+      { url: "/openmrs/ws/rest/v1/admissionLocation/location", method: "POST", body: { parentLocationUuid: "hospital", name: "Urgencia 2", description: "Editada" } },
+      { url: "/openmrs/ws/rest/v1/admissionLocation/location", method: "DELETE", body: undefined },
+      { url: "/openmrs/ws/rest/v1/admissionLocation/ward?v=layout", method: "POST", body: { bedLayout: { row: 2, column: 3 } } },
+      { url: "/openmrs/ws/rest/v1/bed", method: "POST", body: { bedNumber: "A-1", bedType: "Cama", row: 1, column: 1, locationUuid: "ward" } },
+      { url: "/openmrs/ws/rest/v1/bed/bed", method: "POST", body: { bedNumber: "A-2", bedType: "Cuna", row: 2, column: 1, locationUuid: "ward" } },
+      { url: "/openmrs/ws/rest/v1/bed/bed", method: "DELETE", body: undefined },
+      { url: "/openmrs/ws/rest/v1/bedtype", method: "POST", body: { name: "Cama", displayName: "Cama", description: "Adulto" } },
+      { url: "/openmrs/ws/rest/v1/bedtype/type", method: "POST", body: { name: "Cuna", displayName: "Cuna", description: "Pediátrica" } },
+      { url: "/openmrs/ws/rest/v1/bedtype/type", method: "DELETE", body: undefined },
+      { url: "/openmrs/ws/rest/v1/bedTag", method: "POST", body: { name: "Aislamiento" } },
+      { url: "/openmrs/ws/rest/v1/bedTag/tag", method: "POST", body: { name: "Oxígeno" } },
+      { url: "/openmrs/ws/rest/v1/bedTag/tag", method: "DELETE", body: undefined },
+    ]);
   });
 });

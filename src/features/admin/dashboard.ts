@@ -11,7 +11,7 @@ export function resolveAdminExtensionUrl(rawUrl?: string): ResolvedExtensionUrl 
   if (rawUrl === "#/auditLog") return { href: "/bahmni/admin/audit-log", kind: "next" };
   if (rawUrl?.startsWith("#/")) return { href: `/bahmni/admin-legacy/${rawUrl}`, kind: "legacy" };
   if (rawUrl?.startsWith("/bahmni/admin/audit-log")) return { href: rawUrl, kind: "next" };
-  if (rawUrl?.startsWith("/bahmni/admin/beds") || rawUrl?.startsWith("/openmrs/owa/bedmanagement/")) return { href: "/bahmni/admin/beds", kind: "next" };
+  if (rawUrl?.startsWith("/bahmni/admin/beds")) return { href: "/bahmni/admin/beds", kind: "next" };
   return resolveExtensionUrl(rawUrl);
 }
 

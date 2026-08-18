@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { layoutCellKey, locationChildren, validateBedPosition, validateLayout, type AdminLocation } from "./beds";
+import { canDeleteLocation, layoutCellKey, locationChildren, validateBedPosition, validateLayout, type AdminLocation } from "./beds";
 
 const locations: AdminLocation[] = [
   { uuid: "root", name: "Urgencia", description: "", parentUuid: "hospital" },
@@ -10,6 +10,11 @@ describe("dominio administrativo de camas", () => {
   it("construye raíces y salas sin inventar niveles", () => {
     expect(locationChildren(locations).map((item) => item.uuid)).toEqual(["root"]);
     expect(locationChildren(locations, "root").map((item) => item.uuid)).toEqual(["ward"]);
+  });
+
+  it("sólo permite eliminar nodos hoja", () => {
+    expect(canDeleteLocation(locations, "root")).toBe(false);
+    expect(canDeleteLocation(locations, "ward")).toBe(true);
   });
 
   it("conserva la clave fila:columna del layout OWA", () => expect(layoutCellKey(2, 3)).toBe("2:3"));

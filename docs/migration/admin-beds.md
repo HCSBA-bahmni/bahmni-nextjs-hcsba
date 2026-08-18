@@ -21,19 +21,26 @@ Toda la interfaz se presenta en español. Los nombres clínico-administrativos e
 | Flujo | Contrato |
 |---|---|
 | Ubicaciones | `GET location?tag=Admission Location&v=full`, `GET location?tag=Visit Location&v=full`, `POST/DELETE admissionLocation` |
+| Habilitación | `GET systemsetting?v=custom:(property,value)&q=bedmanagement.owa.`; sólo `bedmanagement.owa.enableManagingLocations=true` habilita CRUD de ubicaciones |
 | Layout | `GET/POST admissionLocation/:uuid?v=layout` con `{bedLayout:{row,column}}` |
 | Camas | `POST bed[/uuid]` con `{bedNumber,bedType,row,column,locationUuid}` y `DELETE bed/:uuid` |
 | Tipos | `GET/POST/DELETE bedtype` |
 | Etiquetas | `GET/POST/DELETE bedTag` |
 
-OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next.
+OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Si el system setting falta o no puede leerse, el valor seguro es `false`. La eliminación de ubicaciones sólo se expone y ejecuta para nodos sin hijos; esta condición se revalida inmediatamente antes del DELETE.
 
 ## Navegación y reversión
 
-`admin/extension.json` apunta Beds a `/bahmni/admin/beds`. El resolvedor Next también reconoce la URL OWA anterior para que configuraciones aún no sincronizadas entren al nuevo módulo. La OWA permanece desplegada como fallback operacional y no fue modificada.
+El cambio compañero de `standard-config-HCSBA` configura Beds explícitamente en `/bahmni/admin/beds`: [standard-config-HCSBA#2](https://github.com/HCSBA-bahmni/standard-config-HCSBA/pull/2). La URL OWA no se transforma en Next y permanece como destino externo real.
+
+Rollback independiente de Beds:
+
+1. Restituir en `openmrs/apps/admin/extension.json` la URL `/openmrs/owa/bedmanagement/admissionLocations.html`.
+2. Desplegar nuevamente `standard-config-HCSBA`; no es necesario desactivar el dashboard Next ni Audit Log.
+3. Verificar que la tarjeta Beds abre literalmente la OWA.
 
 ## Verificación
 
 - Dominio: jerarquía, coordenadas y límites del layout.
-- Servicio: normalización y payloads exactos de OpenMRS.
-- E2E: navegación ubicación/sala/layout, apertura de cama, tipos, etiquetas, español y accesibilidad.
+- Servicio: normalización, system setting y payloads exactos de creación, edición y eliminación.
+- E2E: setting activo/inactivo, protección de padres, mutaciones de ubicación/layout/cama/tipo/tag, español y accesibilidad.

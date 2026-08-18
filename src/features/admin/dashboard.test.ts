@@ -10,7 +10,7 @@ describe("dashboard de Administración", () => {
   it("resuelve Audit Log y Beds en Next", () => {
     expect(resolveAdminExtensionUrl("#/auditLog")).toEqual({ href: "/bahmni/admin/audit-log", kind: "next" });
     expect(resolveAdminExtensionUrl("/bahmni/admin/audit-log")).toEqual({ href: "/bahmni/admin/audit-log", kind: "next" });
-    expect(resolveAdminExtensionUrl("/openmrs/owa/bedmanagement/admissionLocations.html")).toEqual({ href: "/bahmni/admin/beds", kind: "next" });
+    expect(resolveAdminExtensionUrl("/openmrs/owa/bedmanagement/admissionLocations.html")).toEqual({ href: "/openmrs/owa/bedmanagement/admissionLocations.html", kind: "service" });
     expect(resolveAdminExtensionUrl("/bahmni/admin/beds")).toEqual({ href: "/bahmni/admin/beds", kind: "next" });
   });
 

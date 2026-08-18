@@ -32,6 +32,16 @@ export async function getVisitLocations(): Promise<AdminLocation[]> {
   return response.results.map(normalizeAdminLocation).filter((location) => location.uuid && location.name);
 }
 
+export async function getManagingLocationsEnabled(): Promise<boolean> {
+  try {
+    const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(property,value)", q: "bedmanagement.owa." })}`, { schema: list, cache: "no-store" });
+    const setting = response.results.find((item) => text(item.property) === "bedmanagement.owa.enableManagingLocations");
+    return setting ? String(setting.value).trim().toLowerCase() === "true" : false;
+  } catch {
+    return false;
+  }
+}
+
 export async function saveAdminLocation(payload: { uuid?: string; parentLocationUuid: string | null; name: string; description: string }): Promise<void> {
   await bahmniRequest(`/ws/rest/v1/admissionLocation${payload.uuid ? `/${encodeURIComponent(payload.uuid)}` : ""}`, { method: "POST", body: JSON.stringify({ parentLocationUuid: payload.parentLocationUuid, name: payload.name, description: payload.description }) });
 }

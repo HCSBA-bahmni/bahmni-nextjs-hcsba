@@ -40,6 +40,10 @@ export function locationChildren(locations: AdminLocation[], parentUuid?: string
     : !location.parentUuid || !ids.has(location.parentUuid));
 }
 
+export function canDeleteLocation(locations: AdminLocation[], uuid: string): boolean {
+  return !locations.some((location) => location.parentUuid === uuid);
+}
+
 export function layoutCellKey(row: number, column: number): string {
   return `${row}:${column}`;
 }

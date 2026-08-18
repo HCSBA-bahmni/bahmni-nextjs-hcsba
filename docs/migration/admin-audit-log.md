@@ -2,7 +2,7 @@
 
 ## Alcance
 
-Esta entrega migra el estado legacy `admin.auditLog` (`#/auditLog`) y sustituye el dashboard visual de Administración por un shell Next.js. CSV Upload, CSV Export, Order Sets y la OWA de camas conservan sus implementaciones actuales.
+Esta entrega migra el estado legacy `admin.auditLog` (`#/auditLog`) y sustituye el dashboard visual de Administración por un shell Next.js. CSV Upload, CSV Export y Order Sets conservan sus implementaciones actuales. Beds se migra en el corte separado descrito en `admin-beds.md`.
 
 Fuentes funcionales revisadas:
 
@@ -34,6 +34,7 @@ Fuentes funcionales revisadas:
 - Dashboard Next.js: `/bahmni/admin`; consume el mismo `admin/extension.json`, aplica `app:admin` y usa los componentes visuales compartidos del proyecto.
 - El dashboard consume la extensión `bahmni.admin.auditLog` y abre la ruta Next configurada.
 - El corte de proxy es independiente: `NEXT_ADMIN_AUDIT_LOG`. Las herramientas no migradas se conservan bajo el alias aislado `/bahmni/admin-legacy`, sin modificar su lógica.
+- El cambio compañero de proxy y Compose se entrega en [bahmni-docker-HCSBA#2](https://github.com/HCSBA-bahmni/bahmni-docker-HCSBA/pull/2); los enlaces configurables de Audit Log y Beds se entregan en [standard-config-HCSBA#2](https://github.com/HCSBA-bahmni/standard-config-HCSBA/pull/2).
 - Los mensajes, tipos de evento y módulos siguen resolviéndose desde los locales configurables de `admin`.
 - La presentación se modernizó con los patrones visuales y accesibles del proyecto, sin modificar parámetros ni decisiones del controlador legacy.
 
