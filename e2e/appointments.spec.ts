@@ -229,8 +229,9 @@ test("service unavailable conflict explains the requested and available hours", 
 
   const conflict = sidebar.locator(".appointment-conflicts");
   await expect(conflict).toContainText("No se pudo crear la cita por un conflicto de disponibilidad.");
-  await expect(conflict).toContainText("El servicio «Cardiología» no está disponible para la cita solicitada el 14/08/2026 de 12:00 a 13:30.");
-  await expect(conflict).toContainText("Horario disponible del servicio: 14:00 a 18:00.");
+  await expect(conflict).toContainText("Servicio no disponible.");
+  await expect(conflict).toContainText("«Cardiología» funciona en el siguiente horario: 14:00 a 18:00.");
+  await expect(conflict).toContainText("La cita solicitada es el 14/08/2026 de 12:00 a 13:30.");
   await expect(sidebar.locator(".error-banner")).toHaveCount(0);
   expect(appointmentWrites).toBe(0);
 });

@@ -40,7 +40,7 @@ describe("appointment domain parity", () => {
         startDateTime: Date.parse("2026-08-14T16:00:00.000Z"),
         endDateTime: Date.parse("2026-08-14T17:30:00.000Z"),
       },
-    })).toBe("El servicio «awa» no está disponible para la cita solicitada el 14/08/2026 de 12:00 a 13:30. Horario disponible del servicio: 14:00 a 18:00. Selecciona un horario dentro de ese rango.");
+    })).toBe("Servicio no disponible. «awa» funciona en el siguiente horario: 14:00 a 18:00. La cita solicitada es el 14/08/2026 de 12:00 a 13:30.");
   });
 
   it("uses configured transitions and exact legacy privileges", () => {

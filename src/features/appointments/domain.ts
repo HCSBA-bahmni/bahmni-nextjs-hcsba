@@ -60,11 +60,11 @@ export function appointmentConflictMessage(conflict: AppointmentConflict): strin
     const weeklyAvailability = appointment?.service.weeklyAvailability.find((availability) => availability.dayOfWeek === weekday);
     const availableStart = conflictClock(appointment?.service.startTime) ?? conflictClock(weeklyAvailability?.startTime);
     const availableEnd = conflictClock(appointment?.service.endTime) ?? conflictClock(weeklyAvailability?.endTime);
-    const requestedText = requested ? ` para la cita solicitada ${requested}` : " en el horario solicitado";
     const availabilityText = availableStart && availableEnd
-      ? ` Horario disponible del servicio: ${availableStart} a ${availableEnd}. Selecciona un horario dentro de ese rango.`
-      : " Selecciona otro horario o revisa la disponibilidad configurada del servicio.";
-    return `El servicio «${serviceName}» no está disponible${requestedText}.${availabilityText}`;
+      ? `«${serviceName}» funciona en el siguiente horario: ${availableStart} a ${availableEnd}.`
+      : `Revisa la disponibilidad configurada de «${serviceName}».`;
+    const requestedText = requested ? ` La cita solicitada es ${requested}.` : "";
+    return `Servicio no disponible. ${availabilityText}${requestedText}`;
   }
   if (kind === "PATIENT") return `El paciente ya tiene otra cita que se superpone${requested ? ` con el horario solicitado ${requested}` : " con el horario solicitado"}.`;
   if (kind && !/^[A-Z0-9_]+$/.test(kind)) return kind;
