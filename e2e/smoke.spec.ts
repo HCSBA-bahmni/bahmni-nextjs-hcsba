@@ -50,7 +50,7 @@ test("successful login preserves the destination and requires a location", async
 
 test("successful login restores the last allowed location without asking again", async ({ page, context }) => {
   let selectedLocation = "";
-  await context.addCookies([{ name: "bahmni.user.location", value: JSON.stringify({ uuid: "location-1", name: "HCSBA" }), url: "http://127.0.0.1:3000" }]);
+  await context.addCookies([{ name: "bahmni.user.location", value: JSON.stringify({ uuid: "location-1", name: "HCSBA" }), url: "http://localhost:3000" }]);
   await page.route("**/openmrs/ws/rest/v1/session**", async (route) => {
     if (route.request().method() === "POST") {
       const body = JSON.parse(route.request().postData() ?? "{}") as { sessionLocation?: string };
@@ -94,6 +94,8 @@ test("home loads HCSBA translations and normalizes legacy routes", async ({ page
 });
 
 test("clinical dashboard uses HCSBA configuration and active visit context", async ({ page }) => {
+  let releaseConditions!: () => void;
+  const conditionsReady = new Promise<void>((resolve) => { releaseConditions = resolve; });
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "login-location", display: "OPD-1" } }) }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "clinical", name: "app:clinical" }, { uuid: "close-visit", name: "app:common:closeVisit" }], roles: [] }] }) }));
   await page.route("**/openmrs/ws/rest/v1/provider**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "provider-1", display: "Super Man", attributes: [] }] }) }));
@@ -112,7 +114,7 @@ test("clinical dashboard uses HCSBA configuration and active visit context", asy
     otherActiveDrugOrders: [],
   }) }));
   await page.route("**/openmrs/ws/rest/emrapi/conditionhistory**", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 450));
+    await conditionsReady;
     await route.fulfill({ contentType: "application/json", body: JSON.stringify([{ conditions: [{ uuid: "condition-active", concept: { shortName: "Asma" }, status: "ACTIVE", onSetDate: "2025-01-01" }, { uuid: "condition-history", concept: { shortName: "Asma" }, status: "HISTORY_OF", onSetDate: "2026-01-01", previousConditionUuid: "condition-active" }] }]) });
   });
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/patient/patient-1/forms**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ formName: "Vitals", encounterDateTime: "2026-08-03T10:00:00.000Z", encounterUuid: "encounter-form-1", visitUuid: "visit-1", formVersion: "1", providers: [{ providerName: "Dra. HCSBA", uuid: "provider-1" }] }]) }));
@@ -133,6 +135,7 @@ test("clinical dashboard uses HCSBA configuration and active visit context", asy
   await expect.poll(() => dashboardScroll.evaluate((element) => getComputedStyle(element).opacity)).toBe("0");
   await dashboardScroll.evaluate((element) => { element.scrollTop = 180; });
   await expect.poll(() => dashboardScroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  releaseConditions();
   await page.getByText("Asma").waitFor({ state: "attached" });
   await expect.poll(() => dashboardScroll.evaluate((element) => element.scrollTop)).toBe(0);
   await expect.poll(() => dashboardScroll.evaluate((element) => getComputedStyle(element).opacity)).toBe("1");
@@ -440,7 +443,9 @@ test("clinical search defaults to the active queue and keeps All as a distinct L
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
 });
 
-test("new patient loads dynamic HCSBA registration metadata", async ({ page }) => {
+test("new patient loads dynamic HCSBA registration metadata and saves the legacy envelope", async ({ page }) => {
+  let patientPayload: Record<string, unknown> | undefined;
+  let jumpAccepted = "";
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "location-1", display: "HCSBA" } }) }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "priv-1", name: "Add Patients" }], roles: [] }] }) }));
   await page.route("**/bahmni_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showBirthTime: true, isLastNameMandatory: true, defaultIdentifierPrefix: "RUN*", patientInformation: { extra: { title: "Additional Patient Information", expanded: false, attributes: ["email", "givenNameLocal"] } }, patientSearch: { customAttributes: { label: "Teléfono", fields: ["phoneNumber"] }, socialAttributes: { label: "Nombre social", fields: ["givenNameLocal"] } }, relationshipTypeMap: { Doctor: "provider" }, printOptions: [{ translationKey: "REGISTRATION_PRINT_REG_CARD_LOCAL_KEY", templateUrl: "/registration/registrationCardLayout/print_local.html" }] } }) }));
@@ -453,6 +458,11 @@ test("new patient loads dynamic HCSBA registration metadata", async ({ page }) =
   await page.route("**/openmrs/ws/rest/v1/relationshiptype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
   await page.route("**/openmrs/module/addresshierarchy/ajax/getOrderedAddressHierarchyLevels.form", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ name: "Región", addressField: "stateProvince" }, { name: "Comuna", addressField: "cityVillage" }]) }));
   await page.route("**/openmrs/ws/rest/v1/idgen", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "RUN*100" }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/patientprofile", async (route) => {
+    patientPayload = route.request().postDataJSON() as Record<string, unknown>;
+    jumpAccepted = (await route.request().allHeaders())["jump-accepted"] ?? "";
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: "patient-created" }) });
+  });
   await page.goto("/bahmni/registration/patient/new");
   await expect(page.getByRole("heading", { name: "Nuevo paciente" })).toBeVisible();
   await expect(page.getByLabel("Fuente o prefijo del identificador", { exact: true })).toHaveValue("source-run");
@@ -478,8 +488,22 @@ test("new patient loads dynamic HCSBA registration metadata", async ({ page }) =
   await expect(page.getByLabel("email")).toBeVisible();
   await expect(page.getByLabel("Región")).toBeVisible();
   await expect(page.getByText("HCSBA", { exact: true })).toBeVisible();
+  await page.getByLabel("Nombres").fill("Paciente");
+  await page.getByLabel("Apellidos").fill("Sintético");
+  await page.getByRole("button", { name: "Abrir Género" }).click();
+  await page.getByRole("option", { name: "Femenino" }).click();
+  await page.getByRole("heading", { name: "Nuevo paciente" }).click();
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
+  await page.getByRole("button", { name: "Guardar paciente traducido" }).click();
+  await expect(page).toHaveURL(/\/bahmni\/registration\/patient\/patient-created\?saved=1$/);
+  expect(jumpAccepted).toBe("false");
+  expect(patientPayload).toMatchObject({
+    patient: {
+      identifiers: [{ identifier: "RUN*100", identifierType: "id-type", preferred: true }],
+      person: { names: [{ givenName: "Paciente", familyName: "Sintético" }], gender: "F", birthdateEstimated: true },
+    },
+  });
 });
 
 test("registration searches existing patients through the HCSBA Lucene endpoint", async ({ page }) => {

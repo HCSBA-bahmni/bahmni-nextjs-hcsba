@@ -20,6 +20,9 @@
     "audit:dashboard:functional": "node scripts/audit-dashboard-functional-coverage.mjs",
     "certification:consultation": "node scripts/check-consultation-gate.mjs",
     "gate:consultation": "node scripts/check-consultation-gate.mjs --require-ready",
+    "certification:phase2": "node scripts/check-phase2-gate.mjs",
+    "gate:phase2": "node scripts/check-phase2-gate.mjs --require-local",
+    "gate:phase2:hcsba": "node scripts/check-phase2-gate.mjs --require-local --require-hcsba",
     "e2e": "playwright test"
   },
   "dependencies": {

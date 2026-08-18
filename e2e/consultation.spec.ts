@@ -53,12 +53,13 @@ test("consultation renders configured boards and saves the unified legacy encoun
   await page.route("**/implementation_config/openmrs/i18n/clinical/locale_es.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/openmrs/ws/rest/v1/entitymapping**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ mappings: [{ uuid: "consultation-type", display: "Consultation" }] }] }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/bahmniencounter/find", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(persistedEncounter ?? { encounterUuid: null, observations: [], orders: [], drugOrders: [{ uuid: "drug-order-1", drug: { uuid: "drug-1", name: "Medicamento sintético" }, dosingInstructions: { dose: 1, doseUnits: "Tablet", route: "Oral", frequency: "Once daily", duration: 5, durationUnits: "Days" }, instructions: "As directed" }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/encounter**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: persistedEncounter ? [{ uuid: "encounter-1", encounterDatetime: "2026-08-04T10:00:00.000Z", visit: { uuid: "visit-1" } }] : [] }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/config/drugOrders", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ doseUnits: [{ name: "Tablet" }], routes: [{ name: "Oral" }], durationUnits: [{ name: "Days" }], dispensingUnits: [{ name: "Tablet" }], dosingInstructions: [{ name: "As directed" }], frequencies: [{ name: "Once daily", frequencyPerDay: 1 }], allowNonCodedDrugs: false }) }));
   await page.route("**/openmrs/ws/rest/v1/drug**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "paracetamol-650", name: "Paracetamol 650 mg", dosageForm: { display: "Tablet" }, concept: { uuid: "paracetamol", name: { name: "Paracetamol" }, names: [{ name: "Paracetamol" }, { name: "Acetaminophen" }] } }] }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/drugOrders**", (route) => {
     const active = route.request().url().includes("/active");
     if (active) activeMedicationRequestCount += 1;
-    const order = { uuid: "active-drug-order", drug: { uuid: "amoxicillin", name: "Amoxicillin 500 mg" }, effectiveStartDate: new Date("2026-08-02T10:00:00.000Z").getTime(), effectiveStopDate: new Date("2026-08-09T10:00:00.000Z").getTime(), provider: { name: "Super Man" }, visit: { startDateTime: new Date("2026-08-02T10:00:00.000Z").getTime() }, duration: 7, durationUnits: "Days", dosingInstructions: { dose: 1, doseUnits: "Tablet", route: "Oral", frequency: "Once daily", quantity: 7, quantityUnits: "Tablet", administrationInstructions: JSON.stringify({ instructions: "As directed" }) } };
+    const order = { uuid: "active-drug-order", drug: { uuid: "amoxicillin", name: "Amoxicillin 500 mg" }, effectiveStartDate: new Date("2026-08-02T10:00:00.000Z").getTime(), effectiveStopDate: new Date("2026-08-29T10:00:00.000Z").getTime(), provider: { name: "Super Man" }, visit: { startDateTime: new Date("2026-08-02T10:00:00.000Z").getTime() }, duration: 27, durationUnits: "Days", dosingInstructions: { dose: 1, doseUnits: "Tablet", route: "Oral", frequency: "Once daily", quantity: 27, quantityUnits: "Tablet", administrationInstructions: JSON.stringify({ instructions: "As directed" }) } };
     const newlySaved = encounterSaveCount >= 3 ? [{ ...order, uuid: "saved-paracetamol-order", drug: { uuid: "paracetamol-650", name: "Paracetamol 650 mg" }, effectiveStartDate: new Date("2026-08-05T10:00:00.000Z").getTime(), effectiveStopDate: new Date("2026-08-15T10:00:00.000Z").getTime(), duration: 10, dosingInstructions: { ...order.dosingInstructions, dose: 2, frequency: "Twice daily", quantity: 99 } }] : [];
     return route.fulfill({ contentType: "application/json", body: JSON.stringify(active ? [order, ...newlySaved] : [order, ...newlySaved, { ...order, uuid: "old-drug-order", effectiveStartDate: new Date("2026-07-11T10:00:00.000Z").getTime(), effectiveStopDate: new Date("2026-07-18T10:00:00.000Z").getTime(), visit: { startDateTime: new Date("2026-07-11T10:00:00.000Z").getTime() } }]) });
   });
@@ -379,7 +380,10 @@ test("consultation renders configured boards and saves the unified legacy encoun
   await page.getByRole("button", { name: "Blood", exact: true }).click();
   await expect(page.getByRole("button", { name: "Blood", exact: true })).toHaveCSS("background-color", "rgb(23, 98, 189)");
   await expect(page.getByRole("button", { name: "Blood", exact: true })).toHaveCSS("color", "rgb(255, 255, 255)");
-  await page.getByLabel("Fecha de recolección de la muestra").fill("05/08/2026");
+  const collectionDate = page.getByLabel("Fecha de recolección de la muestra");
+  await collectionDate.click();
+  await page.getByRole("gridcell", { name: "05/08/2026", exact: true }).click();
+  await expect(collectionDate).toHaveValue("05/08/2026");
   await page.getByLabel("ID de muestra").fill("sample-e2e");
   await page.getByRole("textbox", { name: "Consultation Note", exact: true }).fill("Muestra prioritaria");
   await expect(page.getByText("Bacteriology Results", { exact: true })).toBeVisible();

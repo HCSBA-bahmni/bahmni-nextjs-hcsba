@@ -4,6 +4,7 @@ import { locationSchema, providerSchema, sessionSchema, userSchema, type BahmniL
 import { abortPendingBahmniRequests as abortPendingRequests, BahmniApiError, bahmniRequest, bahmniRequestWithResponse, basicAuthorization, queryString } from "./http";
 
 const resourceList = <T extends z.ZodTypeAny>(item: T) => z.object({ results: z.array(item) }).loose();
+const passwordPolicyPropertiesSchema = z.record(z.string(), z.string());
 const USER_COOKIE = "bahmni.user";
 const LOCATION_COOKIE = "bahmni.user.location";
 const LOCALE_COOKIE = "bahmni.locale";
@@ -268,6 +269,13 @@ export async function getQuickLogoutComboKey(): Promise<string> {
 export async function getAllowedLocaleCodes(): Promise<string[]> {
   const value = await getGlobalProperty("locale.allowed.list").catch(() => "");
   return value.split(",").map((locale) => locale.trim()).filter(Boolean);
+}
+
+export async function getPasswordPolicies(): Promise<Record<string, string>> {
+  return bahmniRequest("/ws/rest/v1/bahmnicore/globalProperty/passwordPolicyProperties", {
+    schema: passwordPolicyPropertiesSchema,
+    cache: "no-store",
+  });
 }
 
 export function hasPrivilege(user: BahmniUser | null, required?: string | string[]): boolean {

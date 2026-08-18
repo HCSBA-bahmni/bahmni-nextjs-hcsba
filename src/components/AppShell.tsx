@@ -2,10 +2,12 @@ import Link from "next/link";
 import { Button } from "primereact/button";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
+import { isKeycloakAuth } from "@/features/auth/authMode";
 import { hasPrivilege } from "@/services/bahmni/auth";
 
 export function AppShell({ children, title, mainClassName }: { children: ReactNode; title?: string; mainClassName?: string }) {
   const { user, location, quickLogoutComboKey, signOut } = useAuth();
+  const keycloakAuth = isKeycloakAuth();
 
   useEffect(() => {
     const quickLogout = (event: KeyboardEvent) => {
@@ -29,7 +31,9 @@ export function AppShell({ children, title, mainClassName }: { children: ReactNo
         {hasPrivilege(user, "app:adt") && <Link href="/bedmanagement">Camas</Link>}
       </nav>
       <div className="session-summary">
-        <span>{user?.display ?? user?.username}</span>
+        {keycloakAuth
+          ? <span>{user?.display ?? user?.username}</span>
+          : <Link className="session-user-link" href="/change-password" title="Cambiar contraseña">{user?.display ?? user?.username}</Link>}
         <Link className="muted session-location-link" href="/location" title="Cambiar ubicación">{location?.display ?? location?.name}</Link>
         <Button text severity="secondary" icon="pi pi-sign-out" label="Salir" onClick={() => void signOut()} />
       </div>

@@ -281,3 +281,39 @@ Programas en HCSBA ni autoriza retirar el fallback clínico completo.
 - Programas aprobado en Chromium, Firefox y Edge; verificación Docker
   same-origin aprobada en ocho rutas y runtime DEV confirmado con
   `integrations.ips.enabled=false`.
+
+### 18-08-2026 — Fase 2 iniciada: campaña A
+
+- Se cerró la brecha del cambio de contraseña: acceso desde la cabecera sólo
+  en modo OpenMRS, políticas leídas del endpoint Bahmni y payload de escritura
+  idéntico a legacy. En modo Keycloak no se expone una acción de contraseña
+  OpenMRS.
+- Se añadió evidencia local del recorrido OTP → Provider → selección de
+  ubicación, expiración con retorno interno y cambio de contraseña, incluida
+  accesibilidad Axe.
+- La campaña A pasa contrato y E2E local en Chromium, Firefox y Edge. La
+  certificación HCSBA queda deliberadamente pendiente de perfiles sintéticos,
+  expiración real y MFA/revocación Keycloak; el stack SSO permanece apagado en
+  desarrollo liviano.
+
+### 18-08-2026 — Fase 2 cerrada en alcance frontend/local
+
+- Las campañas A, B, C y D aprobaron contratos, unitarios, build standalone y
+  Playwright en Chromium, Firefox y Edge.
+- Registro añadió una prueba de alta que valida el sobre `patient/person`, el
+  identificador generado y `Jump-Accepted` sin persistir datos reales.
+- IPD dejó de probar el antiguo dashboard de Bed Management y ahora valida las
+  seis secciones configuradas en `ipdDashboard/app.json`. Transferencia y alta
+  conservan `visitUuid` para evitar escrituras sobre una visita ambigua.
+- Documentos, Órdenes y Appointments cubren escritura, conciliación y fallos
+  pre/post-commit en 15 recorridos E2E locales.
+- La prueba Keycloak se separó por `runtime-config`; la matriz OpenMRS ya no
+  interpreta como fallo una build que deliberadamente tiene SSO apagado.
+- La compuerta reproducible vive en `phase2-gate.json` y se consulta con
+  `npm run certification:phase2`. `npm run gate:phase2` exige el cierre local.
+
+La fase 2 queda lista para la campaña institucional, no certificada en HCSBA.
+`npm run gate:phase2:hcsba` continuará fallando hasta completar los cinco
+criterios reales documentados: perfiles de autenticación, Registro reversible,
+IPD reversible, integraciones institucionales y privilegios representativos.
+No se retira ningún fallback legacy por este cierre local.

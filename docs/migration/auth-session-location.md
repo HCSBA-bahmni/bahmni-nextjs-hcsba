@@ -20,13 +20,14 @@ OpenMRS sigue siendo la autoridad de la sesión clínica que consume el frontend
 7. Si la ubicación guardada falta, está dañada o dejó de estar asignada, se elimina y se muestra `/location`.
 8. Un `401` global limpia identidad/proveedor, conserva la ubicación recordada y vuelve a `/login` con la ruta interna de retorno.
 9. El logout audita, recuerda temporalmente la ruta por UUID de proveedor cuando `bahmni.contextCookieExpirationTimeInMinutes` lo habilita, destruye la sesión OpenMRS y conserva la última ubicación durante siete días. En modo `keycloak` limpia primero el estado local, aborta solicitudes Bahmni pendientes, invalida OpenMRS y navega a la URL de logout OIDC devuelta por el servidor o a `/openmrs/oauth2logout`.
+10. En modo `openmrs`, el nombre del usuario en la cabecera abre el cambio de contraseña. La vista consulta `/ws/rest/v1/bahmnicore/globalProperty/passwordPolicyProperties`, presenta únicamente las políticas configuradas y envía a `/ws/rest/v1/password` exactamente `{ oldPassword, newPassword }`. En modo `keycloak` esta acción no se ofrece porque Keycloak es la autoridad de las credenciales.
 
 ## Compatibilidad de estado
 
 | Estado | Contrato |
 |---|---|
 | `JSESSIONID` | Sesión OpenMRS; nunca se reemplaza por token Next. Se conserva el workaround legacy que elimina únicamente un `JSESSIONID` erróneo con path `/`. |
-| `bahmni.user` | Nombre de usuario como texto, no JSON, para compatibilidad con módulos legacy. |
+| `bahmni.user` | Nombre de usuario serializado como string JSON, tal como lo decodifica `$cookieStore` en los módulos legacy. |
 | `bahmni.user.location` | JSON `{ uuid, name }`, path `/`, siete días. |
 | `bahmni.locale` / `NG_TRANSLATE_LANG_KEY` | Locale seleccionado; además se guarda `userProperties.defaultLocale`. |
 | `loginLocations` | Ubicaciones asignadas al proveedor para módulos AngularJS aún activos. |
@@ -40,8 +41,9 @@ No se incorporó Auth.js. Envolver `JSESSIONID` en otra cookie produciría dos t
 
 ## Evidencia automatizada
 
-- Unitarios de cookies legacy, proveedor activo/retirado, asignaciones y restauración mediante `POST /session`.
-- Playwright de credenciales, accesibilidad, selección obligatoria sin contexto, omisión de `/location` con una ubicación guardada válida y retorno posterior al logout Keycloak sin recrear inmediatamente la sesión SSO.
+- Unitarios de cookies legacy, OTP, proveedor activo/retirado o ausente, asignaciones, restauración mediante `POST /session`, políticas y payload del cambio de contraseña.
+- Playwright local en Chromium, Firefox y Edge del flujo OTP → Provider → ubicación, cambio de contraseña y expiración con retorno local; la vista de contraseña pasa Axe sin impactos serios o críticos.
+- Playwright del retorno posterior al logout Keycloak sin recrear inmediatamente la sesión SSO, compilado expresamente con `NEXT_PUBLIC_AUTH_MODE=keycloak`.
 - Lint, TypeScript estricto, suite completa y build standalone.
 
-La certificación final sigue requiriendo usuarios HCSBA sintéticos con y sin atributos de ubicación, un usuario OTP en modo `openmrs`, expiración real de `JSESSIONID` y una campaña Keycloak completa de login, logout global, TOTP, código de recuperación y revocación de sesión administrativa.
+La campaña A de fase 2 queda implementada y verificada localmente. La certificación HCSBA continúa retenida hasta ejecutar usuarios sintéticos reales con y sin atributos de ubicación, OTP contra el backend compartido, expiración real de `JSESSIONID` y una campaña Keycloak completa de login, logout global, TOTP, código de recuperación y revocación administrativa. Estas pruebas no se sustituyen con mocks ni requieren reactivar Keycloak en el modo de desarrollo liviano.

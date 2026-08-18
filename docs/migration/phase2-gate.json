@@ -1,0 +1,51 @@
+{
+  "gate": "phase-2-active-next-modules",
+  "evaluatedAt": "2026-08-18",
+  "scope": "frontend-local",
+  "status": "ready-for-hcsba-certification",
+  "campaigns": [
+    {
+      "id": "A",
+      "name": "Home y autenticación",
+      "localStatus": "passed",
+      "evidence": ["e2e/auth.spec.ts", "e2e/smoke.spec.ts", "e2e/keycloak-auth.spec.ts", "src/features/auth/passwordPolicies.test.ts"]
+    },
+    {
+      "id": "B",
+      "name": "Registro",
+      "localStatus": "passed",
+      "evidence": ["e2e/smoke.spec.ts", "src/services/bahmni/registrationContracts.test.ts", "src/features/registration/mappers.test.ts", "src/features/registration/workflow.test.ts"]
+    },
+    {
+      "id": "C",
+      "name": "ADT, camas, Care View e IPD",
+      "localStatus": "passed",
+      "evidence": ["e2e/ipd.spec.ts", "src/features/ipd/workflow.test.ts", "src/features/ipd/ipd-dashboard", "src/services/bahmni/ipd.test.ts"]
+    },
+    {
+      "id": "D",
+      "name": "Documentos, Órdenes y Appointments",
+      "localStatus": "passed",
+      "evidence": ["e2e/document-upload.spec.ts", "e2e/orders.spec.ts", "e2e/appointments.spec.ts", "src/features/document-upload", "src/features/orders", "src/features/appointments"]
+    }
+  ],
+  "localCriteria": [
+    { "id": "legacy-inventory", "status": "passed", "evidence": "npm run inventory:legacy:check" },
+    { "id": "dashboard-functional-audit", "status": "passed", "evidence": "npm run audit:dashboard:functional" },
+    { "id": "forbidden-runtime-audit", "status": "passed", "evidence": "npm run audit:dashboard" },
+    { "id": "lint-typecheck-unit", "status": "passed", "evidence": "npm run lint; npm run typecheck; npm test" },
+    { "id": "standalone-build", "status": "passed", "evidence": "npm run build" },
+    { "id": "openmrs-multibrowser", "status": "passed", "evidence": "Playwright Chromium, Firefox y Edge; Keycloak y HCSBA-real separados por runtime/perfil" },
+    { "id": "keycloak-multibrowser", "status": "passed", "evidence": "build explícito NEXT_PUBLIC_AUTH_MODE=keycloak y e2e/keycloak-auth.spec.ts en tres navegadores" },
+    { "id": "accessibility-and-viewport", "status": "passed", "evidence": "Axe sin impactos serios/críticos en los recorridos declarados y pruebas IPD a 1366x768" },
+    { "id": "ambiguous-write-protection", "status": "passed", "evidence": "Órdenes, documentos, camas y consulta concilian o bloquean reintentos ambiguos" },
+    { "id": "rollback-contract", "status": "passed", "evidence": "defines de proxy independientes y fallback legacy conservado" }
+  ],
+  "hcsbaCriteria": [
+    { "id": "real-auth-profiles", "status": "pending", "evidence": "OTP, expiración JSESSIONID, Provider/ubicaciones y revocación Keycloak con usuarios sintéticos autorizados" },
+    { "id": "real-registration-reversible", "status": "pending", "evidence": "alta/edición/visita/Form2/impresión reversible contra HCSBA desarrollo" },
+    { "id": "real-ipd-reversible", "status": "pending", "evidence": "admisión, traslado, alta, equipo/tareas y tratamientos contra HCSBA; incluye dosis variable por etapas" },
+    { "id": "real-integrations-reversible", "status": "pending", "evidence": "almacenamiento documental, órdenes/cumplimiento, impresión, teleconsulta y agenda contra servicios institucionales" },
+    { "id": "real-privilege-profiles", "status": "pending", "evidence": "perfiles representativos y pacientes sintéticos autorizados en HCSBA desarrollo" }
+  ]
+}

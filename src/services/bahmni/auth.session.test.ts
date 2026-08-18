@@ -1,6 +1,8 @@
 import Cookies from "js-cookie";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  changePassword,
+  getPasswordPolicies,
   getProviderForUser,
   getPersistedUsername,
   getCurrentUser,
@@ -10,6 +12,7 @@ import {
   persistCurrentUser,
   persistLocation,
   resolveLoginLocations,
+  MissingProviderError,
 } from "./auth";
 import type { BahmniProvider, BahmniSession, BahmniUser } from "@/types/bahmni";
 
@@ -31,6 +34,28 @@ afterEach(() => {
 });
 
 describe("legacy authentication persistence", () => {
+  it("loads the exact Bahmni password policy contract", async () => {
+    const properties = { "security.passwordMinimumLength": "8", "security.passwordRequiresDigit": "true" };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(json(properties));
+
+    await expect(getPasswordPolicies()).resolves.toEqual(properties);
+    expect(new URL(String(fetchMock.mock.calls[0]?.[0]), window.location.origin).pathname)
+      .toBe("/openmrs/ws/rest/v1/bahmnicore/globalProperty/passwordPolicyProperties");
+  });
+
+  it("submits the legacy OpenMRS password payload without adding fields", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(undefined, { status: 204 }));
+
+    await changePassword("anterior", "nueva");
+
+    const request = fetchMock.mock.calls[0];
+    expect(new URL(String(request?.[0]), window.location.origin).pathname).toBe("/openmrs/ws/rest/v1/password");
+    expect(request?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ oldPassword: "anterior", newPassword: "nueva" }),
+    });
+  });
+
   it("does not interpret OpenMRS authenticated false as an OTP challenge", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(json({ authenticated: false }));
 
@@ -78,6 +103,14 @@ describe("legacy authentication persistence", () => {
 });
 
 describe("provider and location context", () => {
+  it("rejects an authenticated account without an active Provider", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(json({ results: [user] }))
+      .mockResolvedValueOnce(json({ results: [] }));
+
+    await expect(loadAuthenticatedContext(session)).rejects.toBeInstanceOf(MissingProviderError);
+  });
+
   it("ignores retired providers and uses the first active provider", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(json({ results: [
       { uuid: "retired", display: "Retirado", retired: true, attributes: [] },

@@ -87,46 +87,42 @@ test("renders configured queues and the coordinate-based ward map without legacy
 test("renders the configured IPD dashboard with translated typed controls", async ({ page, context }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await context.addCookies([{ name: "bahmni.locale", value: "es_CL", domain: "localhost", path: "/" }]);
-  await page.unroute("**/bahmni_config/openmrs/apps/ipd/app.json");
-  await page.route("**/bahmni_config/openmrs/apps/ipd/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { dashboard: {
-    translationKey: "DASHBOARD_TAB_GENERAL_KEY",
-    sections: {
-      patient: { type: "patientInformation", translationKey: "DASHBOARD_TITLE_PATIENT_INFORMATION_KEY", displayOrder: 0 },
-      links: { type: "navigationLinksControl", translationKey: "DASHBOARD_TITLE_NAVIGATION_LINKS_CONTROL_KEY", displayOrder: 1, showLinks: ["home", "registration"], customLinks: [{ name: "bedManagement", translationKey: "PATIENT_BED_MANAGEMENT_PAGE_KEY", url: "../bedmanagement/#/bedManagement/patient/{{patientUuid}}" }] },
-      vitals: { type: "vitals", translationKey: "DASHBOARD_VITAL_FORM_KEY", displayOrder: 2, dashboardConfig: { conceptNames: ["Temperature"] } },
-      admission: { type: "admissionDetails", translationKey: "DASHBOARD_TITLE_ADMISSION_DETAILS_KEY", displayOrder: 3 },
-    },
-  } } }) }));
-  const translations = {
-    DASHBOARD_TAB_GENERAL_KEY: "General",
-    DASHBOARD_TITLE_PATIENT_INFORMATION_KEY: "Información del paciente",
-    DASHBOARD_TITLE_NAVIGATION_LINKS_CONTROL_KEY: "Enlaces de navegación",
-    DASHBOARD_VITAL_FORM_KEY: "Formulario Signos vitales",
-    DASHBOARD_TITLE_ADMISSION_DETAILS_KEY: "Detalles de admisión",
-    PATIENT_BED_MANAGEMENT_PAGE_KEY: "Gestión de cama",
+  const dashboardConfig = {
+    config: { enable24HourTimers: true, drugChartStartTimeFrequencies: [], drugChartScheduleFrequencies: [] },
+    sections: [
+      { title: "Vitals and Nutritional Values", componentKey: "VT", displayOrder: 1 },
+      { title: "Allergies", componentKey: "AL", displayOrder: 2 },
+      { title: "Diagnosis", componentKey: "DG", displayOrder: 3 },
+      { title: "Treatments", componentKey: "TR", displayOrder: 4 },
+      { title: "Nursing Tasks", componentKey: "NT", displayOrder: 5 },
+      { title: "Drug Chart", componentKey: "DC", displayOrder: 6 },
+    ],
+    vitalsConfig: { latestVitalsConceptValues: { temperature: "Temperature" }, vitalsHistoryConceptValues: { temperature: "Temperature" } },
   };
-  await page.route("**/bahmni_config/openmrs/i18n/ipd/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(translations) }));
-  await page.route("**/bahmni_config/openmrs/i18n/ipd/locale_es_CL.json", (route) => route.fulfill({ status: 404 }));
+  await page.route("**/bahmni_config/openmrs/apps/ipdDashboard/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify(dashboardConfig) }));
+  await page.route("**/implementation_config/openmrs/apps/ipdDashboard/app.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/openmrs/ws/rest/v1/patientprofile/patient**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { identifiers: [{ identifier: "SYN-1" }], person: { names: [{ display: "Paciente Sintético" }], age: 30, gender: "F", addresses: [] } } }) }));
   await page.route("**/openmrs/ws/rest/v1/beds?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ bedId: 1, bedUuid: "bed", bedNumber: "O-S-1-1", status: "OCCUPIED", physicalLocation: { name: "O-SALA-1", parentLocation: { name: "ONCO" } }, patients: [{ uuid: "patient" }] }] }) }));
   await page.route("**/openmrs/ws/rest/v1/visit**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "visit", startDatetime: "2026-08-05T10:00:00.000-04:00", stopDatetime: null, visitType: { display: "IPD" } }] }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/visit/summary**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ admissionDetails: { date: "2026-08-05T10:00:00.000-04:00", provider: "Super Man", notes: "Ingreso confirmado" } }) }));
-  await page.route("**/openmrs/ws/rest/v1/bahmnicore/observations**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ uuid: "obs", concept: { name: "Temperature", units: "°C" }, value: 37, observationDateTime: "2026-08-05T11:00:00.000-04:00" }]) }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/diseaseSummaryData**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({
+    conceptDetails: [{ fullName: "Temperature", name: "Temperature", units: "°C" }],
+    tabularData: { "2026-08-05T11:00:00.000-04:00": { Temperature: { value: 37 } } },
+  }) }));
 
-  await page.goto("/bahmni/bedmanagement/patient/patient/visit/visit/dashboard");
+  await page.goto("/bahmni/clinical/patient/patient/dashboard/visit/ipd/visit");
 
-  await expect(page.getByRole("heading", { name: "Información del paciente" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Enlaces de navegación" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Formulario Signos vitales" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Detalles de admisión" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Signos vitales y valores nutricionales" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Alergias" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Diagnósticos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tratamientos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tareas de enfermería" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Gráfico de medicamentos" })).toBeVisible();
   await expect(page.getByText("Paciente Sintético").first()).toBeVisible();
-  await expect(page.getByText("Temperature")).toBeVisible();
-  await expect(page.getByText("37")).toBeVisible();
-  const admissionCard = page.locator('[data-control-type="admissionDetails"]');
-  await expect(admissionCard.getByText("ONCO", { exact: true })).toBeVisible();
-  await expect(admissionCard.getByText("O-S-1-1", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Gestión de cama" })).toHaveAttribute("href", "/bahmni/bedmanagement/patient/patient?visitUuid=visit");
-  await expect(page.getByText(/DASHBOARD_.*_KEY/)).toHaveCount(0);
+  await expect(page.getByText("Temperatura", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("37", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("ONCO · O-SALA-1 · O-S-1-1")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Gestionar cama" })).toBeVisible();
   await expect(page.getByText("[object Object]")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
@@ -268,7 +264,7 @@ test("transfers an admitted patient using the legacy empty-patients preflight an
   await expect(page.locator(".p-toast-message-success")).toContainText("Transferencia confirmada.");
   await expect(page.locator(".success-banner")).toHaveCount(0);
   await expect(page.getByText("B-1", { exact: true }).first()).toBeVisible();
-  expect(encounterPayload).toEqual({ patientUuid: "patient", locationUuid: "location", encounterTypeUuid: "transfer", visitTypeUuid: "ipd", providers: [{ uuid: "provider" }], observations: [] });
+  expect(encounterPayload).toEqual({ patientUuid: "patient", visitUuid: "visit", locationUuid: "location", encounterTypeUuid: "transfer", visitTypeUuid: "ipd", providers: [{ uuid: "provider" }], observations: [] });
   expect(assignmentPayload).toEqual({ patientUuid: "patient", encounterUuid: "transfer-encounter" });
 });
 
@@ -318,7 +314,7 @@ test("discharges an admitted patient with the legacy payload and confirms that t
   await page.getByRole("button", { name: "Confirmar" }).click();
 
   await expect(page.getByText("Alta confirmada y cama liberada.")).toBeVisible();
-  expect(dischargePayload).toEqual({ patientUuid: "patient", locationUuid: "location", encounterTypeUuid: "discharge", providers: [{ uuid: "provider" }], observations: [] });
+  expect(dischargePayload).toEqual({ patientUuid: "patient", visitUuid: "visit", locationUuid: "location", encounterTypeUuid: "discharge", providers: [{ uuid: "provider" }], observations: [] });
 });
 
 test("renders the native Care View workflow and confirms a current-shift care-team assignment", async ({ page }) => {
