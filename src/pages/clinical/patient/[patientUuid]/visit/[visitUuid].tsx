@@ -9,6 +9,7 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { ClinicalDashboardSectionCard } from "@/features/clinical/ClinicalDashboardSection";
 import { dashboardControlTypes } from "@/features/clinical/DashboardControlRegistry";
+import { isDashboardControlVisible } from "@/features/clinical/dashboardVisibility";
 import type { ClinicalDashboardContext } from "@/features/clinical/dashboardContext";
 import { activeConsultationRoute } from "@/features/clinical/navigationLinks";
 import { toClinicalPatientContext } from "@/features/clinical/patientContext";
@@ -87,7 +88,8 @@ export default function ClinicalVisitPage() {
   const visitProvider = providerForVisit(selectedVisit, encounterTypes);
   const certificateLocation = loginLocations.data?.[0];
   const certificateLocationAddress = certificateAddress(certificateLocation);
-  const visibleSections = (currentTab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege));
+  const ipsEnabled = runtimeConfig.data?.integrations.ips.enabled === true;
+  const visibleSections = (currentTab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege) && isDashboardControlVisible(section.type, { ipsEnabled }));
   const pendingTypes = [...new Set(visibleSections.filter((section) => !dashboardControlTypes.has(section.type)).map((section) => section.type))];
   const dashboardContext: ClinicalDashboardContext | undefined = patient && selectedVisit ? {
     patient, visit: selectedVisit, visits: orderedVisits, visitSummary: visitSummary.data as Record<string, unknown> | undefined,

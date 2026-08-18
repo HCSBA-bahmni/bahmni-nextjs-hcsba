@@ -755,13 +755,11 @@
         "dashboard",
         "defaultVisitType",
         "diagnosisStatus",
-        "enableAutoConvertToIPDVisit",
         "enableIPDFeature",
         "expectedDateOfDischarge",
         "hideStartNewVisitPopUp",
         "identifierHeadings",
         "ignoredTabularViewHeadings",
-        "oirsApiBaseUrl",
         "onAdmissionForwardTo",
         "onDischargeForwardTo",
         "onTransferForwardTo",
@@ -775,10 +773,6 @@
         {
           "key": "wardListPrintViewTemplateUrl",
           "value": "/bahmni_config/openmrs/apps/ipd/wardListPrint.html"
-        },
-        {
-          "key": "oirsApiBaseUrl",
-          "value": "https://api.hcsba.cl/oirs_ped/1.0"
         },
         {
           "key": "patientForwardUrl",
@@ -1558,6 +1552,12 @@
       },
       {
         "source": "legacy-bundled",
+        "path": "admin/locale_es.json",
+        "keys": 58,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
         "path": "admin/locale_fr.json",
         "keys": 19,
         "malformed": false
@@ -1660,6 +1660,12 @@
       },
       {
         "source": "legacy-bundled",
+        "path": "adt/locale_es.json",
+        "keys": 72,
+        "malformed": false
+      },
+      {
+        "source": "legacy-bundled",
         "path": "adt/locale_fr.json",
         "keys": 67,
         "malformed": false
@@ -1728,7 +1734,7 @@
         "source": "legacy-bundled",
         "path": "appointments/locale_es.json",
         "keys": 162,
-        "malformed": true
+        "malformed": false
       },
       {
         "source": "legacy-bundled",
@@ -1847,7 +1853,7 @@
       {
         "source": "legacy-bundled",
         "path": "document-upload/locale_es.json",
-        "keys": 34,
+        "keys": 37,
         "malformed": false
       },
       {
@@ -2069,7 +2075,7 @@
       {
         "source": "legacy-bundled",
         "path": "ot/locale_es.json",
-        "keys": 127,
+        "keys": 128,
         "malformed": false
       },
       {
@@ -2477,13 +2483,13 @@
       {
         "source": "standard-config",
         "path": "ipd/locale_en.json",
-        "keys": 103,
+        "keys": 81,
         "malformed": false
       },
       {
         "source": "standard-config",
         "path": "ipd/locale_es.json",
-        "keys": 72,
+        "keys": 50,
         "malformed": false
       },
       {
@@ -2555,6 +2561,12 @@
       {
         "source": "standard-config",
         "path": "ot/locale_en.json",
+        "keys": 3,
+        "malformed": false
+      },
+      {
+        "source": "standard-config",
+        "path": "ot/locale_es.json",
         "keys": 3,
         "malformed": false
       },
@@ -4677,6 +4689,6 @@
     "legacyUnitSpecs": 293,
     "endpointConstants": 98,
     "privileges": 25,
-    "translationFiles": 180
+    "translationFiles": 183
   }
 }

@@ -3,14 +3,23 @@ import AxeBuilder from "@axe-core/playwright";
 
 test.skip(process.env.HCSBA_E2E_REAL !== "1", "Sólo se ejecuta contra el ambiente HCSBA explícitamente seleccionado.");
 
-interface PatientCandidate { uuid: string; display: string }
+interface PatientCandidate { uuid: string; display: string; identifier: string }
 interface VisitCandidate { uuid: string; stopDatetime?: string | null }
 interface EncounterCandidate { uuid: string }
 interface TemporaryProfile { personUuid: string; userUuid: string; username: string; password: string; expectedBoards: number }
 interface RoleResource extends Record<string, unknown> { uuid: string; privileges?: unknown; inheritedRoles?: unknown }
 
-const syntheticQuery = process.env.HCSBA_SYNTHETIC_QUERY ?? "test";
 const locationName = process.env.HCSBA_LOCATION ?? "OPD-1";
+
+function csvEnvironment(name: string, fallback = ""): string[] {
+  return (process.env[name] ?? fallback)
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+const syntheticPatientUuids = csvEnvironment("HCSBA_SYNTHETIC_PATIENT_UUIDS");
+const syntheticIdentifierPrefixes = csvEnvironment("HCSBA_SYNTHETIC_IDENTIFIER_PREFIXES", "SYN-");
 
 function superAuthorization(): string {
   const username = process.env.HCSBA_USERNAME;
@@ -112,13 +121,28 @@ async function removeTemporaryPrivilegeProfiles(page: Page, profiles: TemporaryP
 }
 
 async function discoverSyntheticPatients(page: Page, locationUuid: string): Promise<Array<PatientCandidate & { visits: VisitCandidate[]; encounters: EncounterCandidate[]; programs: Array<Record<string, unknown>> }>> {
-  const search = await page.request.get(`/openmrs/ws/rest/v1/bahmni/search/patient/lucene?q=${encodeURIComponent(syntheticQuery)}&s=byIdOrName&startIndex=0&limit=100&loginLocationUuid=${encodeURIComponent(locationUuid)}&filterOnAllIdentifiers=false`);
-  expect(search.ok()).toBeTruthy();
-  const candidates = rows(await search.json()).flatMap((item) => {
-    const uuid = typeof item.uuid === "string" ? item.uuid : typeof item.patientUuid === "string" ? item.patientUuid : "";
-    const display = [item.name, item.givenName, item.familyName, item.display].filter((part) => typeof part === "string").join(" ");
-    return uuid && display.toLocaleLowerCase().includes(syntheticQuery.toLocaleLowerCase()) ? [{ uuid, display }] : [];
-  });
+  void locationUuid;
+  if (syntheticPatientUuids.length === 0) {
+    throw new Error("HCSBA_SYNTHETIC_PATIENT_UUIDS debe contener una allowlist explícita; una búsqueda por nombre no demuestra que el paciente sea sintético.");
+  }
+  if (syntheticIdentifierPrefixes.length === 0) {
+    throw new Error("HCSBA_SYNTHETIC_IDENTIFIER_PREFIXES debe declarar al menos un prefijo reservado para certificación.");
+  }
+  const candidates = await Promise.all(syntheticPatientUuids.map(async (uuid) => {
+    const response = await page.request.get(`/openmrs/ws/rest/v1/patient/${encodeURIComponent(uuid)}?v=custom:(uuid,display,identifiers:(identifier,voided))`);
+    expect(response.ok(), `No se pudo validar el paciente sintético allowlisted ${uuid}`).toBeTruthy();
+    const patient = await response.json() as Record<string, unknown>;
+    const identifiers = rows(patient.identifiers).flatMap((item) => item.voided !== true && typeof item.identifier === "string" ? [item.identifier] : []);
+    const identifier = identifiers.find((value) => syntheticIdentifierPrefixes.some((prefix) => value.toLocaleUpperCase().startsWith(prefix.toLocaleUpperCase())));
+    if (!identifier) {
+      throw new Error(`El paciente allowlisted ${uuid} no tiene un identificador con los prefijos sintéticos autorizados.`);
+    }
+    return {
+      uuid,
+      display: typeof patient.display === "string" ? patient.display : "Paciente sintético autorizado",
+      identifier,
+    };
+  }));
   return Promise.all(candidates.map(async (patient) => {
     const [visitsResponse, encountersResponse, programsResponse] = await Promise.all([
       page.request.get(`/openmrs/ws/rest/v1/visit?patient=${encodeURIComponent(patient.uuid)}&includeInactive=true&v=full`),

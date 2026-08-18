@@ -18,15 +18,15 @@ Estados separados deliberadamente:
 | `patientInformation` | patientInformation | Sí | Sí | No | No | Dirección, atributos, identificadores, foto, nacimiento estimado/hora, relaciones e indicador de hospitalización portados; falta certificación real |
 | `allergies` | allergies | Sí | Sí | No | No | Lectura FHIR y alta REST portadas; certificar catálogos y escritura contra HCSBA desarrollo |
 | `forms-v2-react` | formsV2React | Sí | Sí | No | No | Certificar edición/impresión por privilegio |
-| `ips-react` | ipsReact | Parcial | Sí | No | No | ITI-67/68, VHL, QR, flags y límites portados; falta mediador same-origin HCSBA y E2E |
-| `ips-icvp-react` | ipsIcvpReact | Parcial | Sí | No | No | Generación ICVP/HC1 y flags portada; falta mediador, cámara/decodificación local y E2E |
+| `ips-react` | ipsReact | Diferido/oculto | Sí | No | No | Integración OpenHIM oculta cuando `NEXT_PUBLIC_IPS_ENABLED=false`; reactivación opt-in posterior |
+| `ips-icvp-react` | ipsIcvpReact | Diferido/oculto | Sí | No | No | Integración OpenHIM oculta cuando `NEXT_PUBLIC_IPS_ENABLED=false`; reactivación opt-in posterior |
 | `diagnosis` | diagnosis | Sí | Sí | No | No | Certeza, orden, estado, descartados, comentarios, proveedor y vista ampliada portados; falta certificación real |
 | `notificacionGes` | custom/GES | Sí | Sí | No | No | Certificar estados y respuestas del servicio institucional |
 | `navigationLinksControl` | navigationLinksControl | Sí | Sí | No | No | Orden, parámetros, custom links y base `/bahmni` portados; Inpatient/Programas se retiran con sus módulos |
 | `disposition` | disposition | Sí | Sí | No | No | Contrato dashboard por paciente corregido; certificar notas/locale con historial real |
 | `treatments` | treatment | Sí | Sí | No | No | Visitas, otros activos, continuidad, flowsheet IPD, detalle, PDF y correo portados; certificar datos reales |
 | `radiology` | radiology | Sí | Sí | No | No | Certificar galería/PDF con encuentros RADIOLOGY reales |
-| `programs` | programs | Parcial | Parcial | No | No | Lectura/estados portados; falta la ruta Next de gestión de enrolamiento que abría el encabezado legacy |
+| `programs` | programs | Sí | Sí | No | No | Contrato y E2E local cubiertos; Next y legacy fallan igual al enrolar el fixture sintético por HTTP 500 del backend compartido |
 | `radiologyOrders` | ordersControl | Sí lectura | Sí | No | No | Alcance por paciente corregido; certificar conceptos Summary y detalle expandido |
 | `pacs` | pacsOrders | Sí | Sí | No | No | Probar URL Oviyam con orden real y privilegios |
 | `labOrdersDisplayControl` | ordersControl | Sí lectura | Sí | No | No | Comparar panel de detalle de orden |
@@ -68,9 +68,9 @@ Estados separados deliberadamente:
 ## Totales de esta entrega
 
 - Caracterizadas y trazadas por función legacy: **39/39**.
-- Con implementación local completa pendiente de certificación: **36/39**.
-- Parciales: **3/39** (`programs`, `ipsReact`, `ipsIcvpReact`).
-- Bloqueadas sin adaptador: **0/39**. IPS/ICVP permanecen deshabilitadas por despliegue hasta disponer del mediador seguro.
+- Con implementación local completa pendiente de certificación: **37/39**.
+- Diferidas y ocultas: **2/39** (`ipsReact`, `ipsIcvpReact`).
+- Bloqueadas sin adaptador: **0/39**. IPS/ICVP permanecen dormantes tras el switch de despliegue.
 - E2E verificadas en HCSBA: **0/39**.
 - Certificadas: **0/39**.
 
@@ -82,4 +82,4 @@ La traza ejecutable por instancia vive en `docs/clinical-dashboard-functional-au
 
 `ClinicalMfeHost` entrega únicamente paciente, visita, visitas disponibles, proveedor, usuario, ubicación, idioma y la sección configurada. `hostApi` limita capacidades a navegación, refresco selectivo, vista expandida, impresión y auditoría. Los componentes se cargan dinámicamente sólo en navegador y no reciben un service locator.
 
-`formsV2React`, `allOrdersReact`, `ipsReact` e `ipsIcvpReact` se ejecutan desde fuente TypeScript/React 19 del repositorio. No se cargan `next-ui.min.js`, `react2angular`, plantillas Angular ni JavaScript remoto.
+`formsV2React`, `allOrdersReact`, `ipsReact` e `ipsIcvpReact` se ejecutan desde fuente TypeScript/React 19 del repositorio. Forms V2 y All Orders tienen implementación local completa; IPS e IPS ICVP conservan su código pero no se renderizan salvo activación explícita. No se cargan `next-ui.min.js`, `react2angular`, plantillas Angular ni JavaScript remoto.

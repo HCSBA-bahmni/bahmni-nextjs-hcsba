@@ -13,6 +13,7 @@ import { ClinicalDashboardSectionCard } from "@/features/clinical/ClinicalDashbo
 import { ClinicalDashboardMasonryItem } from "@/features/clinical/ClinicalDashboardMasonryItem";
 import { dashboardControlTypes } from "@/features/clinical/DashboardControlRegistry";
 import { createDashboardLayout } from "@/features/clinical/dashboardLayout";
+import { isDashboardControlVisible } from "@/features/clinical/dashboardVisibility";
 import { activeConsultationRoute, patientAdtUrl } from "@/features/clinical/navigationLinks";
 import { getUnopenedDashboardTabs, getVisibleDashboardTabs } from "@/features/clinical/clinicalDashboardTabs";
 import { toClinicalPatientContext } from "@/features/clinical/patientContext";
@@ -50,7 +51,8 @@ export default function ClinicalDashboardPage() {
   const selectedVisit = (visits.data ?? []).find((visit) => visit.uuid === requestedVisitUuid) ?? activeVisit;
   const visitSummary = useQuery({ queryKey: ["clinical-visit-summary", selectedVisit?.uuid], queryFn: () => getVisitSummary(selectedVisit!.uuid), enabled: allowed && Boolean(selectedVisit?.uuid) });
   const patient = profile.data ? toClinicalPatientContext(profile.data, patientUuid) : undefined;
-  const visibleSections = (currentTab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege));
+  const ipsEnabled = runtimeConfig.data?.integrations.ips.enabled === true;
+  const visibleSections = (currentTab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege) && isDashboardControlVisible(section.type, { ipsEnabled }));
   const dashboardLayout = createDashboardLayout(visibleSections);
   const pendingTypes = [...new Set(visibleSections.filter((section) => !dashboardControlTypes.has(section.type)).map((section) => section.type))];
   const locale = user?.userProperties?.defaultLocale ?? "es";

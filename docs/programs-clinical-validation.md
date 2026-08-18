@@ -11,6 +11,7 @@ La suite de contratos debe ejecutarse antes de una prueba clinica manual:
 ```powershell
 npm test -- --run src/services/bahmni/clinical.test.ts src/services/bahmni/programs.test.ts src/features/clinical/navigationLinks.test.ts src/features/programs/ProgramSearch.test.ts
 npm run typecheck
+npm run e2e -- e2e/programs.spec.ts
 ```
 
 | Flujo | Legacy | Next.js | Prueba de contrato |
@@ -61,5 +62,17 @@ un responsable clinico firma la matriz. Conservar un interruptor dedicado de
 proxy para Programas: el rollback debe ser retirar solo ese interruptor y
 recrear el proxy, sin cambiar datos ni reiniciar OpenMRS.
 
-Estado actual: contratos de codigo cubiertos; validacion con paciente de
-certificacion pendiente de que se indique el UUID autorizado.
+Estado actual: gestion nativa, contratos de codigo y E2E local cubiertos. Se
+creo un fixture `SYN-*` autorizado y se comparo el enrolamiento inicial en
+Next.js y legacy. Ambos clientes recibieron HTTP 500 desde OpenMRS y la
+relectura confirmo que no se creo ningun enrolamiento. Esto cierra la paridad
+del contrato frontend, pero retiene la certificacion clinica hasta reparar el
+backend compartido y repetir los pasos 3--7.
+
+La ejecución real debe proporcionar `HCSBA_E2E_REAL=1`, `HCSBA_USERNAME`,
+`HCSBA_PASSWORD`, `HCSBA_SYNTHETIC_PATIENT_UUIDS` (allowlist CSV explícita) y
+`HCSBA_SYNTHETIC_IDENTIFIER_PREFIXES` (por defecto `SYN-`). La suite vuelve a
+leer cada paciente por UUID y exige un identificador no anulado con uno de
+esos prefijos antes de habilitar cualquier flujo. Las escrituras continúan
+bloqueadas salvo `HCSBA_E2E_ALLOW_WRITES=1`; un nombre parecido a "test" o
+"prueba" nunca se acepta como demostración de que el paciente es sintético.

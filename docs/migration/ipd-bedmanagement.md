@@ -16,7 +16,7 @@ La OWA administrativa `/openmrs/owa/bedmanagement/admissionLocations.html` queda
 | `bedManagement.patient` | `/bedmanagement/patient/:patientUuid` | Contexto de paciente, cama y acciones ADT | Implementada |
 | `dashboard` | `/bedmanagement/patient/:patientUuid/visit/:visitUuid/dashboard` | Secciones dinámicas de `ipd/app.json` | Implementada; tipos desconocidos se exponen como cobertura pendiente y nunca cargan Angular |
 | `careViewDashboard` | `/bedmanagement/care-view` | Coordinación por sala, turnos, tareas y equipo de cuidados | Parcial: implementación nativa terminada; contrato/E2E `.205` pendiente |
-| `clinical ... dashboard/visit/ipd` | `/clinical/patient/:patientUuid/dashboard/visit/ipd/:visitUuid` | Dashboard IPD individual configurado por `ipdDashboard/app.json` | Parcial: seis secciones de lectura implementadas; acciones clínicas de tareas y tratamientos pendientes |
+| `clinical ... dashboard/visit/ipd` | `/clinical/patient/:patientUuid/dashboard/visit/ipd/:visitUuid` | Dashboard IPD individual configurado por `ipdDashboard/app.json` | Parcial: seis secciones, tareas, administración/omisión y tratamientos uniformes/PRN implementados; faltan certificación HCSBA y dosis variable por etapas |
 
 La navegación conserva los dos modos del header legacy. `Lista de Pacientes` permanece activa en `home` y `bedManagement.patient`; `Gestión de las camas` permanece activa en `bedManagement` y `bedManagement.bed`. En el modo administrativo la selección de una cama navega a `/bedmanagement/bed/:bedId` y permite administrar estado y tags sin exigir un paciente. En el modo paciente la selección permanece dentro de `/bedmanagement/patient/:patientUuid` y alimenta exclusivamente las acciones ADT.
 

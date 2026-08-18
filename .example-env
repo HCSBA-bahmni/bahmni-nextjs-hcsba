@@ -18,8 +18,8 @@ NEXT_PUBLIC_AUTH_MODE=openmrs
 # IPS permanece deshabilitado hasta disponer de un mediador same-origin.
 # Nunca agregue credenciales a variables NEXT_PUBLIC_*.
 NEXT_PUBLIC_IPS_ENABLED=false
-NEXT_PUBLIC_IPS_PDQM_BASE=/ips-mediator/pdqm
-NEXT_PUBLIC_IPS_REGIONAL_BASE=/ips-mediator/regional
-NEXT_PUBLIC_IPS_VHL_GENERATE_PATH=/ips-mediator/vhl/_generate
-NEXT_PUBLIC_IPS_VHL_RESOLVE_PATH=/ips-mediator/vhl/_resolve
-NEXT_PUBLIC_ICVP_FROM_BUNDLE_PATH=/ips-mediator/icvpcert/_from-bundle
+NEXT_PUBLIC_IPS_PDQM_BASE=/openmrs/ips-mediator/pdqm
+NEXT_PUBLIC_IPS_REGIONAL_BASE=/openmrs/ips-mediator/regional
+NEXT_PUBLIC_IPS_VHL_GENERATE_PATH=/openmrs/ips-mediator/vhl/_generate
+NEXT_PUBLIC_IPS_VHL_RESOLVE_PATH=/openmrs/ips-mediator/vhl/_resolve
+NEXT_PUBLIC_ICVP_FROM_BUNDLE_PATH=/openmrs/ips-mediator/icvpcert/_from-bundle
