@@ -171,6 +171,11 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
   resourceIds.add("unassigned");
   const resources = [...resourceIds].map((id) => ({ id, title: id === "unassigned" ? "Sin proveedor" : displayName(providerOptions.find((entry) => entry.uuid === id)) }));
   const calendarConfig = config.data;
+  const routedNewAppointmentSlot = useMemo(() => {
+    if (section !== "calendar" || router.query.create !== "1" || !calendarConfig) return undefined;
+    const start = clinicalWallTime(date).startOf("day").plus({ minutes: minutesFromClock(calendarConfig.startOfDay) });
+    return { start: start.toJSDate(), end: start.plus({ minutes: minutesFromClock(calendarConfig.calendarSlotDuration) }).toJSDate() };
+  }, [calendarConfig, date, router.query.create, section]);
   const loading = config.isLoading || appointments.isLoading || services.isLoading || providers.isLoading || locations.isLoading || section === "summary" && summary.isLoading;
   const failed = config.isError || appointments.isError || services.isError || providers.isError || locations.isError || section === "summary" && summary.isError;
 
@@ -202,9 +207,19 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
       setNewAppointmentOpen(true);
       return;
     }
-    const query: Record<string, string> = { returnTo: router.asPath };
-    if (slot) { query.start = slot.start.toISOString(); query.end = slot.end.toISOString(); if (typeof slot.resourceId === "string" && slot.resourceId !== "unassigned") query.provider = slot.resourceId; }
-    void router.push({ pathname: "/appointments/new", query });
+    void router.push({
+      pathname: "/appointments/calendar",
+      query: { create: "1", date: clinicalWallTime(date).toISODate()! },
+    });
+  };
+
+  const closeNewAppointment = () => {
+    setNewAppointmentOpen(false);
+    setNewAppointmentSlot(undefined);
+    if (router.query.create !== "1") return;
+    const query = { ...router.query };
+    delete query.create;
+    void router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
   };
 
   const openSummaryList = (summaryDate: string, uuid: string | undefined, group: SummaryGroup) => {
@@ -257,9 +272,9 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
           </section>}
           {!loading && !failed && calendarConfig && (section === "list" || section === "waitlist") && <AppointmentTable appointments={visible} config={calendarConfig} />}
         </div>
-        {newAppointmentOpen && <aside className="appointment-create-sidebar" aria-label={appointmentText.newAppointment}>
-          <header className="appointment-create-sidebar-header"><h2>{appointmentText.newAppointment}</h2><Button text rounded icon="pi pi-times" aria-label="Cerrar nueva cita" onClick={() => setNewAppointmentOpen(false)} /></header>
-          <div className="appointment-create-sidebar-content"><AppointmentForm embedded initialSlot={newAppointmentSlot} onCancel={() => setNewAppointmentOpen(false)} onSaved={() => { setNewAppointmentOpen(false); setNewAppointmentSlot(undefined); }} /></div>
+        {(newAppointmentOpen || routedNewAppointmentSlot) && <aside className="appointment-create-sidebar" aria-label={appointmentText.newAppointment}>
+          <header className="appointment-create-sidebar-header"><h2>{appointmentText.newAppointment}</h2><Button text rounded icon="pi pi-times" aria-label="Cerrar nueva cita" onClick={closeNewAppointment} /></header>
+          <div className="appointment-create-sidebar-content"><AppointmentForm embedded initialSlot={newAppointmentSlot ?? routedNewAppointmentSlot} onCancel={closeNewAppointment} onSaved={closeNewAppointment} /></div>
         </aside>}
       </div>
     </>}

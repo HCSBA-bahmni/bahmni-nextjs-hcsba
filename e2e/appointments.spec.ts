@@ -181,6 +181,21 @@ test("new appointment searches and selects a patient with the shared patient fin
   });
 });
 
+test("new appointment from another section opens the calendar sidebar", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-08-14T02:00:00.000Z"));
+  await page.goto("/bahmni/appointments/summary");
+  await page.getByRole("button", { name: "Nueva cita" }).click();
+
+  await expect(page).toHaveURL(/\/bahmni\/appointments\/calendar(?:\?|$)/);
+  await expect(page).not.toHaveURL(/\/appointments\/new/);
+  await expect(page.getByRole("region", { name: "Calendario de citas" })).toBeVisible();
+  const sidebar = page.getByRole("complementary", { name: "Nueva cita" });
+  await expect(sidebar).toBeVisible();
+  await expect(sidebar.locator("#appointment-date")).toHaveValue("2026-08-14");
+  await expect(sidebar.locator("#appointment-start")).toHaveValue("09:00");
+  await expect(sidebar.locator("#appointment-end")).toHaveValue("09:30");
+});
+
 test("calendar sidebar preserves form data, honors resources and refreshes after save", async ({ page }) => {
   // 14 August in the UTC browser is still 13 August in Santiago. The general
   // button must preserve the calendar's visible date rather than the instant.
