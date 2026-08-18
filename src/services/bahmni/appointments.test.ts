@@ -72,6 +72,22 @@ describe("appointment REST contracts", () => {
     expect(conflicts).toEqual([expect.objectContaining({ uuid: "a", message: "PATIENT" })]);
   });
 
+  it("accepts unsaved service-unavailable conflicts with a null UUID", async () => {
+    const conflicting = {
+      uuid: null,
+      patient: { uuid: "p", name: "Paciente" },
+      service: { uuid: "s", name: "awa", startTime: "14:00:00", endTime: "18:00:00" },
+      providers: [],
+      startDateTime: 1786723200000,
+      endDateTime: 1786728600000,
+      status: "Requested",
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ SERVICE_UNAVAILABLE: [conflicting] }), { status: 200, headers: { "content-type": "application/json" } })));
+    await expect(findAppointmentConflicts(payload)).resolves.toEqual([
+      expect.objectContaining({ uuid: undefined, message: "SERVICE_UNAVAILABLE", appointment: expect.objectContaining({ uuid: null }) }),
+    ]);
+  });
+
   it("wraps recurring writes in appointmentRequest and recurringPattern", async () => {
     const recurringResponse = [{ appointmentDefaultResponse: { uuid: "a", patient: { uuid: "p" }, service: { uuid: "s" }, providers: [], startDateTime: "2026-08-14T13:00:00Z", endDateTime: "2026-08-14T13:30:00Z", status: "Scheduled" }, recurringPattern: { type: "WEEK", period: 1, frequency: 2, daysOfWeek: ["FRIDAY"] } }];
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(recurringResponse), { status: 200, headers: { "content-type": "application/json" } }));

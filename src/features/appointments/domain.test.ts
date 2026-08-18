@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allowedStatusActions, calendarEvents, canEditAppointment, dateTimeOf, serverDateTime } from "./domain";
+import { allowedStatusActions, appointmentConflictMessage, calendarEvents, canEditAppointment, dateTimeOf, serverDateTime } from "./domain";
 import { appointmentSchema } from "./types";
 import type { Appointment, AppointmentAppConfig } from "./types";
 
@@ -28,6 +28,19 @@ describe("appointment domain parity", () => {
 
   it("preserves the Chile wall time when serializing through UTC", () => {
     expect(serverDateTime(dateTimeOf([2026, 9, 6, 9, 30]))).toMatch(/^2026-09-06T1[23]:30:00\.000Z$/);
+  });
+
+  it("explains service availability conflicts with requested and configured hours", () => {
+    expect(appointmentConflictMessage({
+      message: "SERVICE_UNAVAILABLE",
+      appointment: {
+        ...appointment,
+        uuid: null,
+        service: { ...appointment.service, name: "awa", startTime: "14:00:00", endTime: "18:00:00" },
+        startDateTime: Date.parse("2026-08-14T16:00:00.000Z"),
+        endDateTime: Date.parse("2026-08-14T17:30:00.000Z"),
+      },
+    })).toBe("El servicio «awa» no está disponible para la cita solicitada el 14/08/2026 de 12:00 a 13:30. Horario disponible del servicio: 14:00 a 18:00. Selecciona un horario dentro de ese rango.");
   });
 
   it("uses configured transitions and exact legacy privileges", () => {
