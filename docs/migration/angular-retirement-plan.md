@@ -33,8 +33,12 @@ legacy mientras exista una acción que vuelva silenciosamente a AngularJS.
 - AngularJS inventariado: **11 módulos y 67 estados de navegación**.
 - Estados interceptados actualmente por rutas Next.js: **52/67 (77,6 %)**.
 - Estados que continúan directamente en AngularJS: **15/67 (22,4 %)**.
-- Módulos todavía Angular: **Administración (8)**, **Pabellón/OT (4)** y
-  **Reportes (3)**.
+- El alcance restante de migración a Next.js es de **11 estados**:
+  **Administración (8)** y **Reportes (3)**.
+- **Pabellón/OT (4)** se conserva en el inventario porque aún existe en
+  AngularJS, pero queda fuera del alcance de migración: HCSBA ya dispone de un
+  sistema institucional propio. Su destino será una integración externa
+  explícita o el retiro del acceso legacy, según el contrato que se defina.
 - `common` no expone estados propios, pero continúa como dependencia
   transversal de los módulos y fallbacks legacy.
 - Accesos Home: **8 hacia Next.js**, **3 hacia AngularJS** y **3 hacia
@@ -56,7 +60,7 @@ legacy mientras exista una acción que vuelva silenciosamente a AngularJS.
 | **Subtotal interceptado** | **52** | **Next.js, con rollback** |
 | `admin` | 8 | AngularJS fallback |
 | `reports` | 3 | AngularJS fallback |
-| `ot` | 4 | AngularJS fallback |
+| `ot` | 4 | AngularJS inventariado; migración diferida en favor del sistema institucional de pabellón |
 | **Subtotal legacy directo** | **15** | **AngularJS** |
 | `common` | 0 | Dependencia compartida AngularJS |
 
@@ -169,7 +173,11 @@ rollback de los demás.
 - Estados vacíos y errores HTTP relevantes.
 - Build standalone, rollback y relectura posterior a cada escritura probados.
 
-## Fase 3 — Migrar los módulos Angular restantes
+## Fase 3 — Migrar los módulos Angular que permanecen en alcance
+
+La fase 3 cubre **11 estados**: Reportes (3) y Administración (8). Los cuatro
+estados de Pabellón/OT permanecen contabilizados como deuda legacy hasta que
+se sustituya su acceso, pero no se reimplementarán en Next.js.
 
 ### 1. Reportes
 
@@ -183,18 +191,35 @@ Dividir en entregas revisables: auditoría, importación CSV, exportación CSV,
 exportación FHIR y conjuntos de órdenes. Mantener la OWA de camas fuera del
 alcance hasta que se decida migrarla explícitamente.
 
-### 3. Pabellón/Operation Theatre
+### Pabellón/Operation Theatre — fuera de alcance y pendiente de integración
 
-Migrar al final por su riesgo clínico: agenda quirúrgica, nueva cirugía,
-edición, estados, validaciones, privilegios, notas y controles configurables.
+No portar la agenda quirúrgica, creación/edición de cirugías ni sus estados a
+Next.js. HCSBA cuenta con un sistema propio de Pabellón y duplicar esa lógica
+crearía dos fuentes operativas para un flujo clínico de alto riesgo.
 
-Cada módulo debe llegar a certificación y disponer de un define de proxy
-independiente antes del corte.
+Antes de retirar el acceso AngularJS se deberá caracterizar la integración con
+el sistema institucional y acordar, como mínimo:
+
+- URL o mecanismo de navegación y si requiere contexto de paciente o visita.
+- SSO, cierre de sesión, perfiles y autorización.
+- Datos que deben intercambiarse, autoridad de cada sistema y auditoría.
+- Comportamiento cuando el sistema externo no está disponible.
+- Switch de configuración y rollback independientes.
+
+Hasta entonces el acceso OT legacy debe quedar oculto o conservarse como
+fallback controlado según la decisión operativa; nunca se marcará como migrado
+por el solo hecho de ocultarlo.
+
+Reportes y Administración deben llegar a certificación y disponer de un
+define de proxy independiente antes del corte.
 
 ## Fase 4 — Retiro del runtime legacy
 
 - Auditar `/person-management`, aplicaciones externas y recursos aún servidos
   por `bahmni-web`.
+- Sustituir el acceso legacy de Pabellón/OT por la integración institucional o
+  demostrar que puede retirarse sin consumidores antes de apagar
+  `bahmni-web`.
 - Retirar dependencias de `common`, jQuery, React 16, `react2angular`, templates
   y bundles legacy.
 - Eliminar el fallback general de `/bahmni` sólo después de demostrar que no
@@ -210,7 +235,8 @@ independiente antes del corte.
 3. Campañas de certificación de módulos Next.js activos.
 4. Reportes.
 5. Administración.
-6. Pabellón/OT.
+6. Definición e implementación del acceso al sistema institucional de
+   Pabellón/OT, sin reimplementar su dominio clínico.
 7. Retiro de `common`, fallback y contenedor legacy.
 
 ## Regla operativa para cada entrega
@@ -317,3 +343,15 @@ La fase 2 queda lista para la campaña institucional, no certificada en HCSBA.
 criterios reales documentados: perfiles de autenticación, Registro reversible,
 IPD reversible, integraciones institucionales y privilegios representativos.
 No se retira ningún fallback legacy por este cierre local.
+
+### 18-08-2026 — Alcance de la fase 3 ajustado
+
+- La migración activa de la fase 3 se reduce a **11 estados**: Reportes (3) y
+  Administración (8).
+- Pabellón/OT no se reimplementará en Next.js porque HCSBA dispone de un
+  sistema institucional propio para ese dominio.
+- Sus cuatro estados continúan visibles en el inventario como deuda legacy
+  hasta definir y validar la navegación, SSO, contexto, auditoría, fallos y
+  rollback de la integración externa, o aprobar su retiro sin reemplazo.
+- Esta decisión evita declarar OT como migrado por ocultamiento y queda como
+  condición explícita antes de retirar `bahmni-web`.

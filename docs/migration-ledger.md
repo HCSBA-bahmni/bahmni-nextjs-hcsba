@@ -30,7 +30,7 @@ Este documento es la compuerta de avance del plan maestro. El inventario detalla
 | Agenda de citas | Sí | Sí | Sí: operación y administración de servicios nativas | Sí local y lecturas HCSBA verificadas | Sí local | No: faltan perfiles y flujos reales completos | No; proxy Next activo y rollback externo disponible |
 | Reportes | Sí | No | No | No | No | No | No: 3 estados AngularJS |
 | Administración | Sí | No | No | No | No | No | No: 8 estados AngularJS |
-| Pabellón/OT | Sí | No | No | No | No | No | No: 4 estados AngularJS |
+| Pabellón/OT | Sí | Diferido: HCSBA usa un sistema institucional propio | Fuera del alcance Next.js | No aplica hasta definir integración | No aplica hasta definir integración | No | No: 4 estados AngularJS pendientes de sustituir por integración o retiro controlado |
 
 Un dominio sólo cambia a “Caracterizado” cuando cada ruta, acción, privilegio, configuración, endpoint y escritura está documentado. “Implementado”, “Contrato”, “E2E”, “Certificado” y “Legacy retirado” son estados independientes: el proxy activo no certifica paridad y conservar rollback no equivale a retirar legacy.
 
@@ -46,7 +46,7 @@ Un dominio sólo cambia a “Caracterizado” cuando cada ruta, acción, privile
 | `customDisplayControl/js/customControl.js` | Componentes React registrados por tipo | Pendiente |
 | `JsBarcode.all.min.js` | `jsbarcode` npm, ya integrado sin bundle remoto | Implementado |
 | Templates de Registro | Cuatro componentes React cerrados | Parcial, falta certificación visual |
-| Templates Clinical/IPD/OT | Renderers React explícitos; no interpretar HTML Angular | Pendiente |
+| Templates Clinical/IPD | Renderers React explícitos; no interpretar HTML Angular | Pendiente; OT no se portará y queda sujeto a integración institucional |
 | Microfrontends React 16 | Portar fuente a React 19/TypeScript sin `react2angular` | Forms V2 y All Orders portados; IPS/ICVP conservados como integraciones OpenHIM opt-in, ocultas por defecto |
 
 ## Registro: comportamiento implementado y brechas de certificación
