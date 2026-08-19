@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AdminBed, AdminBedLayout, AdminBedTag, AdminBedType, AdminLocation } from "@/features/admin/beds";
-import { bahmniRequest, queryString } from "./http";
+import { BahmniApiError, bahmniRequest, queryString } from "./http";
 
 const row = z.record(z.string(), z.unknown());
 const list = z.object({ results: z.array(row).default([]) }).loose();
@@ -61,7 +61,17 @@ export async function saveAdminBedLayout(uuid: string, rows: number, columns: nu
 export async function saveAdminBed(payload: { bedUuid?: string; bedNumber: string; bedType: string; row: number; column: number; locationUuid: string }): Promise<void> {
   await bahmniRequest(`/ws/rest/v1/bed${payload.bedUuid ? `/${encodeURIComponent(payload.bedUuid)}` : ""}`, { method: "POST", body: JSON.stringify({ bedNumber: payload.bedNumber, bedType: payload.bedType, row: payload.row, column: payload.column, locationUuid: payload.locationUuid }) });
 }
-export async function deleteAdminBed(uuid: string): Promise<void> { await bahmniRequest(`/ws/rest/v1/bed/${encodeURIComponent(uuid)}`, { method: "DELETE" }); }
+export async function deleteAdminBed(uuid: string): Promise<void> {
+  try {
+    await bahmniRequest(`/ws/rest/v1/bed/${encodeURIComponent(uuid)}`, { method: "DELETE" });
+  } catch (error) {
+    if (error instanceof BahmniApiError) {
+      const detail = `${error.message}\n${JSON.stringify(error.payload ?? "")}`;
+      if (detail.includes("BedOccupiedException")) throw new Error("No se puede eliminar una cama ocupada.");
+    }
+    throw error;
+  }
+}
 
 export async function getAdminBedTypes(): Promise<AdminBedType[]> {
   const response = await bahmniRequest(`/ws/rest/v1/bedtype${queryString({ v: "full" })}`, { schema: list, cache: "no-store" });

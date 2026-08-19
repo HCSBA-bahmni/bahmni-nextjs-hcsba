@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { deleteAdminBed, deleteAdminBedTag, deleteAdminBedType, deleteAdminLocation, getAdminBedLayout, getManagingLocationsEnabled, normalizeAdminBed, normalizeAdminLocation, saveAdminBed, saveAdminBedLayout, saveAdminBedTag, saveAdminBedType, saveAdminLocation } from "./adminBeds";
+import { deleteAdminBed, deleteAdminBedTag, deleteAdminBedType, deleteAdminLocation, getAdminBedLayout, getAdminBedTags, getAdminBedTypes, getAdminLocations, getManagingLocationsEnabled, getVisitLocations, normalizeAdminBed, normalizeAdminLocation, saveAdminBed, saveAdminBedLayout, saveAdminBedTag, saveAdminBedType, saveAdminLocation } from "./adminBeds";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -12,6 +12,31 @@ describe("servicio Beds de OpenMRS", () => {
   it("lee la representación layout usada por el OWA", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ ward: { uuid: "ward", name: "Sala" }, bedLocationMappings: [{ rowNumber: 1, columnNumber: 2, bed: { uuid: "bed", bedNumber: "A-1" } }] }), { status: 200, headers: { "content-type": "application/json" } })));
     await expect(getAdminBedLayout("ward")).resolves.toMatchObject({ rows: 1, columns: 2, beds: [{ bedUuid: "bed", rowNumber: 1, columnNumber: 2 }] });
+  });
+
+  it("consulta y normaliza ubicaciones, ubicaciones de visita, tipos y etiquetas", async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      const body = url.includes("tag=Admission+Location")
+        ? { results: [{ uuid: "ward", name: "Sala", parentLocation: { uuid: "hospital" } }] }
+        : url.includes("tag=Visit+Location")
+          ? { results: [{ uuid: "hospital", display: "Hospital" }] }
+          : url.includes("/bedtype")
+            ? { results: [{ uuid: "type", name: "Cama", displayName: "Cama estándar", description: "Adulto" }] }
+            : { results: [{ uuid: "tag", name: "Oxígeno" }] };
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getAdminLocations()).resolves.toEqual([{ uuid: "ward", name: "Sala", description: "", parentUuid: "hospital" }]);
+    await expect(getVisitLocations()).resolves.toEqual([{ uuid: "hospital", name: "Hospital", description: "", parentUuid: undefined }]);
+    await expect(getAdminBedTypes()).resolves.toEqual([{ uuid: "type", name: "Cama", displayName: "Cama estándar", description: "Adulto" }]);
+    await expect(getAdminBedTags()).resolves.toEqual([{ uuid: "tag", name: "Oxígeno" }]);
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      "/openmrs/ws/rest/v1/location?tag=Admission+Location&v=full",
+      "/openmrs/ws/rest/v1/location?tag=Visit+Location&v=full",
+      "/openmrs/ws/rest/v1/bedtype?v=full",
+      "/openmrs/ws/rest/v1/bedTag?v=full",
+    ]);
   });
 
   it.each([
@@ -74,5 +99,10 @@ describe("servicio Beds de OpenMRS", () => {
       { url: "/openmrs/ws/rest/v1/bedTag/tag", method: "POST", body: { name: "Oxígeno" } },
       { url: "/openmrs/ws/rest/v1/bedTag/tag", method: "DELETE", body: undefined },
     ]);
+  });
+
+  it("traduce el rechazo al eliminar una cama ocupada", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { message: "org.openmrs.module.bedmanagement.exception.BedOccupiedException: Bed is occupied" } }), { status: 400, statusText: "Bad Request", headers: { "content-type": "application/json" } })));
+    await expect(deleteAdminBed("occupied-bed")).rejects.toThrow("No se puede eliminar una cama ocupada.");
   });
 });

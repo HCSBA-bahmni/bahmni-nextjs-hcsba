@@ -16,6 +16,8 @@ La ruta Next `/bahmni/admin/beds` reemplaza la OWA administrativa `/openmrs/owa/
 
 Toda la interfaz se presenta en español. Los nombres clínico-administrativos existentes se muestran tal como los entrega OpenMRS y no se traducen ni transforman.
 
+La OWA permite definir o editar la distribución, pero no ofrece eliminarla enviando filas y columnas en cero. Next conserva esa restricción: una distribución sólo se guarda con dimensiones válidas. Las camas se eliminan individualmente mediante `DELETE bed/:uuid`; OpenMRS rechaza la eliminación de una cama ocupada y la interfaz informa ese caso en español.
+
 ## Contratos OpenMRS
 
 | Flujo | Contrato |
@@ -31,12 +33,12 @@ OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y 
 
 ## Navegación y reversión
 
-El cambio compañero de `standard-config-HCSBA` configura Beds explícitamente en `/bahmni/admin/beds`: [standard-config-HCSBA#2](https://github.com/HCSBA-bahmni/standard-config-HCSBA/pull/2). La URL OWA no se transforma en Next y permanece como destino externo real.
+El dashboard resuelve tanto `/bahmni/admin/beds` como la URL OWA configurada actualmente, `/openmrs/owa/bedmanagement/admissionLocations.html`, hacia `/bahmni/admin/beds`. Así se evita que una configuración legacy vuelva a sacar al usuario de la experiencia Next.
 
 Rollback independiente de Beds:
 
-1. Restituir en `openmrs/apps/admin/extension.json` la URL `/openmrs/owa/bedmanagement/admissionLocations.html`.
-2. Desplegar nuevamente `standard-config-HCSBA`; no es necesario desactivar el dashboard Next ni Audit Log.
+1. Revertir en `resolveAdminExtensionUrl` el mapeo de `/openmrs/owa/bedmanagement/admissionLocations.html` hacia Next.
+2. Mantener esa URL OWA en `openmrs/apps/admin/extension.json` y desplegar nuevamente Next; no es necesario desactivar Audit Log.
 3. Verificar que la tarjeta Beds abre literalmente la OWA.
 
 ## Verificación

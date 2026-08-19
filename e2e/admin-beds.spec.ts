@@ -61,6 +61,18 @@ test("Beds replica ubicación, sala, layout, tipos y etiquetas en español", asy
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
 });
 
+test("explica en español cuando OpenMRS impide eliminar una cama ocupada", async ({ page }) => {
+  await mockAdmin(page, true);
+  await page.unroute(/\/openmrs\/ws\/rest\/v1\/bed(?:\/[^?]+)?(?:\?.*)?$/);
+  await page.route(/\/openmrs\/ws\/rest\/v1\/bed\/bed(?:\?.*)?$/, (route) => json(route, { error: { message: "org.openmrs.module.bedmanagement.exception.BedOccupiedException: Bed is occupied" } }, 400));
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/bahmni/admin/beds");
+  await page.getByRole("button", { name: /Urgencia/ }).first().click();
+  await page.getByRole("button", { name: /Sala de Urgencia/ }).first().click();
+  await page.getByRole("button", { name: "Eliminar cama U-1" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "No se puede eliminar una cama ocupada." })).toBeVisible();
+});
+
 test("respeta enableManagingLocations sin bloquear layout ni camas", async ({ page }) => {
   await mockAdmin(page, false);
   await page.goto("/bahmni/admin/beds");
@@ -73,6 +85,34 @@ test("respeta enableManagingLocations sin bloquear layout ni camas", async ({ pa
   await expect(page.getByRole("button", { name: "Eliminar sala" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Editar distribución" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Agregar cama/ })).toBeVisible();
+});
+
+test("cada eliminación usa el recurso OpenMRS correcto y no ofrece borrar el layout", async ({ page }) => {
+  const writes = await mockAdmin(page, true);
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/bahmni/admin/beds");
+  await page.getByRole("button", { name: /Urgencia/ }).first().click();
+  await page.getByRole("button", { name: /Sala de Urgencia/ }).first().click();
+  await expect(page.getByRole("button", { name: "Eliminar distribución" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Eliminar cama U-1" }).click();
+
+  await page.getByRole("tab", { name: /Tipos de cama/ }).click();
+  await page.getByRole("row", { name: /Cama/ }).getByRole("button", { name: "Eliminar" }).click();
+  await page.getByRole("tab", { name: /Etiquetas de cama/ }).click();
+  await page.getByRole("row", { name: /Aislamiento de contacto/ }).getByRole("button", { name: "Eliminar" }).click();
+
+  await page.getByRole("tab", { name: /Ubicaciones de admisión/ }).click();
+  await page.getByRole("button", { name: /Urgencia/ }).first().click();
+  await page.getByRole("button", { name: /Sala de Urgencia/ }).first().click();
+  await page.getByRole("button", { name: "Eliminar sala" }).click();
+
+  await expect.poll(() => writes.filter((write) => write.method === "DELETE").length).toBe(4);
+  expect(writes.filter((write) => write.method === "DELETE").map((write) => new URL(write.url).pathname)).toEqual([
+    "/openmrs/ws/rest/v1/bed/bed",
+    "/openmrs/ws/rest/v1/bedtype/type",
+    "/openmrs/ws/rest/v1/bedTag/tag",
+    "/openmrs/ws/rest/v1/admissionLocation/ward",
+  ]);
 });
 
 test("envía mutaciones reales de ubicación, layout, cama, tipo y etiqueta", async ({ page }) => {
