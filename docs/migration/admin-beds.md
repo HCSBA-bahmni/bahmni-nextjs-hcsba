@@ -33,13 +33,18 @@ OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y 
 
 ## Navegación y reversión
 
-El dashboard resuelve tanto `/bahmni/admin/beds` como la URL OWA configurada actualmente, `/openmrs/owa/bedmanagement/admissionLocations.html`, hacia `/bahmni/admin/beds`. Así se evita que una configuración legacy vuelva a sacar al usuario de la experiencia Next.
+El destino de la tarjeta Beds se controla exclusivamente desde `openmrs/apps/admin/extension.json` en `standard-config-HCSBA`:
+
+- `/bahmni/admin/beds` activa la implementación Next.
+- `/openmrs/owa/bedmanagement/admissionLocations.html` abre literalmente la OWA legacy. Los query string y fragmentos configurados también se conservan.
 
 Rollback independiente de Beds:
 
-1. Revertir en `resolveAdminExtensionUrl` el mapeo de `/openmrs/owa/bedmanagement/admissionLocations.html` hacia Next.
-2. Mantener esa URL OWA en `openmrs/apps/admin/extension.json` y desplegar nuevamente Next; no es necesario desactivar Audit Log.
-3. Verificar que la tarjeta Beds abre literalmente la OWA.
+1. Restaurar `/openmrs/owa/bedmanagement/admissionLocations.html` como URL de Beds en `openmrs/apps/admin/extension.json` de `standard-config-HCSBA`.
+2. Desplegar únicamente el cambio de configuración; no se modifica ni se redespliega Next y no es necesario desactivar Audit Log.
+3. Verificar desde `/bahmni/admin` que la tarjeta Beds abre literalmente la OWA.
+
+Para reactivar Beds Next, volver a configurar la URL explícita `/bahmni/admin/beds` y desplegar la configuración.
 
 ## Verificación
 
