@@ -13,7 +13,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { hasPrivilege } from "@/services/bahmni/auth";
 import { findAppointmentConflicts, findRecurringConflicts, getAppointment, loadAppointmentLocations, loadAppointmentProviders, loadAppointmentServices, saveAppointment, saveRecurringAppointments, searchAppointmentPatients } from "@/services/bahmni/appointments";
 import { loadAppointmentConfig } from "./config";
-import { APPOINTMENTS_TIME_ZONE, canEditAppointment, canManageAppointments, canManageOwnAppointments, dateTimeOf, displayName, serverDateTime, statusLabel } from "./domain";
+import { APPOINTMENTS_TIME_ZONE, appointmentConflictMessage, canEditAppointment, canManageAppointments, canManageOwnAppointments, dateTimeOf, displayName, serverDateTime, statusLabel } from "./domain";
 import { AppointmentNavigation } from "./AppointmentNavigation";
 import { appointmentText } from "./translations";
 import type { Appointment, AppointmentConflict, AppointmentPatient, AppointmentPayload, AppointmentStatus, RecurrenceDetails } from "./types";
@@ -60,6 +60,8 @@ function patientLabel(patient: Partial<AppointmentPatient> & { givenName?: strin
 }
 
 const recurrenceDays: Array<[string, string]> = [["MONDAY", "Lun"], ["TUESDAY", "Mar"], ["WEDNESDAY", "Mié"], ["THURSDAY", "Jue"], ["FRIDAY", "Vie"], ["SATURDAY", "Sáb"], ["SUNDAY", "Dom"]];
+
+class AppointmentConflictError extends Error {}
 
 interface AppointmentFormProps {
   appointmentUuid?: string;
@@ -139,7 +141,7 @@ export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot
         teleconsultation: form.teleconsultation, ...(form.comments.trim() ? { comments: form.comments.trim() } : {}),
       };
       const found = form.recurring && !appointmentUuid ? await findRecurringConflicts(payload, recurrence) : await findAppointmentConflicts(payload);
-      if (found.length) { setConflicts(found); throw new Error(appointmentText.conflict); }
+      if (found.length) { setConflicts(found); throw new AppointmentConflictError(appointmentText.conflict); }
       return form.recurring && !appointmentUuid ? saveRecurringAppointments(payload, recurrence) : saveAppointment(payload);
     },
     onSuccess: async () => {
@@ -151,7 +153,7 @@ export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot
       const returnTo = typeof router.query.returnTo === "string" && router.query.returnTo.startsWith("/appointments") ? router.query.returnTo : "/appointments/calendar";
       await router.push(returnTo);
     },
-    onError: (error) => setFormError(error instanceof Error ? error.message : appointmentText.saveError),
+    onError: (error) => { if (!(error instanceof AppointmentConflictError)) setFormError(error instanceof Error ? error.message : appointmentText.saveError); },
   });
 
   const searchPatient = useCallback(async (rawQuery: string) => {
@@ -205,7 +207,7 @@ export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot
       </div>
       {!appointmentUuid && <section className="appointment-recurrence"><label className="checkbox-field"><Checkbox inputId="appointment-recurring" checked={form.recurring} onChange={(event) => set("recurring", Boolean(event.checked))} /><span>Repetir cita</span></label>{form.recurring && <><div className="field"><label htmlFor="appointment-occurrences">Número de ocurrencias</label><InputNumber inputId="appointment-occurrences" min={2} max={100} value={form.occurrences} onValueChange={(event) => set("occurrences", event.value ?? config.data.recurrence.defaultNumberOfOccurrences)} /></div><fieldset><legend>Días</legend>{recurrenceDays.map(([value, label]) => <label key={value} className="checkbox-field"><Checkbox checked={form.repeatOn.includes(value)} onChange={(event) => set("repeatOn", event.checked ? [...form.repeatOn, value] : form.repeatOn.filter((day) => day !== value))} /><span>{label}</span></label>)}</fieldset></>}</section>}
       <div className="field appointment-comments"><label htmlFor="appointment-comments">Comentarios</label><InputTextarea id="appointment-comments" rows={3} value={form.comments} onChange={(event) => set("comments", event.target.value)} /></div>
-      {conflicts.length > 0 && <section role="alert" className="appointment-conflicts"><strong>{appointmentText.conflict}</strong><ul>{conflicts.map((conflict, index) => <li key={conflict.uuid ?? index}>{conflict.message ?? (conflict.appointment ? `${patientLabel(conflict.appointment.patient)} · ${dateTimeOf(conflict.appointment.startDateTime).toFormat("dd/MM/yyyy HH:mm")}` : "Conflicto de horario")}</li>)}</ul></section>}
+      {conflicts.length > 0 && <section role="alert" className="appointment-conflicts"><strong>{appointmentText.conflict}</strong><ul>{conflicts.map((conflict, index) => <li key={conflict.uuid ?? index}>{appointmentConflictMessage(conflict)}</li>)}</ul></section>}
       {formError && <p role="alert" className="error-banner">{formError}</p>}
       <footer className="actions"><Button type="button" outlined label="Cancelar" onClick={cancel} /><Button type="submit" icon="pi pi-save" label="Guardar" loading={mutation.isPending} /></footer>
     </form>}

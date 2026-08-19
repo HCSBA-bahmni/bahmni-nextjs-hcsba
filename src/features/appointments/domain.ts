@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import type { Appointment, AppointmentAppConfig, AppointmentStatus } from "./types";
+import type { Appointment, AppointmentAppConfig, AppointmentConflict, AppointmentStatus } from "./types";
 
 export const APPOINTMENTS_TIME_ZONE = "America/Santiago";
 
@@ -32,6 +32,57 @@ export function patientName(appointment: Appointment): string {
 export function providerNames(appointment: Appointment): string {
   const names = appointmentProviders(appointment).map(displayName).filter((name) => name !== "—");
   return names.length ? names.join(", ") : "Sin proveedor";
+}
+
+function conflictClock(value: string | null | undefined): string | undefined {
+  const match = value?.match(/^(\d{1,2}):(\d{2})/);
+  return match ? `${match[1]!.padStart(2, "0")}:${match[2]}` : undefined;
+}
+
+function serviceAvailabilityIntervals(conflict: AppointmentConflict): string[] {
+  const appointment = conflict.appointment;
+  if (!appointment) return [];
+  const weekdays = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as const;
+  const weekday = weekdays[dateTimeOf(appointment.startDateTime).weekday - 1];
+  const weekly = appointment.service.weeklyAvailability.filter((availability) => availability.dayOfWeek === weekday && !availability.voided);
+  const source = weekly.length
+    ? weekly
+    : [{ startTime: appointment.service.startTime, endTime: appointment.service.endTime }];
+  return [...new Set(source.flatMap((availability) => {
+    const start = conflictClock(availability.startTime);
+    const end = conflictClock(availability.endTime);
+    return start && end ? [`${start} a ${end}`] : [];
+  }))];
+}
+
+function requestedAppointmentRange(conflict: AppointmentConflict): string | undefined {
+  const appointment = conflict.appointment;
+  if (!appointment) return undefined;
+  const start = dateTimeOf(appointment.startDateTime);
+  const end = dateTimeOf(appointment.endDateTime);
+  if (!start.isValid || !end.isValid) return undefined;
+  return start.hasSame(end, "day")
+    ? `el ${start.toFormat("dd/MM/yyyy")} de ${start.toFormat("HH:mm")} a ${end.toFormat("HH:mm")}`
+    : `desde ${start.toFormat("dd/MM/yyyy HH:mm")} hasta ${end.toFormat("dd/MM/yyyy HH:mm")}`;
+}
+
+export function appointmentConflictMessage(conflict: AppointmentConflict): string {
+  const kind = conflict.message?.trim();
+  const appointment = conflict.appointment;
+  const requested = requestedAppointmentRange(conflict);
+  if (kind === "SERVICE_UNAVAILABLE") {
+    const serviceName = displayName(appointment?.service);
+    const intervals = serviceAvailabilityIntervals(conflict);
+    const availabilityText = intervals.length
+      ? `«${serviceName}» funciona en ${intervals.length === 1 ? "el siguiente horario" : "los siguientes horarios"}: ${intervals.join(" y ")}.`
+      : `Revisa la disponibilidad configurada de «${serviceName}».`;
+    const requestedText = requested ? ` La cita solicitada es ${requested}.` : "";
+    return `Servicio no disponible. ${availabilityText}${requestedText}`;
+  }
+  if (kind === "PATIENT") return requested ? `El paciente ya tiene otra cita ${requested}.` : "El paciente ya tiene otra cita que se superpone con este horario.";
+  if (kind && !/^[A-Z0-9_]+$/.test(kind)) return kind;
+  if (appointment && requested) return `Existe un conflicto de disponibilidad ${requested} para ${displayName(appointment.service)}.`;
+  return "Existe un conflicto de disponibilidad para el horario solicitado.";
 }
 
 export function allowedStatusActions(config: AppointmentAppConfig, status: AppointmentStatus): AppointmentStatus[] {

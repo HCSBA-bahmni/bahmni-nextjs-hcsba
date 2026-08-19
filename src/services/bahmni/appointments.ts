@@ -3,6 +3,7 @@ import { bahmniRequest, bahmniRequestWithResponse, queryString } from "./http";
 import { searchPatients } from "./patients";
 import {
   appointmentConflictSchema,
+  appointmentConflictAppointmentSchema,
   appointmentProviderSchema,
   appointmentReferenceSchema,
   appointmentSchema,
@@ -150,7 +151,7 @@ function recurringRequest(payload: AppointmentPayload, recurrence: RecurrenceDet
   };
 }
 
-const conflictMapSchema = z.record(z.string(), z.array(appointmentSchema));
+const conflictMapSchema = z.record(z.string(), z.array(appointmentConflictAppointmentSchema));
 
 async function appointmentConflicts(path: string, body: unknown): Promise<AppointmentConflict[]> {
   const response = await bahmniRequestWithResponse<unknown>(path, { method: "POST", body: JSON.stringify(body) });
@@ -158,5 +159,5 @@ async function appointmentConflicts(path: string, body: unknown): Promise<Appoin
   const legacy = resultList(appointmentConflictSchema).safeParse(response.data);
   if (legacy.success) return legacy.data;
   const conflicts = conflictMapSchema.parse(response.data);
-  return Object.entries(conflicts).flatMap(([kind, appointments]) => appointments.map((appointment) => ({ uuid: appointment.uuid, message: kind, appointment })));
+  return Object.entries(conflicts).flatMap(([kind, appointments]) => appointments.map((appointment) => ({ uuid: appointment.uuid ?? undefined, message: kind, appointment })));
 }

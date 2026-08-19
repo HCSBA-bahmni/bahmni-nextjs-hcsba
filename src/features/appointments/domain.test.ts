@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { allowedStatusActions, calendarEvents, canEditAppointment, dateTimeOf, serverDateTime } from "./domain";
+import { allowedStatusActions, appointmentConflictMessage, calendarEvents, canEditAppointment, dateTimeOf, serverDateTime } from "./domain";
 import { appointmentSchema } from "./types";
 import type { Appointment, AppointmentAppConfig } from "./types";
 
@@ -28,6 +28,61 @@ describe("appointment domain parity", () => {
 
   it("preserves the Chile wall time when serializing through UTC", () => {
     expect(serverDateTime(dateTimeOf([2026, 9, 6, 9, 30]))).toMatch(/^2026-09-06T1[23]:30:00\.000Z$/);
+  });
+
+  it("explains service availability conflicts with requested and configured hours", () => {
+    expect(appointmentConflictMessage({
+      message: "SERVICE_UNAVAILABLE",
+      appointment: {
+        ...appointment,
+        uuid: null,
+        service: { ...appointment.service, name: "awa", startTime: "14:00:00", endTime: "18:00:00" },
+        startDateTime: Date.parse("2026-08-14T16:00:00.000Z"),
+        endDateTime: Date.parse("2026-08-14T17:30:00.000Z"),
+      },
+    })).toBe("Servicio no disponible. «awa» funciona en el siguiente horario: 14:00 a 18:00. La cita solicitada es el 14/08/2026 de 12:00 a 13:30.");
+  });
+
+  it("prefers every active weekly interval and ignores general and voided hours", () => {
+    const message = appointmentConflictMessage({
+      message: "SERVICE_UNAVAILABLE",
+      appointment: {
+        ...appointment,
+        uuid: null,
+        service: {
+          ...appointment.service,
+          name: "Cardiología",
+          startTime: "01:00:00",
+          endTime: "02:00:00",
+          weeklyAvailability: [
+            { dayOfWeek: "FRIDAY", startTime: "08:00:00", endTime: "12:00:00" },
+            { dayOfWeek: "FRIDAY", startTime: "14:00:00", endTime: "18:00:00" },
+            { dayOfWeek: "FRIDAY", startTime: "20:00:00", endTime: "21:00:00", voided: true },
+            { dayOfWeek: "MONDAY", startTime: "10:00:00", endTime: "11:00:00" },
+          ],
+        },
+        startDateTime: Date.parse("2026-08-14T16:00:00.000Z"),
+        endDateTime: Date.parse("2026-08-14T17:30:00.000Z"),
+      },
+    });
+    expect(message).toContain("los siguientes horarios: 08:00 a 12:00 y 14:00 a 18:00");
+    expect(message).not.toContain("01:00");
+    expect(message).not.toContain("20:00");
+    expect(message).not.toContain("10:00");
+  });
+
+  it("uses a clear fallback when OpenMRS provides no service hours", () => {
+    expect(appointmentConflictMessage({
+      message: "SERVICE_UNAVAILABLE",
+      appointment: { ...appointment, uuid: null, service: { ...appointment.service, name: "Cardiología", startTime: null, endTime: null, weeklyAvailability: [] } },
+    })).toContain("Revisa la disponibilidad configurada de «Cardiología».");
+  });
+
+  it("identifies the existing appointment in patient conflicts", () => {
+    expect(appointmentConflictMessage({
+      message: "PATIENT",
+      appointment: { ...appointment, uuid: "existing", startDateTime: Date.parse("2026-08-14T16:00:00.000Z"), endDateTime: Date.parse("2026-08-14T17:30:00.000Z") },
+    })).toBe("El paciente ya tiene otra cita el 14/08/2026 de 12:00 a 13:30.");
   });
 
   it("uses configured transitions and exact legacy privileges", () => {

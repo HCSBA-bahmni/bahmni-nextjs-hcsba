@@ -181,6 +181,61 @@ test("new appointment searches and selects a patient with the shared patient fin
   });
 });
 
+test("new appointment from another section opens the calendar sidebar", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-08-14T02:00:00.000Z"));
+  await page.goto("/bahmni/appointments/summary");
+  await page.getByRole("button", { name: "Nueva cita" }).click();
+
+  await expect(page).toHaveURL(/\/bahmni\/appointments\/calendar(?:\?|$)/);
+  await expect(page).not.toHaveURL(/\/appointments\/new/);
+  await expect(page.getByRole("region", { name: "Calendario de citas" })).toBeVisible();
+  const sidebar = page.getByRole("complementary", { name: "Nueva cita" });
+  await expect(sidebar).toBeVisible();
+  await expect(sidebar.locator("#appointment-date")).toHaveValue("2026-08-14");
+  await expect(sidebar.locator("#appointment-start")).toHaveValue("09:00");
+  await expect(sidebar.locator("#appointment-end")).toHaveValue("09:30");
+});
+
+test("service unavailable conflict explains the requested and available hours", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-08-14T02:00:00.000Z"));
+  let appointmentWrites = 0;
+  await page.route("**/openmrs/ws/rest/v1/bahmni/search/patient/lucene?**", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({ pageOfResults: [{ uuid: "patient-2", identifier: "HCSBA-2", givenName: "María", familyName: "Rojas" }] }),
+  }));
+  await page.route("**/openmrs/ws/rest/v1/appointments/conflicts", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({ SERVICE_UNAVAILABLE: [{
+      uuid: null,
+      patient: { uuid: "patient-2", name: "María Rojas", identifier: "HCSBA-2" },
+      service: { uuid: "service-1", name: "Cardiología", startTime: "14:00:00", endTime: "18:00:00" },
+      providers: [],
+      startDateTime: Date.parse("2026-08-14T16:00:00.000Z"),
+      endDateTime: Date.parse("2026-08-14T17:30:00.000Z"),
+      status: "Requested",
+    }] }),
+  }));
+  await page.route("**/openmrs/ws/rest/v1/appointment", (route) => { appointmentWrites += 1; return route.fulfill({ status: 500 }); });
+
+  await page.goto("/bahmni/appointments/calendar");
+  await page.getByRole("button", { name: "Nueva cita" }).click();
+  const sidebar = page.getByRole("complementary", { name: "Nueva cita" });
+  await sidebar.getByPlaceholder("Nombre o identificador").fill("María");
+  await sidebar.getByRole("button", { name: /María Rojas/ }).click();
+  await sidebar.locator("#appointment-service").selectOption("service-1");
+  await sidebar.locator("#appointment-start").fill("12:00");
+  await sidebar.locator("#appointment-end").fill("13:30");
+  await sidebar.getByRole("button", { name: "Guardar" }).click();
+
+  const conflict = sidebar.locator(".appointment-conflicts");
+  await expect(conflict).toContainText("No se pudo crear la cita por un conflicto de disponibilidad.");
+  await expect(conflict).toContainText("Servicio no disponible.");
+  await expect(conflict).toContainText("«Cardiología» funciona en el siguiente horario: 14:00 a 18:00.");
+  await expect(conflict).toContainText("La cita solicitada es el 14/08/2026 de 12:00 a 13:30.");
+  await expect(sidebar.locator(".error-banner")).toHaveCount(0);
+  expect(appointmentWrites).toBe(0);
+});
+
 test("calendar sidebar preserves form data, honors resources and refreshes after save", async ({ page }) => {
   // 14 August in the UTC browser is still 13 August in Santiago. The general
   // button must preserve the calendar's visible date rather than the instant.

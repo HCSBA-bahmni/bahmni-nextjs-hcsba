@@ -85,10 +85,14 @@ export const appointmentSchema = z.object({
   recurringAppointment: appointmentReferenceSchema.nullish(),
 }).loose();
 
+export const appointmentConflictAppointmentSchema = appointmentSchema.extend({
+  uuid: z.string().nullish(),
+});
+
 export const appointmentConflictSchema = z.object({
-  uuid: z.string().optional(),
+  uuid: z.string().nullish(),
   message: z.string().optional(),
-  appointment: appointmentSchema.optional(),
+  appointment: appointmentConflictAppointmentSchema.optional(),
 }).loose();
 
 export const appointmentSummaryCountSchema = z.object({
