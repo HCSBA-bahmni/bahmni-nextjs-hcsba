@@ -35,7 +35,12 @@ jobs:
       - uses: docker/build-push-action@v6
         with: { context: ., load: true, tags: hcsba/bahmni-next-web:0.1.0-rc.0 }
       - uses: aquasecurity/trivy-action@master
-        with: { image-ref: hcsba/bahmni-next-web:0.1.0-rc.0, format: sarif, output: trivy.sarif, severity: HIGH,CRITICAL, exit-code: 1 }
+        with:
+          image-ref: hcsba/bahmni-next-web:0.1.0-rc.0
+          format: sarif
+          output: trivy.sarif
+          severity: "HIGH,CRITICAL"
+          exit-code: "1"
       - uses: github/codeql-action/upload-sarif@v4
         with: { sarif_file: trivy.sarif }
   edge:
