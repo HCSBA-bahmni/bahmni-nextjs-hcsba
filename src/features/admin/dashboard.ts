@@ -7,6 +7,16 @@ const adminIcons: Record<string, string> = {
   "icon-bahmni-inpatient": "pi pi-building",
 };
 
+export function resolveAdminLabel(
+  configuredLabel: string | undefined,
+  translationKey: string | undefined,
+  extensionId: string,
+  translate: (key: string, fallback: string) => string,
+): string {
+  const fallback = configuredLabel ?? translationKey ?? extensionId;
+  return translationKey ? translate(translationKey, fallback) : fallback;
+}
+
 export function resolveAdminExtensionUrl(rawUrl?: string): ResolvedExtensionUrl {
   if (rawUrl === "#/auditLog") return { href: "/bahmni/admin/audit-log", kind: "next" };
   if (rawUrl?.startsWith("#/")) return { href: `/bahmni/admin-legacy/${rawUrl}`, kind: "legacy" };

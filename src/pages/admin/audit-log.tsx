@@ -101,10 +101,10 @@ export default function AuditLogPage() {
   const message = (entry: AuditLogEntry) => String(t(entry.messageKey, { ...entry, params: entry.params, defaultValue: entry.messageKey }));
 
   return <AuthGuard><AppShell title={label("ADMIN_APP_HEADER", "Administración")}>
-    {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:admin requerido por el módulo legacy.</p>}
+    {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:admin requerido por el módulo de Administración.</p>}
     {allowed && <main className="audit-log-page">
       <section className="panel audit-log-hero">
-        <div className="audit-log-heading"><span className="audit-log-icon"><i className="pi pi-eye" aria-hidden="true" /></span><div><p className="audit-log-eyebrow">{label("ADMIN_APP_HEADER", "Administración")}</p><h2>{label("AUDIT_LOG_TABLE_HEADER_LABEL", "Audit Log")}</h2><p>Consulta de eventos registrados por Bahmni.</p></div></div>
+        <div className="audit-log-heading"><span className="audit-log-icon"><i className="pi pi-eye" aria-hidden="true" /></span><div><p className="audit-log-eyebrow">{label("ADMIN_APP_HEADER", "Administración")}</p><h2>Registro de auditoría</h2><p>Consulta de eventos registrados por Bahmni.</p></div></div>
         <a className="audit-log-back" href="/bahmni/admin"><i className="pi pi-arrow-left" aria-hidden="true" /> Panel de Administración</a>
       </section>
 
@@ -120,9 +120,9 @@ export default function AuditLogPage() {
       </section>
 
       <section className="panel audit-log-results" aria-labelledby="audit-log-results-title">
-        <header><div><h3 id="audit-log-results-title">{label("AUDIT_LOG_TABLE_HEADER_LABEL", "Audit Log")}</h3><span>{logs.length} eventos en esta página</span></div></header>
+        <header><div><h3 id="audit-log-results-title">Registro de auditoría</h3><span>{logs.length} eventos en esta página</span></div></header>
         {busy && <p role="status" className="audit-log-loading"><i className="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando eventos…</p>}
-        {requestFailed && <p role="alert" className="error-banner">No fue posible consultar el Audit Log de Bahmni.</p>}
+        {requestFailed && <p role="alert" className="error-banner">No fue posible consultar el registro de auditoría de Bahmni.</p>}
         {noticeKey && <p role="status" className="audit-log-notice">{label(noticeKey, noticeKey)}</p>}
         {!busy && logs.length > 0 && <div className="audit-log-table-wrap"><table>
           <thead><tr><th>{label("EVENT_ID", "ID del Evento")}</th><th>{label("CREATED_AT", "Creado En")}</th><th>{label("EVENT_TYPE", "Tipo de Evento")}</th><th>{label("USERNAME", "Nombre de usuario")}</th><th>{label("PATIENT_ID", "ID del Paciente")}</th><th>{label("MESSAGE", "Mensaje")}</th><th>{label("MODULE", "Módulo")}</th></tr></thead>

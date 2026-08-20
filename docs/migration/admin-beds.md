@@ -1,4 +1,4 @@
-# Administración de camas (Beds)
+# Administración de camas
 
 ## Alcance y fuente de verdad
 
@@ -23,13 +23,15 @@ La OWA permite definir o editar la distribución, pero no ofrece eliminarla envi
 | Flujo | Contrato |
 |---|---|
 | Ubicaciones | `GET location?tag=Admission Location&v=full`, `GET location?tag=Visit Location&v=full`, `POST/DELETE admissionLocation` |
-| Habilitación | `GET systemsetting?v=custom:(property,value)&q=bedmanagement.owa.`; sólo `bedmanagement.owa.enableManagingLocations=true` habilita CRUD de ubicaciones |
+| Habilitación | El shell exige `app:admin`; alta, edición y eliminación de ubicaciones/salas exigen además `bedmanagement.owa.enableManagingLocations=true` |
 | Layout | `GET/POST admissionLocation/:uuid?v=layout` con `{bedLayout:{row,column}}` |
 | Camas | `POST bed[/uuid]` con `{bedNumber,bedType,row,column,locationUuid}` y `DELETE bed/:uuid` |
 | Tipos | `GET/POST/DELETE bedtype` |
 | Etiquetas | `GET/POST/DELETE bedTag` |
 
-OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Si el system setting falta o no puede leerse, el valor seguro es `false`. La eliminación de ubicaciones sólo se expone y ejecuta para nodos sin hijos; esta condición se revalida inmediatamente antes del DELETE.
+OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Cuando `bedmanagement.owa.enableManagingLocations` es `true`, Todas las ubicaciones ofrece crear ubicaciones, cada ubicación permite crear salas y las tarjetas exponen edición y eliminación al pasar el puntero o recibir foco. Si la propiedad falta, vale `false` o no puede consultarse, esas acciones permanecen ocultas; la distribución y las camas siguen disponibles. Una ubicación con salas debe vaciar primero su jerarquía. Después de confirmar una eliminación, Next relee todas las ubicaciones y bloquea el `DELETE` si el nodo adquirió hijos. Antes de eliminar una sala también relee su layout y bloquea el `DELETE` si existe una cama `OCCUPIED`. Cada sala conserva la definición de distribución y la administración de camas.
+
+HCSBA requiere permanentemente la administración de ubicaciones y salas. Por eso `standard-config-HCSBA/masterdata/configuration/globalproperties/gp_bedmanagement.xml` aprovisiona `bedmanagement.owa.enableManagingLocations=true`; no debe depender de una modificación manual de la base de datos.
 
 ## Navegación y reversión
 

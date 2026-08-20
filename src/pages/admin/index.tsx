@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { AppShell } from "@/components/AppShell";
-import { resolveAdminExtensionUrl, resolveAdminIcon } from "@/features/admin/dashboard";
+import { resolveAdminExtensionUrl, resolveAdminIcon, resolveAdminLabel } from "@/features/admin/dashboard";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { hasPrivilege } from "@/services/bahmni/auth";
@@ -26,7 +26,7 @@ export default function AdminDashboardPage() {
   const visible = (extensions.data ?? []).filter((extension) => extension.extensionPointId === "org.bahmni.admin.dashboard" && hasPrivilege(user, extension.requiredPrivilege) && extension.online !== false);
 
   return <AuthGuard><AppShell title="Administración" mainClassName="admin-dashboard-page">
-    {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:admin requerido por el módulo legacy.</p>}
+    {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:admin requerido por el módulo de Administración.</p>}
     {allowed && <>
       <section className="panel admin-dashboard-hero">
         <span className="admin-dashboard-hero-icon"><i className="pi pi-cog" aria-hidden="true" /></span>
@@ -36,8 +36,7 @@ export default function AdminDashboardPage() {
       <nav className="admin-dashboard-grid" aria-label="Herramientas de Administración">
         {visible.map((extension) => {
           const destination = resolveAdminExtensionUrl(extension.url);
-          const fallback = extension.label ?? extension.translationKey ?? extension.id;
-          const label = extension.translationKey ? String(t(extension.translationKey, { defaultValue: fallback })) : fallback;
+          const label = resolveAdminLabel(extension.label, extension.translationKey, extension.id, (key, fallback) => String(t(key, { defaultValue: fallback })));
           return <a key={extension.id} className="admin-dashboard-tile" href={destination.href} data-navigation={destination.kind}>
             <span><i className={resolveAdminIcon(extension.icon)} aria-hidden="true" /></span>
             <strong>{label}</strong>

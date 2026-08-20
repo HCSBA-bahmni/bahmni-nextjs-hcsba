@@ -12,6 +12,11 @@ describe("dominio administrativo de camas", () => {
     expect(locationChildren(locations, "root").map((item) => item.uuid)).toEqual(["ward"]);
   });
 
+  it("conserva literalmente los nombres definidos por el implementador", () => {
+    const configured = [{ uuid: "custom", name: "Emergency Ward - HCSBA", description: "", parentUuid: "root" }];
+    expect(locationChildren(configured, "root")[0]?.name).toBe("Emergency Ward - HCSBA");
+  });
+
   it("sólo permite eliminar nodos hoja", () => {
     expect(canDeleteLocation(locations, "root")).toBe(false);
     expect(canDeleteLocation(locations, "ward")).toBe(true);

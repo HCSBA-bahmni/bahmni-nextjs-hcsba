@@ -5,7 +5,7 @@ function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
 }
 
-async function mockAuthenticatedAdmin(page: Page) {
+async function mockAuthenticatedAdmin(page: Page, auditLabel = "Registro de auditoría") {
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => json(route, { authenticated: true, user: { uuid: "user-1", display: "Super Man" }, sessionLocation: { uuid: "emergency", display: "Emergency" } }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => json(route, { results: [{ uuid: "user-1", username: "superman", display: "Super Man", privileges: [{ name: "app:admin" }], roles: [], userProperties: { defaultLocale: "es" } }] }));
   await page.route("**/openmrs/ws/rest/v1/provider**", (route) => json(route, { results: [{ uuid: "provider-1", display: "Super Man", attributes: [] }] }));
@@ -19,11 +19,11 @@ async function mockAuthenticatedAdmin(page: Page) {
   }));
   await page.route("**/implementation_config/openmrs/i18n/admin/locale_es.json", (route) => json(route, {}, 404));
   await page.route("**/bahmni_config/openmrs/apps/admin/extension.json", (route) => json(route, {
-    csvUpload: { id: "bahmni.admin.csv", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "CSV Upload", url: "#/csv", icon: "fa-upload", order: 1, requiredPrivilege: "app:admin" },
-    csvExport: { id: "bahmni.admin.csvExport", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "CSV Export", url: "#/csvExport", icon: "fa-download", order: 1, requiredPrivilege: "app:admin" },
-    auditLog: { id: "bahmni.admin.auditLog", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Audit Log", url: "/bahmni/admin/audit-log", icon: "fa-eye", order: 1, requiredPrivilege: "app:admin" },
-    orderSet: { id: "bahmni.admin.orderSet", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Order Set", url: "#/ordersetdashboard", icon: "fa-upload", order: 1, requiredPrivilege: "app:admin" },
-    beds: { id: "bahmni.admin.adt", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Beds", url: "/bahmni/admin/beds", icon: "icon-bahmni-inpatient", order: 1, requiredPrivilege: "app:admin" },
+    csvUpload: { id: "bahmni.admin.csv", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Cargar CSV", url: "#/csv", icon: "fa-upload", order: 1, requiredPrivilege: "app:admin" },
+    csvExport: { id: "bahmni.admin.csvExport", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Exportar CSV", url: "#/csvExport", icon: "fa-download", order: 1, requiredPrivilege: "app:admin" },
+    auditLog: { id: "bahmni.admin.auditLog", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: auditLabel, url: "/bahmni/admin/audit-log", icon: "fa-eye", order: 1, requiredPrivilege: "app:admin" },
+    orderSet: { id: "bahmni.admin.orderSet", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Conjuntos de órdenes", url: "#/ordersetdashboard", icon: "fa-upload", order: 1, requiredPrivilege: "app:admin" },
+    beds: { id: "bahmni.admin.adt", extensionPointId: "org.bahmni.admin.dashboard", type: "link", label: "Camas", url: "/bahmni/admin/beds", icon: "icon-bahmni-inpatient", order: 1, requiredPrivilege: "app:admin" },
   }));
   await page.route("**/implementation_config/openmrs/apps/admin/extension.json", (route) => json(route, {}, 404));
 }
@@ -35,14 +35,21 @@ test("dashboard de Administración usa el shell Next sin alterar destinos existe
   await expect(page.getByRole("heading", { name: "Administración", level: 1 })).toBeVisible();
   const tools = page.getByRole("navigation", { name: "Herramientas de Administración" });
   await expect(tools.getByRole("link")).toHaveCount(5);
-  await expect(tools.getByRole("link", { name: /Audit Log/ })).toHaveAttribute("href", "/bahmni/admin/audit-log");
-  await expect(tools.getByRole("link", { name: /CSV Upload/ })).toHaveAttribute("href", "/bahmni/admin-legacy/#/csv");
-  await expect(tools.getByRole("link", { name: /CSV Export/ })).toHaveAttribute("href", "/bahmni/admin-legacy/#/csvExport");
-  await expect(tools.getByRole("link", { name: /Order Set/ })).toHaveAttribute("href", "/bahmni/admin-legacy/#/ordersetdashboard");
-  await expect(tools.getByRole("link", { name: /Beds/ })).toHaveAttribute("href", "/bahmni/admin/beds");
+  await expect(tools.getByRole("link", { name: /Registro de auditoría/ })).toHaveAttribute("href", "/bahmni/admin/audit-log");
+  await expect(tools.getByRole("link", { name: /Cargar CSV/ })).toHaveAttribute("href", "/bahmni/admin-legacy/#/csv");
+  await expect(tools.getByRole("link", { name: /Exportar CSV/ })).toHaveAttribute("href", "/bahmni/admin-legacy/#/csvExport");
+  await expect(tools.getByRole("link", { name: /Conjuntos de órdenes/ })).toHaveAttribute("href", "/bahmni/admin-legacy/#/ordersetdashboard");
+  await expect(tools.getByRole("link", { name: /Camas/ })).toHaveAttribute("href", "/bahmni/admin/beds");
 
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
+});
+
+test("conserva una etiqueta personalizada publicada por la implementación", async ({ page }) => {
+  await mockAuthenticatedAdmin(page, "Auditoría clínica HCSBA");
+  await page.goto("/bahmni/admin/#/dashboard");
+  await expect(page.getByRole("link", { name: /Auditoría clínica HCSBA/ })).toHaveAttribute("href", "/bahmni/admin/audit-log");
+  await expect(page.getByText("Registro de auditoría", { exact: true })).toHaveCount(0);
 });
 
 test("reproduce filtros, orden y paginación del Audit Log legacy", async ({ page }) => {
@@ -61,7 +68,7 @@ test("reproduce filtros, orden y paginación del Audit Log legacy", async ({ pag
   });
 
   await page.goto("/bahmni/admin/audit-log");
-  await expect(page.getByRole("heading", { name: "Audit Log" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Registro de auditoría" }).first()).toBeVisible();
   await expect(page.locator("tbody tr").nth(0)).toContainText("#11");
   await expect(page.locator("tbody tr").nth(1)).toContainText("#12");
   expect(requests[0]?.get("defaultView")).toBe("true");
