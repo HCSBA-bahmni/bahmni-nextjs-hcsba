@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { resolveAdminExtensionUrl, resolveAdminIcon } from "./dashboard";
+import { resolveAdminExtensionUrl, resolveAdminIcon, resolveAdminLabel } from "./dashboard";
 
 describe("dashboard de Administración", () => {
+  it("presenta en español las herramientas configuradas con etiquetas inglesas", () => {
+    expect(resolveAdminLabel("bahmni.admin.csv", "CSV Upload")).toBe("Cargar CSV");
+    expect(resolveAdminLabel("bahmni.admin.csvExport", "CSV Export")).toBe("Exportar CSV");
+    expect(resolveAdminLabel("bahmni.admin.auditLog", "Audit Log")).toBe("Registro de auditoría");
+    expect(resolveAdminLabel("bahmni.admin.orderSet", "Order Set")).toBe("Conjuntos de órdenes");
+    expect(resolveAdminLabel("bahmni.admin.adt", "Beds")).toBe("Camas");
+    expect(resolveAdminLabel("personalizada", "Configuración local")).toBe("Configuración local");
+  });
+
   it("mantiene los estados Angular no migrados en el alias legacy", () => {
     expect(resolveAdminExtensionUrl("#/csv")).toEqual({ href: "/bahmni/admin-legacy/#/csv", kind: "legacy" });
     expect(resolveAdminExtensionUrl("#/ordersetdashboard")).toEqual({ href: "/bahmni/admin-legacy/#/ordersetdashboard", kind: "legacy" });

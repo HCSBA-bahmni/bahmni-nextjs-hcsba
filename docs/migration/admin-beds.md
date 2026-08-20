@@ -1,4 +1,4 @@
-# Administración de camas (Beds)
+# Administración de camas
 
 ## Alcance y fuente de verdad
 
@@ -23,13 +23,13 @@ La OWA permite definir o editar la distribución, pero no ofrece eliminarla envi
 | Flujo | Contrato |
 |---|---|
 | Ubicaciones | `GET location?tag=Admission Location&v=full`, `GET location?tag=Visit Location&v=full`, `POST/DELETE admissionLocation` |
-| Habilitación | `GET systemsetting?v=custom:(property,value)&q=bedmanagement.owa.`; sólo `bedmanagement.owa.enableManagingLocations=true` habilita CRUD de ubicaciones |
+| Habilitación | El shell exige `app:admin`; la migración Next ofrece creación y edición de ubicaciones y salas sin cambiar propiedades de OpenMRS |
 | Layout | `GET/POST admissionLocation/:uuid?v=layout` con `{bedLayout:{row,column}}` |
 | Camas | `POST bed[/uuid]` con `{bedNumber,bedType,row,column,locationUuid}` y `DELETE bed/:uuid` |
 | Tipos | `GET/POST/DELETE bedtype` |
 | Etiquetas | `GET/POST/DELETE bedTag` |
 
-OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Si el system setting falta o no puede leerse, el valor seguro es `false`. La eliminación de ubicaciones sólo se expone y ejecuta para nodos sin hijos; esta condición se revalida inmediatamente antes del DELETE.
+OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Todas las ubicaciones conserva la opción de crear ubicaciones y cada ubicación existente permite crear salas. Las tarjetas de ubicaciones y salas exponen edición y eliminación al pasar el puntero o recibir foco. Una ubicación con salas debe vaciar primero su jerarquía. Antes de eliminar una sala, Next relee su layout y bloquea el DELETE si existe una cama `OCCUPIED`; la condición de nodo hoja también se revalida inmediatamente antes del DELETE. Cada sala conserva la definición de distribución y la administración de camas.
 
 ## Navegación y reversión
 

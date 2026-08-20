@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canDeleteLocation, layoutCellKey, locationChildren, validateBedPosition, validateLayout, type AdminLocation } from "./beds";
+import { adminLocationDisplayName, canDeleteLocation, layoutCellKey, locationChildren, validateBedPosition, validateLayout, type AdminLocation } from "./beds";
 
 const locations: AdminLocation[] = [
   { uuid: "root", name: "Urgencia", description: "", parentUuid: "hospital" },
@@ -7,6 +7,14 @@ const locations: AdminLocation[] = [
 ];
 
 describe("dominio administrativo de camas", () => {
+  it("presenta en español las ubicaciones estándar sin alterar nombres personalizados", () => {
+    expect(adminLocationDisplayName("Emergency")).toBe("Urgencias");
+    expect(adminLocationDisplayName("Emergency Ward")).toBe("Sala de Urgencias");
+    expect(adminLocationDisplayName("General Ward")).toBe("Sala General");
+    expect(adminLocationDisplayName("Pediatric Ward")).toBe("Sala Pediátrica");
+    expect(adminLocationDisplayName("NANEAS")).toBe("NANEAS");
+  });
+
   it("construye raíces y salas sin inventar niveles", () => {
     expect(locationChildren(locations).map((item) => item.uuid)).toEqual(["root"]);
     expect(locationChildren(locations, "root").map((item) => item.uuid)).toEqual(["ward"]);

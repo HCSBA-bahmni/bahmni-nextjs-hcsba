@@ -33,6 +33,18 @@ export interface AdminBedLayout {
   columns: number;
 }
 
+const spanishLocationNames: Record<string, string> = {
+  emergency: "Urgencias",
+  "emergency ward": "Sala de Urgencias",
+  "general ward": "Sala General",
+  "pediatric ward": "Sala Pediátrica",
+};
+
+/** Traduce nombres estándar solo al presentarlos; el dato de OpenMRS no se modifica. */
+export function adminLocationDisplayName(name: string): string {
+  return spanishLocationNames[name.trim().toLocaleLowerCase("en")] ?? name;
+}
+
 export function locationChildren(locations: AdminLocation[], parentUuid?: string): AdminLocation[] {
   const ids = new Set(locations.map((location) => location.uuid));
   return locations.filter((location) => parentUuid
