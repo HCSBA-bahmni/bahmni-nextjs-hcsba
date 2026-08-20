@@ -2,13 +2,11 @@ import { describe, expect, it } from "vitest";
 import { resolveAdminExtensionUrl, resolveAdminIcon, resolveAdminLabel } from "./dashboard";
 
 describe("dashboard de Administración", () => {
-  it("presenta en español las herramientas configuradas con etiquetas inglesas", () => {
-    expect(resolveAdminLabel("bahmni.admin.csv", "CSV Upload")).toBe("Cargar CSV");
-    expect(resolveAdminLabel("bahmni.admin.csvExport", "CSV Export")).toBe("Exportar CSV");
-    expect(resolveAdminLabel("bahmni.admin.auditLog", "Audit Log")).toBe("Registro de auditoría");
-    expect(resolveAdminLabel("bahmni.admin.orderSet", "Order Set")).toBe("Conjuntos de órdenes");
-    expect(resolveAdminLabel("bahmni.admin.adt", "Beds")).toBe("Camas");
-    expect(resolveAdminLabel("personalizada", "Configuración local")).toBe("Configuración local");
+  it("respeta una etiqueta configurada y usa i18n sólo cuando existe translationKey", () => {
+    const translate = (key: string, fallback: string) => key === "ADMIN_AUDIT" ? "Registro traducido" : fallback;
+    expect(resolveAdminLabel("Auditoría HCSBA", undefined, "bahmni.admin.auditLog", translate)).toBe("Auditoría HCSBA");
+    expect(resolveAdminLabel("Audit Log", "ADMIN_AUDIT", "bahmni.admin.auditLog", translate)).toBe("Registro traducido");
+    expect(resolveAdminLabel(undefined, undefined, "extension.personalizada", translate)).toBe("extension.personalizada");
   });
 
   it("mantiene los estados Angular no migrados en el alias legacy", () => {

@@ -36,9 +36,7 @@ export default function AdminDashboardPage() {
       <nav className="admin-dashboard-grid" aria-label="Herramientas de Administración">
         {visible.map((extension) => {
           const destination = resolveAdminExtensionUrl(extension.url);
-          const fallback = extension.label ?? extension.translationKey ?? extension.id;
-          const configuredLabel = extension.translationKey ? String(t(extension.translationKey, { defaultValue: fallback })) : fallback;
-          const label = resolveAdminLabel(extension.id, configuredLabel);
+          const label = resolveAdminLabel(extension.label, extension.translationKey, extension.id, (key, fallback) => String(t(key, { defaultValue: fallback })));
           return <a key={extension.id} className="admin-dashboard-tile" href={destination.href} data-navigation={destination.kind}>
             <span><i className={resolveAdminIcon(extension.icon)} aria-hidden="true" /></span>
             <strong>{label}</strong>

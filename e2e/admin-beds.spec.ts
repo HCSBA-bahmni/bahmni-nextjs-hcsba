@@ -9,7 +9,7 @@ async function confirmDeletion(page: Page) {
   await dialog.getByRole("button", { name: "Eliminar", exact: true }).click();
 }
 
-async function mockAdmin(page: Page, manageLocations = true, bedStatus = "AVAILABLE") {
+async function mockAdmin(page: Page, manageLocations = true, bedStatus = "AVAILABLE", names = { location: "Urgencia", ward: "Sala de Urgencia" }) {
   const writes: Array<{ url: string; method: string; body: unknown }> = [];
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => json(route, { authenticated: true, user: { uuid: "user" }, sessionLocation: { uuid: "emergency", display: "Emergency" } }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => json(route, { results: [{ uuid: "user", username: "superman", privileges: [{ name: "app:admin" }], roles: [], userProperties: { defaultLocale: "es" } }] }));
@@ -18,8 +18,8 @@ async function mockAdmin(page: Page, manageLocations = true, bedStatus = "AVAILA
     const tag = new URL(route.request().url()).searchParams.get("tag");
     if (tag === "Visit Location") return json(route, { results: [{ uuid: "hospital", name: "Hospital HCSBA" }] });
     if (tag === "Admission Location") return json(route, { results: [
-      { uuid: "emergency", name: "Urgencia", description: "Atención de urgencia", parentLocation: { uuid: "hospital" } },
-      { uuid: "ward", name: "Sala de Urgencia", parentLocation: { uuid: "emergency" } },
+      { uuid: "emergency", name: names.location, description: "Atención de urgencia", parentLocation: { uuid: "hospital" } },
+      { uuid: "ward", name: names.ward, parentLocation: { uuid: "emergency" } },
     ] });
     return json(route, { results: [{ uuid: "emergency", display: "Emergency" }] });
   });
@@ -33,7 +33,7 @@ async function mockAdmin(page: Page, manageLocations = true, bedStatus = "AVAILA
     writes.push({ url: route.request().url(), method: route.request().method(), body: route.request().postDataJSON() }); return json(route, {});
   });
   await page.route(/\/openmrs\/ws\/rest\/v1\/admissionLocation(?:\/[^?]+)?(?:\?.*)?$/, async (route) => {
-    if (route.request().method() === "GET") return json(route, { ward: { uuid: "ward", name: "Sala de Urgencia", parentLocation: { uuid: "emergency" } }, bedLocationMappings: [
+    if (route.request().method() === "GET") return json(route, { ward: { uuid: "ward", name: names.ward, parentLocation: { uuid: "emergency" } }, bedLocationMappings: [
       { rowNumber: 1, columnNumber: 1, bedUuid: "bed", bedNumber: "U-1", status: bedStatus, bedType: { name: "Cama", displayName: "Cama" } },
       { rowNumber: 1, columnNumber: 2 },
     ] });
@@ -68,6 +68,33 @@ test("Beds replica ubicación, sala, layout, tipos y etiquetas en español", asy
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
 });
 
+test("muestra literalmente los nombres configurados en OpenMRS", async ({ page }) => {
+  await mockAdmin(page, true, "AVAILABLE", { location: "Emergency", ward: "General Ward" });
+  await page.goto("/bahmni/admin/beds");
+  await expect(page.getByRole("button", { name: /Emergency/ }).first()).toBeVisible();
+  await expect(page.getByText("Urgencias", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: /Emergency/ }).first().click();
+  await expect(page.getByRole("button", { name: /General Ward/ }).first()).toBeVisible();
+  await expect(page.getByText("Sala General", { exact: true })).toHaveCount(0);
+});
+
+test("oculta gestión de ubicaciones cuando el system setting está deshabilitado", async ({ page }) => {
+  await mockAdmin(page, false);
+  await page.goto("/bahmni/admin/beds");
+  await expect(page.getByRole("button", { name: "Agregar ubicación", exact: true })).toHaveCount(0);
+  const locationCard = page.locator(".admin-location-card").filter({ hasText: "Urgencia" }).first();
+  await locationCard.hover();
+  await expect(locationCard.getByRole("button", { name: /Editar ubicación/ })).toHaveCount(0);
+  await locationCard.locator(".admin-location-card-open").click();
+  await expect(page.getByRole("button", { name: "Agregar sala" })).toHaveCount(0);
+  const wardCard = page.locator(".admin-location-card").filter({ hasText: "Sala de Urgencia" });
+  await wardCard.hover();
+  await expect(wardCard.getByRole("button", { name: /Editar sala/ })).toHaveCount(0);
+  await wardCard.locator(".admin-location-card-open").click();
+  await expect(page.getByRole("button", { name: "Editar distribución" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Agregar cama/ })).toBeVisible();
+});
+
 test("explica en español cuando OpenMRS impide eliminar una cama ocupada", async ({ page }) => {
   await mockAdmin(page, true);
   await page.unroute(/\/openmrs\/ws\/rest\/v1\/bed(?:\/[^?]+)?(?:\?.*)?$/);
@@ -81,7 +108,7 @@ test("explica en español cuando OpenMRS impide eliminar una cama ocupada", asyn
 });
 
 test("muestra edición y eliminación dentro de las tarjetas de ubicaciones y salas", async ({ page }) => {
-  await mockAdmin(page, false);
+  await mockAdmin(page, true);
   await page.goto("/bahmni/admin/beds");
   await page.getByRole("button", { name: "Agregar ubicación", exact: true }).click();
   await expect(page.getByRole("dialog").getByText("Ubicación padre")).toBeVisible();
@@ -150,6 +177,26 @@ test("impide eliminar una sala con camas asociadas a pacientes", async ({ page }
   await occupiedWardCard.getByRole("button", { name: "Eliminar sala Sala de Urgencia" }).click();
   await confirmDeletion(page);
   await expect(page.getByRole("alert").filter({ hasText: "tiene camas con pacientes asociados" })).toBeVisible();
+  expect(writes.some((write) => write.method === "DELETE" && new URL(write.url).pathname.includes("admissionLocation"))).toBe(false);
+});
+
+test("revalida la jerarquía después de confirmar y evita un DELETE obsoleto", async ({ page }) => {
+  const writes = await mockAdmin(page, true);
+  await page.goto("/bahmni/admin/beds");
+  await page.getByRole("button", { name: /Urgencia/ }).first().click();
+  const wardCard = page.locator(".admin-location-card").filter({ hasText: "Sala de Urgencia" });
+  await wardCard.hover();
+  await wardCard.getByRole("button", { name: "Eliminar sala Sala de Urgencia" }).click();
+
+  await page.unroute(/\/openmrs\/ws\/rest\/v1\/location(?:\?.*)?$/);
+  await page.route(/\/openmrs\/ws\/rest\/v1\/location(?:\?.*)?$/, (route) => json(route, { results: [
+    { uuid: "emergency", name: "Urgencia", parentLocation: { uuid: "hospital" } },
+    { uuid: "ward", name: "Sala de Urgencia", parentLocation: { uuid: "emergency" } },
+    { uuid: "new-child", name: "Sub-sala nueva", parentLocation: { uuid: "ward" } },
+  ] }));
+  await confirmDeletion(page);
+
+  await expect(page.getByRole("alert").filter({ hasText: "ahora contiene salas" })).toBeVisible();
   expect(writes.some((write) => write.method === "DELETE" && new URL(write.url).pathname.includes("admissionLocation"))).toBe(false);
 });
 

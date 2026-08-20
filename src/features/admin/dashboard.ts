@@ -7,16 +7,14 @@ const adminIcons: Record<string, string> = {
   "icon-bahmni-inpatient": "pi pi-building",
 };
 
-const adminLabels: Record<string, string> = {
-  "bahmni.admin.csv": "Cargar CSV",
-  "bahmni.admin.csvExport": "Exportar CSV",
-  "bahmni.admin.auditLog": "Registro de auditoría",
-  "bahmni.admin.orderSet": "Conjuntos de órdenes",
-  "bahmni.admin.adt": "Camas",
-};
-
-export function resolveAdminLabel(id: string, configuredLabel: string): string {
-  return adminLabels[id] ?? configuredLabel;
+export function resolveAdminLabel(
+  configuredLabel: string | undefined,
+  translationKey: string | undefined,
+  extensionId: string,
+  translate: (key: string, fallback: string) => string,
+): string {
+  const fallback = configuredLabel ?? translationKey ?? extensionId;
+  return translationKey ? translate(translationKey, fallback) : fallback;
 }
 
 export function resolveAdminExtensionUrl(rawUrl?: string): ResolvedExtensionUrl {

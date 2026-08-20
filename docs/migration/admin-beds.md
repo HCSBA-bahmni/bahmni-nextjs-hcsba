@@ -23,13 +23,13 @@ La OWA permite definir o editar la distribución, pero no ofrece eliminarla envi
 | Flujo | Contrato |
 |---|---|
 | Ubicaciones | `GET location?tag=Admission Location&v=full`, `GET location?tag=Visit Location&v=full`, `POST/DELETE admissionLocation` |
-| Habilitación | El shell exige `app:admin`; la migración Next ofrece creación y edición de ubicaciones y salas sin cambiar propiedades de OpenMRS |
+| Habilitación | El shell exige `app:admin`; alta, edición y eliminación de ubicaciones/salas exigen además `bedmanagement.owa.enableManagingLocations=true` |
 | Layout | `GET/POST admissionLocation/:uuid?v=layout` con `{bedLayout:{row,column}}` |
 | Camas | `POST bed[/uuid]` con `{bedNumber,bedType,row,column,locationUuid}` y `DELETE bed/:uuid` |
 | Tipos | `GET/POST/DELETE bedtype` |
 | Etiquetas | `GET/POST/DELETE bedTag` |
 
-OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Todas las ubicaciones conserva la opción de crear ubicaciones y cada ubicación existente permite crear salas. Las tarjetas de ubicaciones y salas exponen edición y eliminación al pasar el puntero o recibir foco. Una ubicación con salas debe vaciar primero su jerarquía. Antes de eliminar una sala, Next relee su layout y bloquea el DELETE si existe una cama `OCCUPIED`; la condición de nodo hoja también se revalida inmediatamente antes del DELETE. Cada sala conserva la definición de distribución y la administración de camas.
+OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Cuando `bedmanagement.owa.enableManagingLocations` es `true`, Todas las ubicaciones ofrece crear ubicaciones, cada ubicación permite crear salas y las tarjetas exponen edición y eliminación al pasar el puntero o recibir foco. Si la propiedad falta, vale `false` o no puede consultarse, esas acciones permanecen ocultas; la distribución y las camas siguen disponibles. Una ubicación con salas debe vaciar primero su jerarquía. Después de confirmar una eliminación, Next relee todas las ubicaciones y bloquea el `DELETE` si el nodo adquirió hijos. Antes de eliminar una sala también relee su layout y bloquea el `DELETE` si existe una cama `OCCUPIED`. Cada sala conserva la definición de distribución y la administración de camas.
 
 ## Navegación y reversión
 
