@@ -491,13 +491,15 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   });
   await page.goto("/bahmni/registration/patient/new");
   await expect(page.getByRole("heading", { name: "Nuevo paciente" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Etapas del registro del paciente" })).toBeVisible();
+  await expect(page.getByText("Identificación y datos personales", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Datos de identificación" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Información de dirección" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Guardar paciente traducido" })).toHaveCount(0);
   await expect(page.getByLabel("Fuente o prefijo del identificador", { exact: true })).toHaveValue("source-hcsba");
   await expect(page.getByLabel("Prefijo del identificador", { exact: true })).toHaveText("HCSBA");
   await page.getByRole("button", { name: "Generar identificador" }).click();
   await expect(page.getByLabel("Identificador", { exact: true })).toHaveValue("100");
-  await page.getByLabel("RUN", { exact: true }).fill("12.345.678-5");
-  await page.getByLabel("RUN", { exact: true }).press("Tab");
-  await expect(page.getByLabel("RUN", { exact: true })).toHaveValue("12345678-5");
   await expect(page.getByLabel("Fecha de nacimiento", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Hora de nacimiento", { exact: true })).toBeVisible();
   await page.getByLabel("Años", { exact: true }).pressSequentially("30");
@@ -506,6 +508,29 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await expect(page.getByLabel("Días", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Fecha de nacimiento", { exact: true })).not.toHaveValue("");
   await expect(page.getByRole("checkbox", { name: "Fecha estimada", exact: true })).toBeChecked();
+  await page.getByLabel("Nombres").fill("Paciente");
+  await page.getByLabel("Primer apellido").fill("Sintético");
+  await page.getByLabel("Segundo apellido").fill("EIS");
+  await page.getByRole("button", { name: "Abrir Género" }).click();
+  await page.getByRole("option", { name: "Femenino" }).click();
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  await expect(page.getByRole("heading", { name: "Información de dirección" })).toBeVisible();
+  await expect(page.getByLabel("Nombres")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Guardar paciente traducido" })).toHaveCount(0);
+  for (const label of ["País *", "Región *", "Provincia *", "Comuna *", "Tipo de vía", "Nombre de vía", "Número", "Complemento", "Código postal"]) {
+    await expect(page.getByLabel(label, { exact: true })).toBeVisible();
+  }
+  await page.getByLabel("Nombre de vía", { exact: true }).fill("Calle de prueba");
+  await page.getByRole("button", { name: "Anterior" }).click();
+  await expect(page.getByLabel("Nombres")).toBeVisible();
+  await expect(page.getByLabel("Nombres")).toHaveValue("Paciente");
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  await expect(page.getByLabel("Nombre de vía", { exact: true })).toHaveValue("Calle de prueba");
+  await page.getByRole("button", { name: "Siguiente" }).click();
+  await expect(page.getByRole("heading", { name: "Información adicional" })).toBeVisible();
+  await page.getByLabel("RUN", { exact: true }).fill("12.345.678-5");
+  await page.getByLabel("RUN", { exact: true }).press("Tab");
+  await expect(page.getByLabel("RUN", { exact: true })).toHaveValue("12345678-5");
   await expect(page.locator(".actions .p-dropdown-label")).toHaveText("Tarjeta local HCSBA");
   await expect(page.getByRole("button", { name: "Guardar paciente traducido" })).toBeVisible();
   await expect(page.getByText("Otra información", { exact: true })).toBeVisible();
@@ -515,16 +540,8 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await expect(page.getByLabel("email")).toBeVisible();
   await page.getByLabel("email").fill("persona@hcsba.cl");
   await expect(page.getByLabel("email")).toBeVisible();
-  for (const label of ["País *", "Región *", "Provincia *", "Comuna *", "Tipo de vía", "Nombre de vía", "Número", "Complemento", "Código postal"]) {
-    await expect(page.getByLabel(label, { exact: true })).toBeVisible();
-  }
   await expect(page.getByText("Relaciones", { exact: true })).toBeVisible();
   await expect(page.getByTitle("Cambiar ubicación")).toHaveText("HCSBA");
-  await page.getByLabel("Nombres").fill("Paciente");
-  await page.getByLabel("Primer apellido").fill("Sintético");
-  await page.getByLabel("Segundo apellido").fill("EIS");
-  await page.getByRole("button", { name: "Abrir Género" }).click();
-  await page.getByRole("option", { name: "Femenino" }).click();
   await page.getByRole("heading", { name: "Nuevo paciente" }).click();
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);

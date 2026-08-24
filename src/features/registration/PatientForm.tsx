@@ -8,8 +8,9 @@ import { Checkbox } from "primereact/checkbox";
 import { Dropdown } from "primereact/dropdown";
 import { InputNumber } from "primereact/inputnumber";
 import { InputText } from "primereact/inputtext";
-import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
-import { useForm, useWatch } from "react-hook-form";
+import { Steps } from "primereact/steps";
+import { useEffect, useMemo, useState, type FormEvent, type PropsWithChildren } from "react";
+import { useForm, useWatch, type FieldErrors } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
 import type { IdentifierMetadataConfig, RegistrationConfig } from "@/config-compat/registrationConfig";
@@ -22,6 +23,7 @@ import { ageFromBirthDate, birthDateFromAge, type PatientAge } from "./age";
 import { buildAddressFieldLayout, type AddressKey } from "./addressFieldLayout";
 import { composeIdentifier, identifierSuffix, selectIdentifierSource, validateConfiguredIdentifier } from "./identifierConfig";
 import { buildPatientAttributeLayout, patientAttributeTranslationKey } from "./patientAttributeLayout";
+import { LAST_PATIENT_FORM_STEP, PATIENT_FORM_STEPS, patientFormStepForErrorKeys } from "./patientFormSteps";
 import { PatientPrint } from "./PatientPrint";
 import { useRegistrationTranslations } from "./useRegistrationTranslations";
 import type { RegistrationSubmitIntent, RegistrationWorkflowAction } from "./workflow";
@@ -209,6 +211,7 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
   const [saveError, setSaveError] = useState("");
   const [configuredErrors, setConfiguredErrors] = useState<Record<string, string>>({});
   const [removedRelationships, setRemovedRelationships] = useState<PatientFormValues["relationships"]>([]);
+  const [activeStep, setActiveStep] = useState(0);
   const form = useForm<PatientFormValues>({ resolver: zodResolver(schema), defaultValues: { givenName: "", familyName: "", gender: "", relationships: [], dead: false, birthDateEstimated: false, ...initial, ageYears: initial?.ageYears ?? initialAge?.years, ageMonths: initial?.ageMonths ?? initialAge?.months, ageDays: initial?.ageDays ?? initialAge?.days, identifierTypeUuid: initial?.identifierTypeUuid || initialIdentifierType?.uuid, identifierSourceUuid: initial?.identifierSourceUuid || initialIdentifierSource?.uuid, identifierPrefix: initial?.identifierPrefix || initialPrefix, identifierSuffix: initial?.identifierSuffix ?? identifierSuffix(initial?.identifier, initialPrefix), additionalIdentifiers: initialAdditionalIdentifiers, attributes: { ...defaultAttributes, ...initial?.attributes } } });
   const { register, control, getValues, handleSubmit, setValue, formState: { errors, isSubmitting } } = form;
   const patient = useWatch({ control }) as PatientFormValues;
@@ -287,8 +290,10 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
         else if (metadata.validFrom && metadata.validTo && metadata.validFrom > metadata.validTo) messages[`additionalIdentifiers.${index}`] = "El inicio de vigencia no puede ser posterior al vencimiento";
       }
     }
+    const errorKeys = Object.keys(messages);
     setConfiguredErrors(messages);
-    return Object.keys(messages).length === 0;
+    if (errorKeys.length > 0) setActiveStep(patientFormStepForErrorKeys(errorKeys));
+    return errorKeys.length === 0;
   };
   const submit = async (values: PatientFormValues, jumpAccepted: boolean, intent: RegistrationSubmitIntent) => {
     setSaveError("");
@@ -373,12 +378,33 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
     visitType: workflow.action.intent.kind === "startVisit" ? workflow.action.intent.visitTypeName : undefined,
   })) : "";
 
-  return <form onSubmit={handleSubmit((values) => submit(values, false, { kind: "save" }))}>
+  const handleInvalidForm = (validationErrors: FieldErrors<PatientFormValues>) => {
+    setActiveStep(patientFormStepForErrorKeys(Object.keys(validationErrors)));
+  };
+  const requestSave = (intent: RegistrationSubmitIntent, jumpAccepted = false) => {
+    void handleSubmit((values) => submit(values, jumpAccepted, intent), handleInvalidForm)();
+  };
+  const changeStep = (nextStep: number) => setActiveStep(Math.max(0, Math.min(LAST_PATIENT_FORM_STEP, nextStep)));
+  const handleFormSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (activeStep < LAST_PATIENT_FORM_STEP) {
+      changeStep(activeStep + 1);
+      return;
+    }
+    requestSave({ kind: "save" });
+  };
+
+  return <form onSubmit={handleFormSubmit}>
     {saveError && <div role="alert" className="error-banner">{saveError}</div>}
-    <section className="panel patient-profile-panel">
-      <div className="patient-profile-heading"><div><span className="patient-profile-kicker">{initial?.uuid ? "Paciente registrado" : "Nuevo paciente"}</span><strong>{patient.identifier || "Identificador por asignar"}</strong></div><div className="patient-photo-control">{patient.image && <Image unoptimized src={patient.image} alt="Fotografía del paciente" width={76} height={76} />}<label className="patient-photo-button">Foto<input aria-label="Fotografía del paciente" type="file" accept="image/*" capture="user" onChange={(event) => fileToImage(event.target.files?.[0])} /></label></div></div>
-      <h2 className="patient-section-title">Datos de identificación</h2>
-      <div className="patient-profile-grid">
+    <nav className="panel patient-form-steps" aria-label="Etapas del registro del paciente">
+      <Steps model={PATIENT_FORM_STEPS} activeIndex={activeStep} readOnly={false} onSelect={(event) => changeStep(event.index)} pt={{ menu: { "aria-label": "Etapas del registro del paciente" } }} />
+    </nav>
+
+    <div className="patient-form-stage" hidden={activeStep !== 0}>
+      <section className="panel patient-profile-panel" aria-labelledby="patient-identification-title">
+        <div className="patient-profile-heading"><div><span className="patient-profile-kicker">{initial?.uuid ? "Paciente registrado" : "Nuevo paciente"}</span><strong>{patient.identifier || "Identificador por asignar"}</strong></div><div className="patient-photo-control">{patient.image && <Image unoptimized src={patient.image} alt="Fotografía del paciente" width={76} height={76} />}<label className="patient-photo-button">Foto<input aria-label="Fotografía del paciente" type="file" accept="image/*" capture="user" onChange={(event) => fileToImage(event.target.files?.[0])} /></label></div></div>
+        <h2 id="patient-identification-title" className="patient-section-title">Datos de identificación</h2>
+        <div className="patient-profile-grid">
         <div className="field patient-name-group"><label>Nombre del paciente *</label><div className="patient-name-inputs"><InputText id="givenName" aria-label="Nombres" placeholder="Nombres" {...register("givenName")} />{config?.showMiddleName !== false && <InputText id="middleName" aria-label="Segundo nombre" placeholder="Segundo nombre" {...register("middleName")} />}{config?.showLastName !== false && <InputText id="familyName" aria-label="Primer apellido" placeholder="Primer apellido" {...register("familyName")} />}{config?.showSecondLastName && <InputText id="familyName2" aria-label="Segundo apellido" placeholder="Segundo apellido" {...register("familyName2")} />}</div><small className="field-error">{errors.givenName?.message ?? configuredErrors.givenName ?? errors.familyName?.message ?? configuredErrors.familyName ?? errors.familyName2?.message ?? configuredErrors.familyName2}</small></div>
         {attributeLayout.localNames.length === 3 && <div className="field patient-name-group"><label>Nombre social</label><div className="patient-name-inputs">{attributeLayout.localNames.map((attribute) => <InputText key={attribute.uuid} aria-label={translatedAttributeLabel(attribute)} placeholder={translatedAttributeLabel(attribute)} value={String(patient.attributes?.[attribute.uuid] ?? "")} onChange={(event) => setValue(`attributes.${attribute.uuid}`, event.target.value)} />)}</div></div>}
         <div className="field"><label htmlFor="gender">Género *</label><Dropdown inputId="gender" pt={dropdownA11y("Género")} value={patient.gender} options={[{ label: "Femenino", value: "F" }, { label: "Masculino", value: "M" }, { label: "Otro", value: "O" }, { label: "Desconocido", value: "U" }]} onChange={(event) => setValue("gender", String(event.value), { shouldValidate: true })} /><small className="field-error">{errors.gender?.message}</small></div>
@@ -388,23 +414,42 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
         <div className="field"><label htmlFor="identifierType">Tipo de identificador{selectedIdentifierType?.required ? " *" : ""}</label><Dropdown inputId="identifierType" pt={dropdownA11y("Tipo de identificador")} value={patient.identifierTypeUuid} options={identifierTypes} optionLabel="display" optionValue="uuid" onChange={(event) => changeIdentifierType(String(event.value))} /></div>
         {identifierSources.length > 1 && <div className="field"><label htmlFor="identifierSource">Fuente / prefijo</label><Dropdown inputId="identifierSource" pt={dropdownA11y("Fuente o prefijo del identificador")} value={patient.identifierSourceUuid} options={identifierSources} optionLabel="prefix" optionValue="uuid" onChange={(event) => changeIdentifierSource(String(event.value))} />{configuredDefaultPrefixMissing && <small className="field-warning">El prefijo predeterminado {config?.defaultIdentifierPrefix} no existe entre las fuentes de OpenMRS; se seleccionó {selectedIdentifierSource?.prefix ?? "la primera fuente disponible"}.</small>}</div>}
         <div className="field"><label htmlFor="identifier">Identificador</label><InputGroup>{selectedIdentifierSource?.prefix && <InputGroupAddon>{selectedIdentifierSource.prefix}</InputGroupAddon>}<InputText id="identifier" value={patient.identifierSuffix ?? ""} readOnly={config?.showEnterId === false} placeholder={selectedIdentifierType?.description ?? "Valor del identificador"} onChange={(event) => changeIdentifierSuffix(event.target.value)} /><Button type="button" icon="pi pi-refresh" aria-label="Generar identificador" onClick={async () => { try { const generatedIdentifier = await onGenerateId(selectedIdentifierSource?.prefix ?? selectedIdentifierSource?.name); setValue("identifier", generatedIdentifier); setValue("identifierSuffix", identifierSuffix(generatedIdentifier, selectedIdentifierSource?.prefix)); } catch { setSaveError("No fue posible generar el identificador."); } }} /></InputGroup>{configuredErrors.identifier && <small className="field-error">{configuredErrors.identifier}</small>}</div>
-      </div>
-      <h2 className="patient-section-title">Información de dirección</h2>
-      <div className="patient-profile-grid">{addressFieldLayout.map((level) => { const field: AddressKey = level.addressField; const props = { level, value: String(patient[field] ?? ""), error: configuredErrors[field], onChange: (value: string) => setValue(field, value) }; return level.strictHierarchy ? <HierarchyAddressField key={field} {...props} onSelect={(entry) => applyHierarchy(field, entry)} /> : <PlainAddressField key={field} {...props} />; })}</div>
-      {(visibleAdditionalIdentifiers.length > 0 || onDemandIdentifierTypes.length > 0) && <><h2 className="patient-section-title">Identificadores adicionales</h2>{onDemandIdentifierTypes.length > 0 && <div className="field"><label htmlFor="addIdentifierType">Agregar tipo de identificador</label><Dropdown inputId="addIdentifierType" pt={dropdownA11y("Agregar tipo de identificador")} value={null} placeholder="Seleccione un tipo" options={onDemandIdentifierTypes} optionLabel="display" optionValue="uuid" onChange={(event) => { const type = extraTypes.find((item) => item.uuid === event.value); if (type) setValue("additionalIdentifiers", [...(getValues("additionalIdentifiers") ?? []), additionalValue(type)]); }} /></div>}<div className="patient-profile-grid">{visibleAdditionalIdentifiers.map(({ value: additional, index }) => { const type = identifierTypes.find((item) => item.uuid === additional.identifierTypeUuid); const typeName = type?.name ?? type?.display ?? ""; return type ? <AdditionalIdentifierField key={`${type.uuid}-${index}`} type={type} value={additional} metadataConfig={config?.identifierMetadata[typeName]} helpText={translatedHelp(config?.identifierHelpText[typeName])} error={configuredErrors[`additionalIdentifiers.${index}`]} onGenerate={onGenerateId} onChange={(value) => setValue(`additionalIdentifiers.${index}`, value)} onRemove={() => { const current = [...(getValues("additionalIdentifiers") ?? [])]; if (additional.uuid) current[index] = { ...additional, voided: true }; else current.splice(index, 1); setValue("additionalIdentifiers", current); }} /> : null; })}</div></>}
-      {attributeLayout.otherInformation.length > 0 && <><h2 className="patient-section-title">Otra información</h2><div className="patient-profile-grid">{attributeLayout.otherInformation.map((attribute) => <DynamicAttributeField key={attribute.uuid} attribute={attribute} label={translatedAttributeLabel(attribute)} value={patient.attributes?.[attribute.uuid]} requiredByConfig={attributeRequired(attribute)} helpText={translatedHelp(config?.fieldHelpText[attributeName(attribute)])} error={configuredErrors[attribute.uuid]} onChange={(value) => setValue(`attributes.${attribute.uuid}`, value)} />)}</div></>}
-    </section>
-    {attributeLayout.configuredSections.filter((section) => (section.config.title || section.config.translationKey) && (section.config.key !== "isapreInstitution" || isIsapre)).map((section) => { const hasValue = section.attributes.some((attribute) => patient.attributes?.[attribute.uuid] !== undefined && patient.attributes?.[attribute.uuid] !== ""); const title = section.config.translationKey ? plainTranslation(t(section.config.translationKey, { defaultValue: section.config.title ?? "Información Adicional del Paciente" })) : plainTranslation(t("REGISTRATION_TITLE_ADDITIONAL_PATIENT", { defaultValue: "Información Adicional del Paciente" })); return <CollapsiblePatientSection title={title} key={section.config.key} initiallyOpen={section.config.expanded || hasValue}><div className="patient-profile-grid">{section.attributes.map((attribute) => <DynamicAttributeField key={attribute.uuid} attribute={attribute} label={translatedAttributeLabel(attribute)} value={patient.attributes?.[attribute.uuid]} requiredByConfig={attributeRequired(attribute)} helpText={translatedHelp(config?.fieldHelpText[attributeName(attribute)])} error={configuredErrors[attribute.uuid]} onChange={(value) => setValue(`attributes.${attribute.uuid}`, value)} />)}</div></CollapsiblePatientSection>; })}
-    {relationshipTypes.length > 0 && <CollapsiblePatientSection title="Relaciones" initiallyOpen={relationships.length > 0}>{relationships.map((relationship, index) => <RelationshipRow key={`${index}-${relationship.relationshipTypeUuid}`} index={index} relationship={relationship} relationshipTypes={relationshipTypes} typeMap={config?.relationshipTypeMap ?? {}} onChange={(value) => setValue(`relationships.${index}`, value)} onRemove={() => { if (relationship.relationshipUuid) setRemovedRelationships((current) => [...current, { ...relationship, voided: true }]); setValue("relationships", relationships.filter((_, itemIndex) => itemIndex !== index)); }} />)}<Button type="button" text icon="pi pi-plus" label="Agregar relación" onClick={() => setValue("relationships", [...getValues("relationships"), { relationshipTypeUuid: "", personUuid: "", personDisplay: "" }])} /></CollapsiblePatientSection>}
-    <CollapsiblePatientSection title="Información de fallecimiento" initiallyOpen={patient.dead}><label htmlFor="dead"><Checkbox inputId="dead" checked={patient.dead ?? false} onChange={(event) => setValue("dead", Boolean(event.checked))} /> Paciente fallecido</label>{patient.dead && <div className="patient-profile-grid"><div className="field"><label htmlFor="deathDate">Fecha de fallecimiento</label><InputText id="deathDate" type="date" {...register("deathDate")} /></div><div className="field"><label htmlFor="causeOfDeathUuid">UUID causa de fallecimiento</label><InputText id="causeOfDeathUuid" {...register("causeOfDeathUuid")} /></div></div>}</CollapsiblePatientSection>
-    {duplicate && <div className="error-banner" role="alert">El servidor detectó una posible duplicación. Revise nombre, fecha de nacimiento e identificador antes de confirmar. <Button type="button" severity="danger" label="Confirmar duplicado" onClick={() => void handleSubmit((values) => submit(values, true, duplicateIntent))()} /></div>}
-    <div className="actions">
+        </div>
+      </section>
+    </div>
+
+    <div className="patient-form-stage" hidden={activeStep !== 1}>
+      <section className="panel patient-profile-panel" aria-labelledby="patient-address-title">
+        <h2 id="patient-address-title" className="patient-section-title">Información de dirección</h2>
+        <p className="patient-step-help"><i className="pi pi-info-circle" aria-hidden="true" /> Complete la dirección siguiendo el orden de la jerarquía configurada.</p>
+        <div className="patient-profile-grid">{addressFieldLayout.map((level) => { const field: AddressKey = level.addressField; const props = { level, value: String(patient[field] ?? ""), error: configuredErrors[field], onChange: (value: string) => setValue(field, value) }; return level.strictHierarchy ? <HierarchyAddressField key={field} {...props} onSelect={(entry) => applyHierarchy(field, entry)} /> : <PlainAddressField key={field} {...props} />; })}</div>
+      </section>
+    </div>
+
+    <div className="patient-form-stage patient-additional-stage" hidden={activeStep !== LAST_PATIENT_FORM_STEP}>
+      <section className="panel patient-profile-panel" aria-labelledby="patient-additional-title">
+        <h2 id="patient-additional-title" className="patient-section-title">Información adicional</h2>
+        {(visibleAdditionalIdentifiers.length > 0 || onDemandIdentifierTypes.length > 0) && <><h3 className="patient-section-title">Identificadores adicionales</h3>{onDemandIdentifierTypes.length > 0 && <div className="field"><label htmlFor="addIdentifierType">Agregar tipo de identificador</label><Dropdown inputId="addIdentifierType" pt={dropdownA11y("Agregar tipo de identificador")} value={null} placeholder="Seleccione un tipo" options={onDemandIdentifierTypes} optionLabel="display" optionValue="uuid" onChange={(event) => { const type = extraTypes.find((item) => item.uuid === event.value); if (type) setValue("additionalIdentifiers", [...(getValues("additionalIdentifiers") ?? []), additionalValue(type)]); }} /></div>}<div className="patient-profile-grid">{visibleAdditionalIdentifiers.map(({ value: additional, index }) => { const type = identifierTypes.find((item) => item.uuid === additional.identifierTypeUuid); const typeName = type?.name ?? type?.display ?? ""; return type ? <AdditionalIdentifierField key={`${type.uuid}-${index}`} type={type} value={additional} metadataConfig={config?.identifierMetadata[typeName]} helpText={translatedHelp(config?.identifierHelpText[typeName])} error={configuredErrors[`additionalIdentifiers.${index}`]} onGenerate={onGenerateId} onChange={(value) => setValue(`additionalIdentifiers.${index}`, value)} onRemove={() => { const current = [...(getValues("additionalIdentifiers") ?? [])]; if (additional.uuid) current[index] = { ...additional, voided: true }; else current.splice(index, 1); setValue("additionalIdentifiers", current); }} /> : null; })}</div></>}
+        {attributeLayout.otherInformation.length > 0 && <><h3 className="patient-section-title">Otra información</h3><div className="patient-profile-grid">{attributeLayout.otherInformation.map((attribute) => <DynamicAttributeField key={attribute.uuid} attribute={attribute} label={translatedAttributeLabel(attribute)} value={patient.attributes?.[attribute.uuid]} requiredByConfig={attributeRequired(attribute)} helpText={translatedHelp(config?.fieldHelpText[attributeName(attribute)])} error={configuredErrors[attribute.uuid]} onChange={(value) => setValue(`attributes.${attribute.uuid}`, value)} />)}</div></>}
+      </section>
+      {attributeLayout.configuredSections.filter((section) => (section.config.title || section.config.translationKey) && (section.config.key !== "isapreInstitution" || isIsapre)).map((section) => { const hasValue = section.attributes.some((attribute) => patient.attributes?.[attribute.uuid] !== undefined && patient.attributes?.[attribute.uuid] !== ""); const title = section.config.translationKey ? plainTranslation(t(section.config.translationKey, { defaultValue: section.config.title ?? "Información Adicional del Paciente" })) : plainTranslation(t("REGISTRATION_TITLE_ADDITIONAL_PATIENT", { defaultValue: "Información Adicional del Paciente" })); return <CollapsiblePatientSection title={title} key={section.config.key} initiallyOpen={section.config.expanded || hasValue}><div className="patient-profile-grid">{section.attributes.map((attribute) => <DynamicAttributeField key={attribute.uuid} attribute={attribute} label={translatedAttributeLabel(attribute)} value={patient.attributes?.[attribute.uuid]} requiredByConfig={attributeRequired(attribute)} helpText={translatedHelp(config?.fieldHelpText[attributeName(attribute)])} error={configuredErrors[attribute.uuid]} onChange={(value) => setValue(`attributes.${attribute.uuid}`, value)} />)}</div></CollapsiblePatientSection>; })}
+      {relationshipTypes.length > 0 && <CollapsiblePatientSection title="Relaciones" initiallyOpen={relationships.length > 0}>{relationships.map((relationship, index) => <RelationshipRow key={`${index}-${relationship.relationshipTypeUuid}`} index={index} relationship={relationship} relationshipTypes={relationshipTypes} typeMap={config?.relationshipTypeMap ?? {}} onChange={(value) => setValue(`relationships.${index}`, value)} onRemove={() => { if (relationship.relationshipUuid) setRemovedRelationships((current) => [...current, { ...relationship, voided: true }]); setValue("relationships", relationships.filter((_, itemIndex) => itemIndex !== index)); }} />)}<Button type="button" text icon="pi pi-plus" label="Agregar relación" onClick={() => setValue("relationships", [...getValues("relationships"), { relationshipTypeUuid: "", personUuid: "", personDisplay: "" }])} /></CollapsiblePatientSection>}
+      <CollapsiblePatientSection title="Información de fallecimiento" initiallyOpen={patient.dead}><label htmlFor="dead"><Checkbox inputId="dead" checked={patient.dead ?? false} onChange={(event) => setValue("dead", Boolean(event.checked))} /> Paciente fallecido</label>{patient.dead && <div className="patient-profile-grid"><div className="field"><label htmlFor="deathDate">Fecha de fallecimiento</label><InputText id="deathDate" type="date" {...register("deathDate")} /></div><div className="field"><label htmlFor="causeOfDeathUuid">UUID causa de fallecimiento</label><InputText id="causeOfDeathUuid" {...register("causeOfDeathUuid")} /></div></div>}</CollapsiblePatientSection>
+    </div>
+
+    {duplicate && <div className="error-banner" role="alert">El servidor detectó una posible duplicación. Revise nombre, fecha de nacimiento e identificador antes de confirmar. <Button type="button" severity="danger" label="Confirmar duplicado" onClick={() => requestSave(duplicateIntent, true)} /></div>}
+
+    {activeStep < LAST_PATIENT_FORM_STEP ? <div className="actions patient-wizard-actions">
+      {activeStep > 0 && <Button type="button" outlined label="Anterior" icon="pi pi-arrow-left" onClick={() => changeStep(activeStep - 1)} />}
+      <Button type="button" className="patient-wizard-next" label="Siguiente" icon="pi pi-arrow-right" iconPos="right" onClick={() => changeStep(activeStep + 1)} />
+    </div> : <div className="actions">
+      <Button type="button" outlined label="Anterior" icon="pi pi-arrow-left" onClick={() => changeStep(activeStep - 1)} />
       <Dropdown aria-label="Formato de impresión" pt={dropdownA11y("Formato de impresión")} value={template} options={translatedPrintOptions} optionLabel="label" optionValue="templateUrl" onChange={(event) => setTemplate(String(event.value))} />
       <Button type="button" outlined label={plainTranslation(t("registrationPrintAction", { defaultValue: "Imprimir" }))} icon="pi pi-print" onClick={() => { setShowPrint(true); window.setTimeout(() => window.print(), 50); }} />
       {workflow?.action?.intent.kind === "startVisit" && workflow.visitTypes.length > 1 && <Dropdown aria-label="Tipo de visita" pt={dropdownA11y("Tipo de visita")} value={workflow.selectedVisitTypeUuid} options={workflow.visitTypes} optionLabel="display" optionValue="uuid" onChange={(event) => workflow.setSelectedVisitTypeUuid(String(event.value))} />}
-      {workflow?.action && <Button type="button" label={workflowLabel} icon={workflow.action.icon} loading={isSubmitting || workflow.loading} disabled={workflow.action.disabled} onClick={() => void handleSubmit((values) => submit(values, false, workflow.action!.intent))()} />}
-      <Button type="button" label={plainTranslation(t("REGISTRATION_LABEL_SAVE", { defaultValue: t("registrationSaveAction", { defaultValue: "Guardar paciente" }) }))} icon="pi pi-save" loading={isSubmitting} onClick={() => void handleSubmit((values) => submit(values, false, { kind: "save" }))()} />
-    </div>
+      {workflow?.action && <Button type="button" label={workflowLabel} icon={workflow.action.icon} loading={isSubmitting || workflow.loading} disabled={workflow.action.disabled} onClick={() => requestSave(workflow.action!.intent)} />}
+      <Button type="button" label={plainTranslation(t("REGISTRATION_LABEL_SAVE", { defaultValue: t("registrationSaveAction", { defaultValue: "Guardar paciente" }) }))} icon="pi pi-save" loading={isSubmitting} onClick={() => requestSave({ kind: "save" })} />
+    </div>}
     {showPrint && <PatientPrint templateUrl={template} patient={patient} />}
   </form>;
 }
