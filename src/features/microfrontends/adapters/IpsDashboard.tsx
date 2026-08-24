@@ -114,13 +114,14 @@ export function IpsDashboard({ hostData, hostApi, tx }: BahmniMfeProps) {
   const runtime = useQuery({ queryKey: ["runtime-config"], queryFn: getRuntimeConfig, staleTime: 60_000 });
   const integration = runtime.data?.integrations.ips;
   const configured = Boolean(integration?.enabled && integration.regionalBase);
+  const patientRun = hostData.patient.runIdentifier?.trim();
   const normalizedHc1 = normalizeHc1(hc1Input);
   const localIcvp = useMemo(() => {
     if (!isIcvp || !/^HC1:/i.test(normalizedHc1)) return undefined;
     try { return { preview: decodeIcvpPreview(normalizedHc1) }; }
     catch (error) { return { error: error instanceof Error ? error.message : "No fue posible decodificar el QR." }; }
   }, [isIcvp, normalizedHc1]);
-  const documents = useQuery({ queryKey: ["clinical", "ips", hostData.section.type, hostData.patient.identifier, integration?.regionalBase], enabled: configured && Boolean(hostData.patient.identifier), queryFn: () => searchIpsDocuments(integration!.regionalBase, hostData.patient.identifier) });
+  const documents = useQuery({ queryKey: ["clinical", "ips", hostData.section.type, patientRun, integration?.regionalBase], enabled: configured && Boolean(patientRun), queryFn: () => searchIpsDocuments(integration!.regionalBase, patientRun!) });
 
   const openDocument = useMutation({
     mutationFn: async (document: IpsDocumentReference) => {
@@ -146,10 +147,11 @@ export function IpsDashboard({ hostData, hostApi, tx }: BahmniMfeProps) {
 
   return <div className="ips-dashboard">
     {mutationError && <p role="alert" className="error-banner">{mutationError instanceof Error ? mutationError.message : "La operación IPS no pudo completarse."}</p>}
+    {!patientRun && <p role="alert" className="warning-banner">El paciente no tiene un RUN registrado. La consulta de documentos IPS queda deshabilitada para evitar buscar con el identificador clínico HCSBA.</p>}
     {allowResolve && <div className="dashboard-inline-actions"><Button outlined icon="pi pi-qrcode" label={tx("READ_VHL_DOCUMENT", "Leer QR / HC1")} disabled={!integration.vhlResolvePath} onClick={() => { setReaderOpen(true); setResolvedFiles([]); }} /></div>}
     {documents.isLoading && <p role="status">Consultando documentos…</p>}
     {documents.isError && <div role="alert" className="error-banner">No fue posible consultar documentos IPS. <Button text label="Reintentar" onClick={() => void documents.refetch()} /></div>}
-    {!documents.isLoading && !documents.isError && !documents.data?.length && <p className="muted-text">No hay documentos registrados para este paciente.</p>}
+    {patientRun && !documents.isLoading && !documents.isError && !documents.data?.length && <p className="muted-text">No hay documentos registrados para este paciente.</p>}
     {Boolean(documents.data?.length) && <div className="dashboard-matrix-scroll"><table className="dashboard-matrix"><thead><tr><th>Documento</th><th>Fecha</th><th>Autor</th><th>Estado</th><th>Acción</th></tr></thead><tbody>{documents.data?.map((document, index) => <tr key={document.id ?? index}><td>{ipsDocumentTitle(document)}</td><td>{ipsDocumentTimestamp(document) ? new Intl.DateTimeFormat(hostData.locale, { dateStyle: "medium", timeStyle: "short" }).format(ipsDocumentTimestamp(document)) : "—"}</td><td>{document.author?.map((author) => author.display).filter(Boolean).join(", ") || "—"}</td><td>{document.status ?? "—"}</td><td><Button text icon="pi pi-eye" label="Ver" loading={openDocument.isPending && openDocument.variables === document} onClick={() => openDocument.mutate(document)} /></td></tr>)}</tbody></table></div>}
 
     <Dialog visible={readerOpen} modal header={tx("READ_VHL_DOCUMENT", "Leer QR / HC1")} className="ips-reader-dialog" onHide={() => setReaderOpen(false)}>

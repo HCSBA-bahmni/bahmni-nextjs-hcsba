@@ -23,7 +23,7 @@ function PatientRows({ patients }: { patients: PatientSearchResult[] }) {
   }
 
   return <div className="clinical-patient-results">{patients.map((patient) => {
-    const name = String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
+    const name = String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
     return <Link key={patient.uuid} href={`/bedmanagement/patient/${encodeURIComponent(patient.uuid)}`}>
       <span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span>
       <span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span>

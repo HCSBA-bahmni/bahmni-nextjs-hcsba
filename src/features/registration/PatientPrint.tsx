@@ -15,11 +15,11 @@ export function resolvePrintTemplate(templateUrl: string) {
 }
 
 function FullName({ patient }: { patient: PatientFormValues }) {
-  return <>{[patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ")}</>;
+  return <>{[patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" ")}</>;
 }
 
 function LocalCard({ patient }: { patient: PatientFormValues }) {
-  return <section className="print-sheet"><h2>Hospital Clínico San Borja Arriarán</h2><h1><FullName patient={patient} /></h1><p>RUN: {patient.identifier}</p><p>Fecha de nacimiento: {patient.birthDate}</p></section>;
+  return <section className="print-sheet"><h2>Hospital Clínico San Borja Arriarán</h2><h1><FullName patient={patient} /></h1><p>Identificador clínico: {patient.identifier}</p><p>Fecha de nacimiento: {patient.birthDate}</p></section>;
 }
 
 function StandardCard({ patient }: { patient: PatientFormValues }) {

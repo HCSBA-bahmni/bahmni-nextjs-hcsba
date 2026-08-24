@@ -2,6 +2,7 @@ export interface ClinicalPatientContext {
   uuid: string;
   name: string;
   identifier: string;
+  runIdentifier?: string;
   gender: string;
   birthDate?: string;
   birthDateEstimated?: boolean;
@@ -24,7 +25,11 @@ export function toClinicalPatientContext(profile: Record<string, unknown>, uuid:
   const person = record(patient.person ?? profile.person ?? patient);
   const name = records(person.names)[0] ?? {};
   const identifiers = records(patient.identifiers);
-  const identifier = identifiers[0] ?? {};
+  const identifier = identifiers.find((item) => item.preferred === true) ?? identifiers[0] ?? {};
+  const runIdentifier = identifiers.find((item) => {
+    const type = record(item.identifierType);
+    return String(type.name ?? type.display ?? "").trim().toUpperCase() === "RUN";
+  });
   const address = records(person.addresses)[0] ?? {};
   const attributes = records(person.attributes).flatMap((attribute) => {
     const type = record(attribute.attributeType);
@@ -37,7 +42,7 @@ export function toClinicalPatientContext(profile: Record<string, unknown>, uuid:
       value: String(display),
     }];
   });
-  const displayName = String(name.display ?? [name.givenName, name.middleName, name.familyName].filter(Boolean).join(" "));
+  const displayName = String(name.display ?? [name.givenName, name.middleName, name.familyName, name.familyName2].filter(Boolean).join(" "));
   const displayAddress = [address.address1, address.address2, address.cityVillage, address.countyDistrict].filter(Boolean).join(", ");
   const relationships = records(profile.relationships).flatMap((relationship) => {
     const personA = record(relationship.personA);
@@ -59,6 +64,7 @@ export function toClinicalPatientContext(profile: Record<string, unknown>, uuid:
     uuid,
     name: displayName,
     identifier: String(identifier.identifier ?? ""),
+    runIdentifier: typeof runIdentifier?.identifier === "string" ? runIdentifier.identifier : undefined,
     gender: String(person.gender ?? ""),
     birthDate: typeof person.birthdate === "string" ? person.birthdate : undefined,
     birthDateEstimated: person.birthdateEstimated === true,
@@ -70,7 +76,7 @@ export function toClinicalPatientContext(profile: Record<string, unknown>, uuid:
     image: `/openmrs/ws/rest/v1/patientImage?patientUuid=${encodeURIComponent(uuid)}`,
     bloodGroup,
     attributes,
-    additionalIdentifiers: identifiers.slice(1).flatMap((additionalIdentifier) => {
+    additionalIdentifiers: identifiers.filter((item) => item !== identifier).flatMap((additionalIdentifier) => {
       const type = record(additionalIdentifier.identifierType);
       const value = additionalIdentifier.identifier;
       return value === undefined || value === null || value === "" ? [] : [{

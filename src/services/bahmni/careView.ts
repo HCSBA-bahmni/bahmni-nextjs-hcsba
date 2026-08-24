@@ -69,7 +69,7 @@ export function normalizeCareViewPatient(value: unknown): CareViewPatient {
   const visit = object(source.visit ?? source.visitDetails);
   const name = object(person.preferredName ?? patient.preferredName);
   const identifiers = Array.isArray(patient.identifiers) ? patient.identifiers.map(object) : [];
-  const composedName = [name.givenName, name.middleName, name.familyName]
+  const composedName = [name.givenName, name.middleName, name.familyName, name.familyName2]
     .filter((part): part is string => typeof part === "string" && Boolean(part))
     .join(" ");
   const careTeam = object(source.careTeam ?? source.careTeamDetails);

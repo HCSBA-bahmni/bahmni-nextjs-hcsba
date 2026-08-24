@@ -40,7 +40,7 @@ function occupant(value: unknown): BedOccupant {
   const person = object(source.person);
   const preferredName = object(person.preferredName);
   const names = Array.isArray(person.names) ? object(person.names[0]) : {};
-  const namesDisplay = [names.givenName, names.middleName, names.familyName].filter((part): part is string => typeof part === "string" && Boolean(part)).join(" ");
+  const namesDisplay = [names.givenName, names.middleName, names.familyName, names.familyName2].filter((part): part is string => typeof part === "string" && Boolean(part)).join(" ");
   const personName = text(person.display)
     ?? text(preferredName.display)
     ?? (namesDisplay || undefined);

@@ -36,7 +36,7 @@ function allSearchFilter(config: Record<string, unknown> | undefined): { attrNam
 function PatientResults({ tab, patients }: { tab: ClinicalPatientSearchTab; patients: PatientSearchResult[] }) {
   if (patients.length === 0) return <div className="clinical-search-empty"><i className="pi pi-user-minus" aria-hidden="true" /><strong>Sin pacientes encontrados</strong><span>No hay pacientes que coincidan con este criterio.</span></div>;
   return <div className="clinical-patient-results">{patients.map((patient) => {
-    const name = String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
+    const name = String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
     return <Link key={patient.uuid} href={clinicalPatientDestination(tab, patient)}>
       <span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span>
       <span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span>

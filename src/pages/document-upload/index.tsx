@@ -141,7 +141,7 @@ function patientSummary(profile: Record<string, unknown>, uuid: string) {
   const identifiers = records(patient.identifiers);
   const identifier = identifiers.find((item) => item.preferred === true) ?? identifiers[0] ?? {};
   const displayName = text(preferredName.display)
-    ?? [preferredName.givenName, preferredName.middleName, preferredName.familyName].map(text).filter(Boolean).join(" ")
+    ?? [preferredName.givenName, preferredName.middleName, preferredName.familyName, preferredName.familyName2].map(text).filter(Boolean).join(" ")
     ?? text(person.display)
     ?? "Paciente";
   const birthdate = text(person.birthdate);
@@ -261,7 +261,7 @@ function DocumentUploadModuleNavigation({ activeMode, patientUuid }: { activeMod
 function PatientResults({ tab, patients, encounterType, topLevelConcept, defaultOption }: { tab: DocumentUploadSearchTab; patients: PatientSearchResult[]; encounterType: string; topLevelConcept: string; defaultOption?: string }) {
   if (patients.length === 0) return <div className="clinical-search-empty"><i className="pi pi-user-minus" aria-hidden="true" /><strong>Sin pacientes encontrados</strong><span>No hay pacientes que coincidan con este criterio.</span></div>;
   return <div className="clinical-patient-results">{patients.map((patient) => {
-    const name = String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
+    const name = String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
     return <Link key={patient.uuid} href={documentUploadPatientDestination(tab, patient, { encounterType, topLevelConcept, defaultOption })}>
       <span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span>
       <span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span>

@@ -17,7 +17,7 @@ export function legacyProgramPatientUrl(patientUuid: string): string {
 }
 
 function patientName(patient: PatientSearchResult): string {
-  return String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
+  return String(patient.name ?? ([patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" ") || patient.identifier || "Paciente"));
 }
 
 function ProgramPatientResults({ patients }: { patients: PatientSearchResult[] }) {

@@ -42,7 +42,7 @@ export function filterDocumentUploadPatients(patients: PatientSearchResult[], qu
   const term = query.trim().toLocaleLowerCase();
   if (!term) return patients;
   return patients.filter((patient) => {
-    const name = String(patient.name ?? [patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" "));
+    const name = String(patient.name ?? [patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" "));
     return [patient.display, name, patient.identifier].some((value) => String(value ?? "").toLocaleLowerCase().includes(term));
   });
 }

@@ -53,7 +53,7 @@ export function parseClinicalPatientSearchTabs(extensions: AppExtension[], user:
 
 export function normalizeClinicalPatient(raw: Record<string, unknown>, searchColumns: string[] = ["identifier", "name"]): PatientSearchResult {
   const patient = normalizePatientSearchResult(raw);
-  const name = String(raw.name ?? [patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ")).trim();
+  const name = String(raw.name ?? [patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" ")).trim();
   const display = searchColumns.map((column) => column === "name" ? name : String(raw[column] ?? patient[column] ?? "")).join(" - ");
   return { ...patient, name, display };
 }

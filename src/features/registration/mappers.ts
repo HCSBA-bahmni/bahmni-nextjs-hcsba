@@ -50,7 +50,15 @@ export function toPatientProfilePayload(values: PatientFormValues): PatientProfi
   });
   const person = compact({
     uuid: values.uuid,
-    names: [{ ...(values.nameUuid ? { uuid: values.nameUuid } : {}), givenName: values.givenName, middleName: values.middleName, familyName: values.familyName, display: `${values.givenName}${values.familyName ? ` ${values.familyName}` : ""}`, preferred: Boolean(values.uuid) }],
+    names: [{
+      ...(values.nameUuid ? { uuid: values.nameUuid } : {}),
+      givenName: values.givenName,
+      middleName: values.middleName,
+      familyName: values.familyName,
+      familyName2: values.familyName2,
+      display: [values.givenName, values.middleName, values.familyName, values.familyName2].filter(Boolean).join(" "),
+      preferred: Boolean(values.uuid),
+    }],
     gender: values.gender,
     birthdate,
     birthdateEstimated: values.birthDateEstimated ?? (!values.birthDate && hasEstimatedAge),

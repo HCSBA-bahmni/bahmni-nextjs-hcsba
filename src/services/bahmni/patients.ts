@@ -36,6 +36,7 @@ export function normalizePatientSearchResult(raw: Record<string, unknown>): Pati
     givenName: String(raw.givenName ?? name.shift() ?? ""),
     middleName: typeof raw.middleName === "string" ? raw.middleName : undefined,
     familyName: String(raw.familyName ?? name.join(" ") ?? ""),
+    familyName2: typeof raw.familyName2 === "string" ? raw.familyName2 : undefined,
     gender: typeof raw.gender === "string" ? raw.gender : undefined,
     age: typeof raw.age === "number" || typeof raw.age === "string" ? raw.age : undefined,
     birthDate: typeof raw.birthDate === "string" ? raw.birthDate : typeof raw.birthdate === "string" ? raw.birthdate : undefined,

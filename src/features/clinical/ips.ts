@@ -38,7 +38,7 @@ async function requestJson(url: string, init?: RequestInit): Promise<unknown> {
 }
 
 export async function searchIpsDocuments(regionalBase: string, identifier: string): Promise<IpsDocumentReference[]> {
-  const normalized = identifier.trim().replace(/^RUN\*/i, "");
+  const normalized = identifier.trim();
   if (!normalized) return [];
   let best: IpsDocumentReference[] = [];
   let previousCount = -1;

@@ -77,9 +77,10 @@ function patientSummary(profile: Record<string, unknown>) {
   const patient = (profile.patient ?? profile) as Record<string, unknown>;
   const person = (patient.person ?? profile.person ?? patient) as Record<string, unknown>;
   const name = ((person.names as Array<Record<string, unknown>> | undefined) ?? [])[0] ?? {};
-  const identifier = ((patient.identifiers as Array<Record<string, unknown>> | undefined) ?? [])[0] ?? {};
+  const identifiers = (patient.identifiers as Array<Record<string, unknown>> | undefined) ?? [];
+  const identifier = identifiers.find((item) => item.preferred === true) ?? identifiers[0] ?? {};
   return {
-    name: String(name.display ?? [name.givenName, name.middleName, name.familyName].filter(Boolean).join(" ")),
+    name: String(name.display ?? [name.givenName, name.middleName, name.familyName, name.familyName2].filter(Boolean).join(" ")),
     identifier: String(identifier.identifier ?? ""),
     identifierType: String((identifier.identifierType as { display?: string; name?: string } | undefined)?.display ?? (identifier.identifierType as { name?: string } | undefined)?.name ?? "Identificador"),
   };

@@ -4,7 +4,7 @@ import { generateIcvp, generateVhl, icvpArtifacts, resolveIpsAttachment, resolve
 afterEach(() => vi.unstubAllGlobals());
 
 describe("IPS same-origin contracts", () => {
-  it("uses ITI-67 with the legacy identifier normalization and stable sorting", async () => {
+  it("uses ITI-67 with the canonical RUN supplied by the patient context and stable sorting", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       resourceType: "Bundle", type: "searchset", link: [], entry: [
         { resource: { resourceType: "DocumentReference", id: "old", date: "2026-01-01T00:00:00Z", type: { text: "IPS antiguo" }, content: [] } },
@@ -13,11 +13,11 @@ describe("IPS same-origin contracts", () => {
     }), { status: 200, headers: { "content-type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const documents = await searchIpsDocuments("/openmrs/ips-mediator/regional", "RUN*SYN-IPS-001");
+    const documents = await searchIpsDocuments("/openmrs/ips-mediator/regional", "12345678-5");
 
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]), window.location.origin);
     expect(url.pathname).toBe("/openmrs/ips-mediator/regional/DocumentReference");
-    expect(url.searchParams.get("patient.identifier")).toBe("SYN-IPS-001");
+    expect(url.searchParams.get("patient.identifier")).toBe("12345678-5");
     expect(url.searchParams.get("_count")).toBe("50");
     expect(documents.map((document) => document.id)).toEqual(["new", "old"]);
   });

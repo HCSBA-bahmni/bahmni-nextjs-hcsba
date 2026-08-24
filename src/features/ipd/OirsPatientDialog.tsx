@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
 import { getOirsBedPatient, getOirsRelationships, ipdQueryKeys, saveOirsBedPatient } from "@/services/bahmni/ipd";
 
 interface Visitor { id?: string | number; doc: string; nombre: string; contacto: string; relationshipId?: number; indigenous: boolean }
-interface Props { visible: boolean; onHide(): void; baseUrl: string; patientUuid: string; visitUuid: string; bedNumber?: string; identifier: string; patientName: string; age: string }
+interface Props { visible: boolean; onHide(): void; baseUrl: string; patientUuid: string; visitUuid: string; bedNumber?: string; runIdentifier?: string; patientName: string; age: string }
 function object(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function emptyVisitor(): Visitor { return { doc: "", nombre: "", contacto: "", indigenous: false }; }
 
@@ -31,11 +31,12 @@ export function OirsPatientDialog(props: Props) {
   }, [existing.data, existing.isLoading, props.visible]);
   const mutation = useMutation({
     mutationFn: async () => {
+      if (!props.runIdentifier?.trim()) throw new Error("OIRS requiere un RUN registrado para el paciente.");
       const normalized = visitors.filter((visitor) => visitor.doc || visitor.nombre || visitor.contacto || visitor.relationshipId);
       if (normalized.some((visitor) => !visitor.doc || !visitor.nombre || !visitor.contacto || !visitor.relationshipId)) throw new Error("Cada visita requiere documento, nombre, contacto y parentesco.");
       const id = existing.data?.id;
       await saveOirsBedPatient(props.baseUrl, typeof id === "string" || typeof id === "number" ? id : undefined, {
-        data_paciente: { uuid: props.patientUuid, cama: props.bedNumber ?? null, rut: props.identifier.replace(/^RUN\*/, ""), nombre_paciente: props.patientName, edad: props.age, observaciones: notes || null, id_nacionalidad: null, pertenece_pueblo: null, encounter_id: props.visitUuid },
+        data_paciente: { uuid: props.patientUuid, cama: props.bedNumber ?? null, rut: props.runIdentifier.replace(/^RUN\*/, ""), nombre_paciente: props.patientName, edad: props.age, observaciones: notes || null, id_nacionalidad: null, pertenece_pueblo: null, encounter_id: props.visitUuid },
         visitas_autorizadas: normalized.map((visitor) => ({ ...(visitor.id ? { id: visitor.id } : {}), documento: "RUT", nro_documento: visitor.doc, contacto: visitor.contacto, nombre: visitor.nombre, id_parentesco: visitor.relationshipId, pertenece_pueblo: visitor.indigenous })),
       });
     },

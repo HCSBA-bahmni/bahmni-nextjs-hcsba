@@ -4,9 +4,10 @@ import { estimatedBirthDate, toPatientProfilePayload } from "./mappers";
 
 describe("patientprofile mapper", () => {
   it("uses the Bahmni patient/person envelope", () => {
-    const result = toPatientProfilePayload({ givenName: "Ana", familyName: "Pérez", gender: "F", birthDate: "1990-01-02", identifier: "123", identifierTypeUuid: "type", locationUuid: "loc", phoneNumber: "555", attributes: { "social-uuid": "Anita", "phone-uuid": "555" }, relationships: [] });
+    const result = toPatientProfilePayload({ givenName: "Ana", familyName: "Pérez", familyName2: "Soto", gender: "F", birthDate: "1990-01-02", identifier: "123", identifierTypeUuid: "type", locationUuid: "loc", phoneNumber: "555", attributes: { "social-uuid": "Anita", "phone-uuid": "555" }, relationships: [] });
     expect(result.patient.identifiers).toEqual([{ identifier: "123", identifierType: "type", preferred: true, voided: false }]);
     expect(result.patient.person).toMatchObject({ gender: "F", birthdate: "1990-01-02", birthdateEstimated: false });
+    expect(result.patient.person.names).toEqual([expect.objectContaining({ familyName: "Pérez", familyName2: "Soto", display: "Ana Pérez Soto" })]);
     expect(result.patient.person.attributes).toEqual(expect.arrayContaining([expect.objectContaining({ attributeType: { uuid: "social-uuid" }, value: "Anita" }), expect.objectContaining({ attributeType: { uuid: "phone-uuid" }, value: "555" })]));
   });
   it("calculates an estimated date from years, months and days", () => expect(estimatedBirthDate(30, 1, 6, DateTime.fromISO("2026-08-03"))).toBe("1996-06-28"));

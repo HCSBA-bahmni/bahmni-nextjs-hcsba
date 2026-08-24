@@ -443,32 +443,52 @@ test("clinical search defaults to the active queue and keeps All as a distinct L
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
 });
 
-test("new patient loads dynamic HCSBA registration metadata and saves the legacy envelope", async ({ page }) => {
+test("new patient saves the EIS identity envelope after the native HCSBA patient", async ({ page }) => {
+  test.setTimeout(60_000);
   let patientPayload: Record<string, unknown> | undefined;
+  let metadataPayload: Record<string, unknown> | undefined;
   let jumpAccepted = "";
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "location-1", display: "HCSBA" } }) }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "priv-1", name: "Add Patients" }], roles: [] }] }) }));
-  await page.route("**/bahmni_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showBirthTime: true, isLastNameMandatory: true, defaultIdentifierPrefix: "RUN*", patientInformation: { extra: { title: "Additional Patient Information", expanded: false, attributes: ["email", "givenNameLocal"] } }, patientSearch: { customAttributes: { label: "Teléfono", fields: ["phoneNumber"] }, socialAttributes: { label: "Nombre social", fields: ["givenNameLocal"] } }, relationshipTypeMap: { Doctor: "provider" }, printOptions: [{ translationKey: "REGISTRATION_PRINT_REG_CARD_LOCAL_KEY", templateUrl: "/registration/registrationCardLayout/print_local.html" }] } }) }));
+  await page.route("**/bahmni_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showBirthTime: true, showSecondLastName: true, isLastNameMandatory: true, isSecondLastNameMandatory: true, defaultIdentifierPrefix: "HCSBA", prominentExtraIdentifierTypes: ["RUN"], onDemandExtraIdentifierTypes: ["Pasaporte"], identifierMetadata: { RUN: { typeCode: "1", use: "official", issuerCountryCode: "152" } }, patientInformation: { extra: { title: "Additional Patient Information", expanded: false, attributes: ["email", "givenNameLocal"] } }, patientSearch: { customAttributes: { label: "Teléfono", fields: ["phoneNumber"] }, socialAttributes: { label: "Nombre social", fields: ["givenNameLocal"] } }, relationshipTypeMap: { Doctor: "provider" }, printOptions: [{ translationKey: "REGISTRATION_PRINT_REG_CARD_LOCAL_KEY", templateUrl: "/registration/registrationCardLayout/print_local.html" }] } }) }));
   await page.route("**/implementation_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/bahmni/i18n/registration/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ REGISTRATION_LABEL_SAVE: "<u>G</u>uardar paciente traducido", REGISTRATION_TITLE_ADDITIONAL_PATIENT: "Información Adicional del Paciente", REGISTRATION_PRINT_REG_CARD_LOCAL_KEY: "Tarjeta base" }) }));
   await page.route("**/bahmni_config/openmrs/i18n/registration/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ REGISTRATION_PRINT_REG_CARD_LOCAL_KEY: "Tarjeta local HCSBA" }) }));
   await page.route("**/implementation_config/openmrs/i18n/registration/locale_es.json", (route) => route.fulfill({ status: 404 }));
-  await page.route("**/openmrs/ws/rest/v1/idgen/identifiertype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ uuid: "id-type", name: "Patient Identifier", primary: true, required: true, format: "^RUN\\*[0-9-]+$", formatDescription: "RUN inválido", identifierSources: [{ uuid: "source-cl", name: "CL", prefix: "CL" }, { uuid: "source-run", name: "RUN*", prefix: "RUN*" }] }]) }));
+  await page.route("**/openmrs/ws/rest/v1/idgen/identifiertype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([
+    { uuid: "id-type", name: "Patient Identifier", primary: true, required: true, format: "^HCSBA[0-9]+$", formatDescription: "Ficha HCSBA inválida", identifierSources: [{ uuid: "source-rut-history", name: "RUT histórico", prefix: "RUT*" }, { uuid: "source-hcsba", name: "Identificador clínico HCSBA", prefix: "HCSBA" }] },
+    { uuid: "run-type", name: "RUN", display: "RUN", primary: false, required: false, format: "^\\d{1,8}-[0-9Kk]$", formatDescription: "RUN inválido", identifierSources: [] },
+  ]) }));
   await page.route("**/openmrs/ws/rest/v1/personattributetype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "phone-type", name: "phoneNumber", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "email-type", name: "email", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "social-type", name: "givenNameLocal", format: "java.lang.String", sortWeight: 2, concept: null }] }) }));
   await page.route("**/openmrs/ws/rest/v1/relationshiptype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/visittype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
   await page.route("**/openmrs/module/addresshierarchy/ajax/getOrderedAddressHierarchyLevels.form", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ name: "Región", addressField: "stateProvince" }, { name: "Comuna", addressField: "cityVillage" }]) }));
-  await page.route("**/openmrs/ws/rest/v1/idgen", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "RUN*100" }));
+  await page.route("**/openmrs/ws/rest/v1/idgen", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "HCSBA100" }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/patientprofile", async (route) => {
     patientPayload = route.request().postDataJSON() as Record<string, unknown>;
     jumpAccepted = (await route.request().allHeaders())["jump-accepted"] ?? "";
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({ uuid: "patient-created" }) });
   });
+  await page.route("**/openmrs/ws/rest/v1/eisidentity/identifier-metadata**", async (route) => {
+    if (route.request().method() === "POST") {
+      metadataPayload = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({ contentType: "application/json", body: JSON.stringify([{ identifierUuid: "run-native", identifierTypeUuid: "run-type", value: "12345678-5", voided: false, typeCode: "1", use: "official", issuerCountryCode: "152" }]) });
+      return;
+    }
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify([
+      { identifierUuid: "primary-native", identifierTypeUuid: "id-type", value: "HCSBA100", voided: false },
+      { identifierUuid: "run-native", identifierTypeUuid: "run-type", value: "12345678-5", voided: false },
+    ]) });
+  });
   await page.goto("/bahmni/registration/patient/new");
   await expect(page.getByRole("heading", { name: "Nuevo paciente" })).toBeVisible();
-  await expect(page.getByLabel("Fuente o prefijo del identificador", { exact: true })).toHaveValue("source-run");
-  await expect(page.getByLabel("Prefijo del identificador", { exact: true })).toHaveText("RUN*");
+  await expect(page.getByLabel("Fuente o prefijo del identificador", { exact: true })).toHaveValue("source-hcsba");
+  await expect(page.getByLabel("Prefijo del identificador", { exact: true })).toHaveText("HCSBA");
   await page.getByRole("button", { name: "Generar identificador" }).click();
   await expect(page.getByLabel("Identificador", { exact: true })).toHaveValue("100");
+  await page.getByLabel("RUN", { exact: true }).fill("12.345.678-5");
+  await page.getByLabel("RUN", { exact: true }).press("Tab");
+  await expect(page.getByLabel("RUN", { exact: true })).toHaveValue("12345678-5");
   await expect(page.getByLabel("Fecha de nacimiento", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Hora de nacimiento", { exact: true })).toBeVisible();
   await page.getByLabel("Años", { exact: true }).pressSequentially("30");
@@ -487,9 +507,10 @@ test("new patient loads dynamic HCSBA registration metadata and saves the legacy
   await page.getByLabel("email").fill("persona@hcsba.cl");
   await expect(page.getByLabel("email")).toBeVisible();
   await expect(page.getByLabel("Región")).toBeVisible();
-  await expect(page.getByText("HCSBA", { exact: true })).toBeVisible();
+  await expect(page.getByTitle("Cambiar ubicación")).toHaveText("HCSBA");
   await page.getByLabel("Nombres").fill("Paciente");
-  await page.getByLabel("Apellidos").fill("Sintético");
+  await page.getByLabel("Primer apellido").fill("Sintético");
+  await page.getByLabel("Segundo apellido").fill("EIS");
   await page.getByRole("button", { name: "Abrir Género" }).click();
   await page.getByRole("option", { name: "Femenino" }).click();
   await page.getByRole("heading", { name: "Nuevo paciente" }).click();
@@ -500,10 +521,14 @@ test("new patient loads dynamic HCSBA registration metadata and saves the legacy
   expect(jumpAccepted).toBe("false");
   expect(patientPayload).toMatchObject({
     patient: {
-      identifiers: [{ identifier: "RUN*100", identifierType: "id-type", preferred: true }],
-      person: { names: [{ givenName: "Paciente", familyName: "Sintético" }], gender: "F", birthdateEstimated: true },
+      identifiers: [
+        { identifier: "HCSBA100", identifierType: "id-type", preferred: true },
+        { identifier: "12345678-5", identifierType: "run-type", preferred: false },
+      ],
+      person: { names: [{ givenName: "Paciente", familyName: "Sintético", familyName2: "EIS" }], gender: "F", birthdateEstimated: true },
     },
   });
+  expect(metadataPayload).toEqual({ patientUuid: "patient-created", identifiers: [{ identifierUuid: "run-native", identifierTypeUuid: "run-type", value: "12345678-5", voided: false, typeCode: "1", use: "official", issuerCountryCode: "152" }] });
 });
 
 test("registration searches existing patients through the HCSBA Lucene endpoint", async ({ page }) => {

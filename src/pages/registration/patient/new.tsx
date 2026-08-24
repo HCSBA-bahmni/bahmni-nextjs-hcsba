@@ -10,6 +10,7 @@ import { useRegistrationWorkflow } from "@/features/registration/useRegistration
 import { getAddressLevels } from "@/services/bahmni/address";
 import { loadAppConfig } from "@/services/bahmni/config";
 import { getIdentifierTypes, getPersonAttributeTypes, getRelationshipTypes } from "@/services/bahmni/metadata";
+import { savePatientIdentifierMetadata } from "@/services/bahmni/identifierMetadata";
 import { generateIdentifier, savePatient, uploadPatientImage } from "@/services/bahmni/patients";
 import type { PatientFormValues } from "@/types/bahmni";
 
@@ -38,6 +39,7 @@ export default function NewPatient() {
         const saved = await savePatient(values, jumpAccepted);
         const uuid = String(saved.uuid ?? (saved.patient as { uuid?: string } | undefined)?.uuid ?? "");
         if (!uuid) throw new Error("El servidor no devolvió el UUID del paciente creado.");
+        await savePatientIdentifierMetadata(uuid, values);
         if (values.image) await uploadPatientImage(uuid, values.image);
         await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router);
       }}

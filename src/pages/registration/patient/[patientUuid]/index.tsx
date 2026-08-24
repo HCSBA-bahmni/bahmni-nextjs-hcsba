@@ -9,10 +9,11 @@ import { useRegistrationWorkflow } from "@/features/registration/useRegistration
 import { getAddressLevels } from "@/services/bahmni/address";
 import { loadAppConfig } from "@/services/bahmni/config";
 import { getIdentifierTypes, getPersonAttributeTypes, getRelationshipTypes, type PersonAttributeType } from "@/services/bahmni/metadata";
+import { getPatientIdentifierMetadata, metadataValues, savePatientIdentifierMetadata, type IdentifierMetadataRecord } from "@/services/bahmni/identifierMetadata";
 import { generateIdentifier, getPatientProfile, savePatient, uploadPatientImage } from "@/services/bahmni/patients";
 import type { PatientFormValues } from "@/types/bahmni";
 
-export function profileToForm(profile: Record<string, unknown>, uuid: string, attributeTypes: PersonAttributeType[]): Partial<PatientFormValues> {
+export function profileToForm(profile: Record<string, unknown>, uuid: string, attributeTypes: PersonAttributeType[], identifierMetadata: IdentifierMetadataRecord[] = []): Partial<PatientFormValues> {
   const person = (profile.person ?? (profile.patient as Record<string, unknown> | undefined)?.person ?? profile) as Record<string, unknown>;
   const patient = (profile.patient ?? profile) as Record<string, unknown>;
   const names = ((person.names as Array<Record<string, unknown>> | undefined) ?? [])[0] ?? {};
@@ -24,7 +25,9 @@ export function profileToForm(profile: Record<string, unknown>, uuid: string, at
     const typeUuid = typeof identifierType === "string" ? identifierType : identifierType?.uuid;
     if (!typeUuid) return [];
     const source = item.identifierSource as { uuid?: string; prefix?: string } | undefined;
-    return [{ uuid: typeof item.uuid === "string" ? item.uuid : undefined, identifier: String(item.identifier ?? ""), identifierTypeUuid: typeUuid, identifierSourceUuid: source?.uuid ?? (typeof item.identifierSourceUuid === "string" ? item.identifierSourceUuid : undefined), identifierPrefix: source?.prefix ?? (typeof item.identifierPrefix === "string" ? item.identifierPrefix : undefined) }];
+    const identifierUuid = typeof item.uuid === "string" ? item.uuid : undefined;
+    const metadata = identifierMetadata.find((entry) => entry.identifierUuid === identifierUuid);
+    return [{ uuid: identifierUuid, identifier: String(item.identifier ?? ""), identifierTypeUuid: typeUuid, identifierSourceUuid: source?.uuid ?? (typeof item.identifierSourceUuid === "string" ? item.identifierSourceUuid : undefined), identifierPrefix: source?.prefix ?? (typeof item.identifierPrefix === "string" ? item.identifierPrefix : undefined), metadata: metadataValues(metadata) }];
   });
   const rawAttributes = (person.attributes as Array<{ attributeType?: { uuid?: string; name?: string; display?: string }; value?: unknown }> | undefined) ?? [];
   const rawRelationships = (profile.relationships as Array<Record<string, unknown>> | undefined) ?? [];
@@ -40,7 +43,7 @@ export function profileToForm(profile: Record<string, unknown>, uuid: string, at
   });
   const birthtime = typeof person.birthtime === "string" && person.birthtime.includes("T") ? person.birthtime.split("T")[1]?.slice(0, 5) : undefined;
   return {
-    uuid, nameUuid: typeof names.uuid === "string" ? names.uuid : undefined, addressUuid: typeof address.uuid === "string" ? address.uuid : undefined, identifierUuid: typeof identifier.uuid === "string" ? identifier.uuid : undefined, givenName: String(names.givenName ?? ""), middleName: String(names.middleName ?? ""), familyName: String(names.familyName ?? ""), gender: String(person.gender ?? ""),
+    uuid, nameUuid: typeof names.uuid === "string" ? names.uuid : undefined, addressUuid: typeof address.uuid === "string" ? address.uuid : undefined, identifierUuid: typeof identifier.uuid === "string" ? identifier.uuid : undefined, givenName: String(names.givenName ?? ""), middleName: String(names.middleName ?? ""), familyName: String(names.familyName ?? ""), familyName2: String(names.familyName2 ?? ""), gender: String(person.gender ?? ""),
     birthDate: typeof person.birthdate === "string" ? person.birthdate.slice(0, 10) : "", birthDateEstimated: Boolean(person.birthdateEstimated), birthTime: birthtime,
     identifier: String(identifier.identifier ?? ""), identifierTypeUuid: String((identifier.identifierType as { uuid?: string } | undefined)?.uuid ?? identifier.identifierType ?? ""), identifierSourceUuid: String((identifier.identifierSource as { uuid?: string } | undefined)?.uuid ?? identifier.identifierSourceUuid ?? "") || undefined, identifierPrefix: String((identifier.identifierSource as { prefix?: string } | undefined)?.prefix ?? identifier.identifierPrefix ?? "") || undefined, additionalIdentifiers,
     address1: String(address.address1 ?? ""), address2: String(address.address2 ?? ""), address3: String(address.address3 ?? ""), address4: String(address.address4 ?? ""), address5: String(address.address5 ?? ""), address6: String(address.address6 ?? ""), cityVillage: String(address.cityVillage ?? ""), countyDistrict: String(address.countyDistrict ?? ""), stateProvince: String(address.stateProvince ?? ""), country: String(address.country ?? ""), postalCode: String(address.postalCode ?? ""),
@@ -57,19 +60,20 @@ export default function EditPatient() {
   const attributes = useQuery({ queryKey: ["person-attribute-types"], queryFn: getPersonAttributeTypes });
   const relationships = useQuery({ queryKey: ["relationship-types"], queryFn: getRelationshipTypes });
   const addressLevels = useQuery({ queryKey: ["address-levels"], queryFn: getAddressLevels });
+  const identifierMetadata = useQuery({ queryKey: ["identifier-metadata", uuid], queryFn: () => getPatientIdentifierMetadata(uuid), enabled: Boolean(uuid), retry: false });
   const descriptor = useQuery({ queryKey: ["app-config", "registration"], queryFn: () => loadAppConfig("registration") });
   const config = descriptor.data ? parseRegistrationConfig(descriptor.data) : undefined;
   const workflow = useRegistrationWorkflow(uuid, config);
   const queries = [profile, identifiers, attributes, descriptor];
-  const loading = queries.some((query) => query.isLoading);
+  const loading = queries.some((query) => query.isLoading) || identifierMetadata.isLoading;
   const failed = queries.some((query) => query.isError);
-  const optionalFailure = relationships.isError || addressLevels.isError;
+  const optionalFailure = relationships.isError || addressLevels.isError || identifierMetadata.isError;
 
   return <AuthGuard><AppShell title="Editar paciente">
     {router.query.saved === "1" && <p role="status" className="success-banner">Paciente guardado correctamente.</p>}
     {loading && <p role="status">Cargando paciente y configuración…</p>}
     {failed && <p role="alert" className="error-banner">No fue posible cargar el perfil completo del paciente.</p>}
     {optionalFailure && <p role="status" className="warning-banner">Relaciones o dirección jerárquica no están disponibles temporalmente; el resto del perfil puede editarse.</p>}
-    {!loading && !failed && profile.data && config && <PatientForm initial={profileToForm(profile.data, uuid, attributes.data ?? [])} config={config} workflow={workflow} identifierTypes={identifiers.data ?? []} attributeTypes={attributes.data ?? []} relationshipTypes={relationships.data ?? []} addressLevels={addressLevels.data ?? []} onGenerateId={(identifierSourceName) => generateIdentifier(identifierSourceName ?? config.defaultIdentifierPrefix)} onSave={async (values, jumpAccepted, intent) => { await savePatient(values, jumpAccepted); if (values.image) await uploadPatientImage(uuid, values.image); await queryClient.invalidateQueries({ queryKey: ["patient", uuid] }); await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router); }} />}
+    {!loading && !failed && profile.data && config && <PatientForm initial={profileToForm(profile.data, uuid, attributes.data ?? [], identifierMetadata.data ?? [])} config={config} workflow={workflow} identifierTypes={identifiers.data ?? []} attributeTypes={attributes.data ?? []} relationshipTypes={relationships.data ?? []} addressLevels={addressLevels.data ?? []} onGenerateId={(identifierSourceName) => generateIdentifier(identifierSourceName ?? config.defaultIdentifierPrefix)} onSave={async (values, jumpAccepted, intent) => { await savePatient(values, jumpAccepted); await savePatientIdentifierMetadata(uuid, values); if (values.image) await uploadPatientImage(uuid, values.image); await queryClient.invalidateQueries({ queryKey: ["patient", uuid] }); await queryClient.invalidateQueries({ queryKey: ["identifier-metadata", uuid] }); await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router); }} />}
   </AppShell></AuthGuard>;
 }

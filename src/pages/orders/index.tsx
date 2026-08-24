@@ -45,7 +45,7 @@ export default function OrdersSearchPage() {
         {selectedQueue?.isError && <p role="alert" className="error-banner">No fue posible cargar los pacientes configurados para Órdenes.</p>}
         {selectedQueue?.data && patients.length === 0 && <div className="clinical-search-empty"><i className="pi pi-user-minus" aria-hidden="true" /><strong>Sin pacientes encontrados</strong><span>No hay pacientes que coincidan con este criterio.</span></div>}
         {selectedQueue?.data && patients.length > 0 && <div className="clinical-patient-results">{patients.map((patient) => {
-          const name = String(patient.name ?? [patient.givenName, patient.middleName, patient.familyName].filter(Boolean).join(" ") ?? patient.identifier);
+          const name = String(patient.name ?? [patient.givenName, patient.middleName, patient.familyName, patient.familyName2].filter(Boolean).join(" ") ?? patient.identifier);
           return <Link key={patient.uuid} href={ordersPatientDestination(selected, patient)}><span className="clinical-result-avatar" aria-hidden="true">{name.charAt(0).toLocaleUpperCase()}</span><span><strong>{name}</strong><small>{patient.identifier || "Sin identificador"}</small></span><span className="clinical-result-badges"><span className="clinical-result-context">{patient.activeVisitUuid ? "Visita activa" : "Sin visita activa"}</span><AssignedBedBadge patientUuid={String(patient.uuid ?? "")} /></span><i className="pi pi-chevron-right" aria-hidden="true" /></Link>;
         })}</div>}
       </>}

@@ -29,14 +29,26 @@ interface Props { patientUuid?: string; bedId?: number }
 
 function record(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function display(value: unknown): string | undefined { return typeof value === "string" && value ? value : undefined; }
+const RUN_IDENTIFIER_TYPE_UUID = "0286b492-05b1-4bf3-a8ae-8c60dff87f41";
+
+function isRunIdentifier(item: Record<string, unknown>): boolean {
+  const type = record(item.identifierType);
+  const uuid = display(type.uuid) ?? display(item.identifierType);
+  const name = (display(type.name) ?? display(type.display) ?? "").trim().toUpperCase();
+  return uuid === RUN_IDENTIFIER_TYPE_UUID || name === "RUN";
+}
+
 function patientView(profile: Record<string, unknown> | undefined) {
   const patient = record(profile?.patient ?? profile);
   const person = record(patient.person);
   const names = Array.isArray(person.names) ? record(person.names[0]) : {};
-  const identifiers = Array.isArray(patient.identifiers) ? record(patient.identifiers.find((item) => record(item).preferred) ?? patient.identifiers[0]) : {};
+  const identifierRows = Array.isArray(patient.identifiers) ? patient.identifiers.map(record) : [];
+  const identifier = identifierRows.find((item) => item.preferred === true) ?? identifierRows[0] ?? {};
+  const runIdentifier = identifierRows.find(isRunIdentifier);
   return {
-    name: display(patient.name) ?? display(person.display) ?? ([names.givenName, names.middleName, names.familyName].filter(Boolean).join(" ") || "Paciente"),
-    identifier: display(patient.identifier) ?? display(identifiers.identifier) ?? "Sin identificador",
+    name: display(patient.name) ?? display(person.display) ?? ([names.givenName, names.middleName, names.familyName, names.familyName2].filter(Boolean).join(" ") || "Paciente"),
+    identifier: display(patient.identifier) ?? display(identifier.identifier) ?? "Sin identificador",
+    runIdentifier: display(runIdentifier?.identifier),
     gender: display(person.gender) ?? display(patient.gender) ?? "—",
     age: String(person.age ?? patient.age ?? "—"),
   };
@@ -306,7 +318,7 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
         {patientUuid ? <><dl className="ipd-context-details"><dt>Edad / sexo</dt><dd>{patient.age} / {patient.gender}</dd><dt>Cama actual</dt><dd><span className={assigned.data ? "ipd-current-bed" : "ipd-no-bed"}>{assigned.data?.bedNumber ?? "Sin cama"}</span></dd></dl>
           {visitResolution.issue && <div className="warning-banner" role="alert"><p>{visitResolution.issue}</p>{visitResolution.orphanedBed && canAssign && <Button outlined severity="danger" icon="pi pi-wrench" label="Liberar cama inconsistente" onClick={() => setRepairOpen(true)} />}</div>}
           <div className="ipd-actions">{possibleActions.map((item) => <Button key={item} disabled={!canAssign || execute.isPending || (item !== "discharge" && (!selectedBed || (item === "transfer" && assignedHere)))} label={item === "admit" ? "Admitir" : item === "transfer" ? "Transferir" : "Dar de alta"} severity={item === "discharge" ? "danger" : undefined} onClick={() => { setConvertVisit(true); setAction(item); }} />)}
-          {config.data?.oirsApiBaseUrl && activeVisit && assigned.data && <Button outlined icon="pi pi-users" label="Paciente acostado / visitas" onClick={() => setOirsOpen(true)} />}</div>
+          {config.data?.oirsApiBaseUrl && activeVisit && assigned.data && <Button outlined icon="pi pi-users" label="Paciente acostado / visitas" disabled={!patient.runIdentifier} title={patient.runIdentifier ? undefined : "OIRS requiere que el paciente tenga RUN"} onClick={() => setOirsOpen(true)} />}</div>
           {activeVisit && <Link className="ipd-dashboard-link" href={`/bedmanagement/patient/${patientUuid}/visit/${activeVisit.uuid}/dashboard`}><i className="pi pi-chart-bar" aria-hidden="true" /> Abrir dashboard IPD <i className="pi pi-arrow-right" aria-hidden="true" /></Link>}
         </> : <p className="ipd-context-empty">Seleccione una cama para consultar sus datos, cambiar su estado o administrar sus tags.</p>}
         <section className={`ipd-selected-bed ${selectedBed ? `ipd-selected-bed-${selectedBed.status.toLowerCase()}` : "is-empty"}`}><header><span className="ipd-selected-bed-icon"><BedIcon /></span><div><small>Cama seleccionada</small><h3>{selectedBed?.bedNumber ?? "Ninguna"}</h3></div></header><dl><dt>Sala</dt><dd>{ward.data?.name ?? "—"}</dd><dt>Habitación</dt><dd>{room?.name ?? "—"}</dd><dt>Estado</dt><dd>{selectedBed ? <span className={`ipd-status-pill ipd-status-${selectedBed.status.toLowerCase()}`}>{bedStatusLabel(selectedBed.status)}</span> : "—"}</dd><dt>Tags</dt><dd>{selectedBed?.bedTagMaps.map((map) => map.bedTag.name).join(", ") || "—"}</dd></dl>
@@ -343,6 +355,6 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
     <Dialog header="Confirmar operación ADT" visible={Boolean(action)} modal onHide={() => setAction(undefined)} footer={<><Button outlined label="Cancelar" onClick={() => setAction(undefined)} /><Button loading={execute.isPending} label="Confirmar" severity={action === "discharge" ? "danger" : undefined} onClick={() => action && execute.mutate(action)} /></>}><p>{confirmText}</p>{action === "admit" && activeVisit && config.data?.defaultVisitType && (display(activeVisit.visitType?.display) ?? display(activeVisit.visitType?.name)) !== config.data.defaultVisitType && !config.data.enableAutoConvertToIPDVisit && !config.data.hideStartNewVisitPopUp && <div className="ipd-visit-choice"><p>La visita activa no es {config.data.defaultVisitType}. El legacy permite elegir:</p><Button outlined={!convertVisit} label={`Cerrar visita e iniciar ${config.data.defaultVisitType}`} onClick={() => setConvertVisit(true)} /><Button outlined={convertVisit} label="Continuar con visita actual" onClick={() => setConvertVisit(false)} /></div>}{adtConcept.isLoading && <p>Cargando notas ADT configuradas…</p>}{adtConcept.data && <div className="ipd-adt-observations"><AdtConceptSetEditor concept={adtConcept.data} observations={adtObservations} conceptSetUI={record(config.data?.extensions.conceptSetUI)} onChange={setAdtObservations} /></div>}<p className="muted">Antes de escribir se releerá la cama destino y después se reconciliarán cama, visita y encuentro.</p></Dialog>
     <Dialog header={`Tags de cama ${selectedBed?.bedNumber ?? ""}`} visible={tagsOpen} modal onHide={() => setTagsOpen(false)}><div className="ipd-tag-editor">{tags.data?.map((tag) => { const map = selectedBed?.bedTagMaps.find((candidate) => candidate.bedTag.uuid === tag.uuid); return <button type="button" key={tag.uuid} className={map ? "selected" : ""} disabled={tagMutation.isPending} onClick={() => map?.uuid ? tagMutation.mutate({ mode: "remove", uuid: map.uuid }) : tagMutation.mutate({ mode: "add", uuid: tag.uuid })}><i className={`pi ${map ? "pi-check" : "pi-tag"}`} /> {tag.name}</button>; })}</div></Dialog>
     <Dialog header="Reparar asignación de cama" visible={repairOpen} modal onHide={() => setRepairOpen(false)} footer={<><Button outlined label="Cancelar" onClick={() => setRepairOpen(false)} /><Button severity="danger" loading={repairAssignment.isPending} label="Liberar cama" onClick={() => repairAssignment.mutate()} /></>}><p>La cama {assigned.data?.bedNumber ?? "—"} está ligada a una visita cerrada. Se finalizará solamente la asignación de cama huérfana; no se creará ni cerrará una visita.</p></Dialog>
-    {config.data?.oirsApiBaseUrl && patientUuid && activeVisit && <OirsPatientDialog visible={oirsOpen} onHide={() => setOirsOpen(false)} baseUrl={config.data.oirsApiBaseUrl} patientUuid={patientUuid} visitUuid={activeVisit.uuid} bedNumber={assigned.data?.bedNumber} identifier={patient.identifier} patientName={patient.name} age={patient.age} />}
+    {config.data?.oirsApiBaseUrl && patientUuid && activeVisit && <OirsPatientDialog visible={oirsOpen} onHide={() => setOirsOpen(false)} baseUrl={config.data.oirsApiBaseUrl} patientUuid={patientUuid} visitUuid={activeVisit.uuid} bedNumber={assigned.data?.bedNumber} runIdentifier={patient.runIdentifier} patientName={patient.name} age={patient.age} />}
   </AppShell></AuthGuard>;
 }

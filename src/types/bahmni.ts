@@ -57,6 +57,7 @@ export interface PatientSearchResult {
   givenName?: string;
   middleName?: string;
   familyName?: string;
+  familyName2?: string;
   gender?: string;
   age?: number | string;
   birthDate?: string;
@@ -74,6 +75,7 @@ export interface PatientFormValues {
   givenName: string;
   middleName?: string;
   familyName: string;
+  familyName2?: string;
   gender: string;
   birthDate?: string;
   birthDateEstimated?: boolean;
@@ -94,6 +96,7 @@ export interface PatientFormValues {
     identifierPrefix?: string;
     identifierSuffix?: string;
     voided?: boolean;
+    metadata?: PatientIdentifierMetadataValues;
   }>;
   locationUuid?: string;
   phoneNumber?: string;
@@ -115,6 +118,17 @@ export interface PatientFormValues {
   attributeUuids?: Record<string, string>;
   relationships: Array<{ relationshipTypeUuid: string; personUuid: string; personDisplay?: string; relationshipUuid?: string; voided?: boolean }>;
   image?: string;
+}
+
+export interface PatientIdentifierMetadataValues {
+  typeCode: string;
+  use: string;
+  systemUri?: string;
+  issuerCountryCode?: string;
+  issuerOrganization?: string;
+  documentType?: string;
+  validFrom?: string;
+  validTo?: string;
 }
 
 export interface Visit {
