@@ -1,0 +1,452 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-08-18",
+  "scope": "HCSBA Bahmni Next.js, legacy AngularJS, OpenMRS and adjacent runtime services",
+  "confidenceLevels": {
+    "confirmed": "The repository contains the endpoint, table, SQL or deployment wiring cited as evidence.",
+    "derived": "The relationship follows the OpenMRS/Bahmni model or upstream module, but the exact installed artifact on HCSBA .205 has not been inspected.",
+    "pending": "The integration or persistence contract still requires evidence from the deployed environment or an external repository."
+  },
+  "flows": [
+    {
+      "id": "home-auth",
+      "menus": ["Inicio", "Login", "Cambio de contraseña", "Selección de ubicación"],
+      "frontendRoutes": ["/bahmni/home", "/bahmni/login", "/bahmni/location", "/bahmni/change-password"],
+      "localEvidence": [
+        "src/services/bahmni/auth.ts",
+        "../standard-config-HCSBA/openmrs/apps/home/extension.json"
+      ],
+      "backendHops": [
+        {
+          "kind": "openmrs-core-rest",
+          "owner": "OpenMRS Core + Web Services REST",
+          "endpoints": ["/ws/rest/v1/session", "/ws/rest/v1/user", "/ws/rest/v1/provider", "/ws/rest/v1/location", "/ws/rest/v1/password"],
+          "dataStores": ["users", "user_role", "role", "role_privilege", "provider", "provider_attribute", "location", "location_tag", "location_tag_map"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "bahmni-omod-rest",
+          "owner": "Bahmni Core OMOD",
+          "endpoints": ["/ws/rest/v1/bahmnicore/sql/globalproperty", "/ws/rest/v1/bahmnicore/globalProperty/passwordPolicyProperties"],
+          "dataStores": ["global_property"],
+          "confidence": "confirmed"
+        },
+        {
+          "kind": "identity-provider",
+          "owner": "Keycloak + openmrs-module-oauth2login-hcsba when AUTH_MODE=keycloak",
+          "endpoints": ["/openmrs/oauth2login", "/realms/hcsba/protocol/openid-connect/*"],
+          "dataStores": ["Keycloak PostgreSQL", "OpenMRS users/roles/providers synchronized by the login module"],
+          "confidence": "confirmed"
+        }
+      ]
+    },
+    {
+      "id": "registration",
+      "menus": ["Registro"],
+      "frontendRoutes": ["/bahmni/registration", "/bahmni/registration/patient/*"],
+      "localEvidence": [
+        "src/services/bahmni/patients.ts",
+        "src/services/bahmni/metadata.ts",
+        "src/services/bahmni/visits.ts",
+        "src/services/bahmni/forms.ts",
+        "../standard-config-HCSBA/openmrs/apps/registration/app.json"
+      ],
+      "backendHops": [
+        {
+          "kind": "bahmni-omod-rest",
+          "owner": "Bahmni Core OMOD",
+          "endpoints": ["/ws/rest/v1/bahmni/search/patient*", "/ws/rest/v1/patientprofile/*", "/ws/rest/v1/bahmnicore/patientprofile*", "/ws/rest/v1/bahmnicore/bahmniencounter", "/ws/rest/v1/bahmnicore/config/bahmniencounter"],
+          "dataStores": ["person", "person_name", "person_address", "person_attribute", "patient", "patient_identifier", "relationship", "visit", "encounter", "encounter_provider", "obs"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "openmrs-core-rest",
+          "owner": "OpenMRS Core REST",
+          "endpoints": ["/ws/rest/v1/visit", "/ws/rest/v1/person*", "/ws/rest/v1/provider", "/ws/rest/v1/concept", "/ws/rest/v1/entitymapping"],
+          "dataStores": ["visit", "person", "provider", "concept", "entity_mapping", "location_encounter_type_map"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "specialized-omod-rest",
+          "owner": "ID Generation, Address Hierarchy and Bahmni Form Builder OMODs",
+          "endpoints": ["/ws/rest/v1/idgen*", "/module/addresshierarchy/ajax/*", "/ws/rest/v1/bahmniie/form/*", "/ws/rest/v1/form/*"],
+          "dataStores": ["idgen_seq_id_gen", "idgen_remote_source", "address_hierarchy_*", "form", "form_resource"],
+          "confidence": "derived"
+        }
+      ]
+    },
+    {
+      "id": "clinical",
+      "menus": ["Clínico", "Dashboard", "Consulta", "Programas"],
+      "frontendRoutes": ["/bahmni/clinical/*"],
+      "localEvidence": [
+        "src/services/bahmni/clinical.ts",
+        "src/services/bahmni/consultation.ts",
+        "src/services/bahmni/dashboard.ts",
+        "src/services/bahmni/programs.ts",
+        "src/services/bahmni/allergies.ts",
+        "../standard-config-HCSBA/openmrs/apps/clinical/dashboard.json"
+      ],
+      "backendHops": [
+        {
+          "kind": "bahmni-omod-rest",
+          "owner": "Bahmni Core OMOD",
+          "endpoints": ["/ws/rest/v1/bahmnicore/bahmniencounter*", "/ws/rest/v1/bahmnicore/diagnosis/*", "/ws/rest/v1/bahmnicore/observations*", "/ws/rest/v1/bahmnicore/orders*", "/ws/rest/v1/bahmnicore/drugOrders*", "/ws/rest/v1/bahmnicore/labOrderResults", "/ws/rest/v1/bahmnicore/disposition/*"],
+          "dataStores": ["visit", "encounter", "encounter_provider", "obs", "conditions", "orders", "drug_order", "audit_log"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "openmrs-core-rest",
+          "owner": "OpenMRS Core REST + EMR API",
+          "endpoints": ["/ws/rest/v1/encounter", "/ws/rest/v1/obs", "/ws/rest/v1/order", "/ws/rest/v1/concept", "/ws/rest/emrapi/condition", "/ws/rest/v1/patient/*/allergy"],
+          "dataStores": ["encounter", "obs", "orders", "conditions", "allergy", "allergy_reaction", "concept", "concept_name"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "specialized-omod-rest",
+          "owner": "Program, Bacteriology, Form Builder, FHIR2 and Appointments modules",
+          "endpoints": ["/ws/rest/v1/bahmniprogramenrollment*", "/ws/rest/v1/bacteriology/specimen*", "/ws/rest/v1/bahmniie/form/*", "/ws/fhir2/R4/AllergyIntolerance", "/ws/rest/v1/appointment*"],
+          "dataStores": ["program", "patient_program", "patient_state", "patient_program_attribute", "program_attribute_type", "form", "form_resource", "bacteriology module tables", "appointment module tables"],
+          "confidence": "derived"
+        }
+      ]
+    },
+    {
+      "id": "adt-bedmanagement",
+      "menus": ["Hospitalización", "Gestión de las camas", "ADT"],
+      "frontendRoutes": ["/bahmni/adt/*", "/bahmni/bedmanagement/*"],
+      "localEvidence": [
+        "src/services/bahmni/ipd.ts",
+        "src/services/bahmni/adt.ts",
+        "../standard-config-HCSBA/openmrs/apps/adt/extension.json",
+        "../standard-config-HCSBA/openmrs/apps/ipd/app.json"
+      ],
+      "backendHops": [
+        {
+          "kind": "bahmni-omod-rest",
+          "owner": "Bahmni Core OMOD",
+          "endpoints": ["/ws/rest/v1/bahmnicore/bahmniencounter", "/ws/rest/v1/bahmnicore/discharge", "/ws/rest/v1/bahmnicore/visit/endVisitAndCreateEncounter", "/ws/rest/v1/bahmnicore/sql"],
+          "dataStores": ["visit", "encounter", "obs", "global_property SQL handlers"],
+          "confidence": "confirmed"
+        },
+        {
+          "kind": "specialized-omod-rest",
+          "owner": "OpenMRS Bed Management OMOD",
+          "endpoints": ["/ws/rest/v1/admissionLocation/*", "/ws/rest/v1/beds*", "/ws/rest/v1/bed/*", "/ws/rest/v1/bedTag*", "/ws/rest/v1/bedTagMap/*"],
+          "dataStores": ["bed", "bed_location_map", "bed_patient_assignment_map", "bed_tag", "bed_tag_map", "bed_type", "location", "patient", "encounter"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "external-rest",
+          "owner": "OIRS HCSBA",
+          "endpoints": ["*/parentesco/", "*/data_paciente_acostado/*"],
+          "dataStores": ["OIRS database; schema not present in this workspace"],
+          "confidence": "pending"
+        }
+      ]
+    },
+    {
+      "id": "care-view-ipd",
+      "menus": ["Vista de cuidados", "Dashboard IPD"],
+      "frontendRoutes": ["/bahmni/bedmanagement/care-view", "/bahmni/clinical/patient/*/dashboard/visit/ipd/*"],
+      "localEvidence": [
+        "src/services/bahmni/careView.ts",
+        "src/services/bahmni/ipdTreatments.ts",
+        "../openmrs-module-ipd/omod/src/main/java/org/openmrs/module/ipd/web/controller/IPDScheduleController.java",
+        "../openmrs-module-ipd/api/src/main/resources/liquibase.xml"
+      ],
+      "backendHops": [
+        {
+          "kind": "specialized-omod-rest",
+          "owner": "HCSBA Bahmni IPD OMOD 1.1.1-hcsba.5",
+          "endpoints": ["/ws/rest/v1/ipd/wards/*", "/ws/rest/v1/ipd/schedule/type/medication*", "/ws/rest/v1/ipdVisit/*/medication", "/ws/rest/v1/ipd/careteam/participants", "/ws/rest/v1/ipd/*MedicationAdministrations"],
+          "dataStores": ["ipd_schedule", "ipd_slot", "ipd_reference", "care_team", "care_team_participant", "orders", "medication_administration", "visit", "patient", "provider", "location"],
+          "confidence": "confirmed"
+        },
+        {
+          "kind": "specialized-omod-rest",
+          "owner": "OpenMRS Task/Medication Administration resources used by IPD",
+          "endpoints": ["/ws/rest/v1/tasks*", "/ws/rest/v1/ipd/scheduledMedicationAdministrations", "/ws/rest/v1/ipd/adhocMedicationAdministrations"],
+          "dataStores": ["task/medication-administration module tables", "ipd_slot"],
+          "confidence": "derived"
+        }
+      ]
+    },
+    {
+      "id": "documents",
+      "menus": ["Subir Documentos de Radiología", "Documentos de Pacientes"],
+      "frontendRoutes": ["/bahmni/document-upload/*", "dashboard document controls"],
+      "localEvidence": [
+        "src/services/bahmni/documentUpload.ts",
+        "src/services/bahmni/forms.ts",
+        "../bahmni-docker-HCSBA/bahmni-standard/docker-compose.yml"
+      ],
+      "backendHops": [
+        {
+          "kind": "bahmni-omod-rest",
+          "owner": "Bahmni Core OMOD visitDocument API",
+          "endpoints": ["/ws/rest/v1/bahmnicore/visitDocument*", "/ws/rest/v1/bahmnicore/visitDocument/uploadDocument", "/ws/rest/v1/encounter"],
+          "dataStores": ["encounter", "obs", "visit", "filesystem: /home/bahmni/document_images and uploaded-files volumes"],
+          "confidence": "confirmed"
+        },
+        {
+          "kind": "static-file-service",
+          "owner": "patient-documents Nginx service",
+          "endpoints": ["/document_images/*", "/uploaded_results/*", "/uploaded-files/*"],
+          "dataStores": ["Docker volumes bahmni-document-images, bahmni-lab-results, bahmni-uploaded-files"],
+          "confidence": "confirmed"
+        }
+      ]
+    },
+    {
+      "id": "orders",
+      "menus": ["Órdenes", "Consulta > Órdenes", "Cumplimiento"],
+      "frontendRoutes": ["/bahmni/orders/*", "/bahmni/clinical/patient/*/consultation/orders"],
+      "localEvidence": [
+        "src/services/bahmni/consultation.ts",
+        "src/services/bahmni/dashboard.ts",
+        "src/features/orders/fulfillment.ts",
+        "../standard-config-HCSBA/openmrs/apps/orders/extension.json"
+      ],
+      "backendHops": [
+        {
+          "kind": "openmrs-core-rest",
+          "owner": "OpenMRS Core Order REST",
+          "endpoints": ["/ws/rest/v1/order*", "/ws/rest/v1/ordertype", "/ws/rest/v1/drug", "/ws/rest/v1/orderfrequency"],
+          "dataStores": ["orders", "drug_order", "order_type", "order_frequency", "drug", "concept"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "bahmni-omod-rest",
+          "owner": "Bahmni Core OMOD",
+          "endpoints": ["/ws/rest/v1/bahmnicore/orders*", "/ws/rest/v1/bahmnicore/drugOrders*", "/ws/rest/v1/bahmnicore/bahmniencounter", "/ws/rest/v1/bahmnicore/config/drugOrders"],
+          "dataStores": ["orders", "drug_order", "encounter", "obs", "global_property"],
+          "confidence": "derived"
+        }
+      ]
+    },
+    {
+      "id": "appointments",
+      "menus": ["Calendarización de Cita"],
+      "frontendRoutes": ["/bahmni/appointments/*"],
+      "localEvidence": [
+        "src/services/bahmni/appointments.ts",
+        "../standard-config-HCSBA/openmrs/apps/appointments/app.json",
+        "../bahmni-docker-HCSBA/bahmni-standard/docker-compose.yml"
+      ],
+      "backendHops": [
+        {
+          "kind": "specialized-omod-rest",
+          "owner": "Bahmni Appointments OMOD",
+          "endpoints": ["/ws/rest/v1/appointment*", "/ws/rest/v1/appointments/*", "/ws/rest/v1/recurring-appointments*", "/ws/rest/v1/appointmentService*", "/ws/rest/v1/speciality/*"],
+          "dataStores": ["patient_appointment", "patient_appointment_audit", "patient_appointment_provider", "patient_appointment_recurring_time", "patient_appointment_occurrence", "appointment_service", "appointment_service_type", "appointment_service_weekly_availability", "appointment_speciality", "appointment_unavailability"],
+          "confidence": "derived"
+        },
+        {
+          "kind": "static-frontend-service",
+          "owner": "Bahmni appointments frontend container retained as rollback",
+          "endpoints": ["/appointments/*"],
+          "dataStores": ["No independent clinical database; consumes the Appointments OMOD"],
+          "confidence": "confirmed"
+        }
+      ]
+    },
+    {
+      "id": "reports",
+      "menus": ["Reportes"],
+      "frontendRoutes": ["/bahmni/reports/#/dashboard", "/bahmni/reports/#/dashboard/reports", "/bahmni/reports/#/dashboard/myReports"],
+      "localEvidence": [
+        "../openmrs-module-bahmniapps-hcsba-2024/ui/app/reports/services/reportService.js",
+        "../standard-config-HCSBA/openmrs/apps/reports/reports.json",
+        "../bahmni-docker-HCSBA/bahmni-standard/docker-compose.yml"
+      ],
+      "backendHops": [
+        {
+          "kind": "external-java-service",
+          "owner": "Bahmni Reports service, not an OpenMRS OMOD",
+          "endpoints": ["/bahmnireports/report", "/bahmnireports/schedule", "/bahmnireports/getReports", "/bahmnireports/download/*", "/bahmnireports/delete/*", "/bahmnireports/upload"],
+          "dataStores": ["OpenMRS DB", "OpenELIS DB", "Odoo DB", "bahmni_reports DB", "queued report filesystem volume"],
+          "confidence": "confirmed"
+        }
+      ],
+      "directDataAccessRefs": ["reports-openmrs-db", "reports-openelis-sql", "reports-odoo-sql"]
+    },
+    {
+      "id": "administration",
+      "menus": ["Administración"],
+      "frontendRoutes": ["/bahmni/admin/#/dashboard", "/bahmni/admin/#/csv", "/bahmni/admin/#/csvExport", "/bahmni/admin/#/auditLog", "/bahmni/admin/#/ordersetdashboard", "/bahmni/admin/#/orderset/*", "/bahmni/admin/#/fhirExport"],
+      "localEvidence": [
+        "../openmrs-module-bahmniapps-hcsba-2024/ui/app/admin/app.js",
+        "../openmrs-module-bahmniapps-hcsba-2024/ui/app/admin/services/adminImportService.js",
+        "../openmrs-module-bahmniapps-hcsba-2024/ui/app/admin/services/adminOrderSetService.js",
+        "../openmrs-module-bahmniapps-hcsba-2024/ui/app/admin/services/fhirExportService.js"
+      ],
+      "backendHops": [
+        {
+          "kind": "bahmni-omod-rest",
+          "owner": "Bahmni Core Admin and Audit APIs",
+          "endpoints": ["/ws/rest/v1/bahmnicore/admin/upload/*", "/ws/rest/v1/bahmnicore/admin/export/conceptset", "/ws/rest/v1/auditlog", "/ws/rest/v1/bahmniorderset*"],
+          "dataStores": ["import_status", "audit_log", "order_set module tables", "concept metadata and target clinical tables selected by each importer"],
+          "confidence": "confirmed"
+        },
+        {
+          "kind": "specialized-omod-rest",
+          "owner": "FHIR Export/FHIR2 and Bed Management OWA",
+          "endpoints": ["/ws/rest/v1/fhirexport", "/ws/fhir2/R4/Task", "/openmrs/owa/bedmanagement/*"],
+          "dataStores": ["OpenMRS clinical tables selected for export", "FHIR Task resources", "bed management tables"],
+          "confidence": "derived"
+        }
+      ]
+    },
+    {
+      "id": "external-integrations",
+      "menus": ["Notificaciones GES", "IPS/ICVP ocultos", "Lab Lite", "Atomfeed Console", "Pabellón/OT diferido"],
+      "frontendRoutes": ["dashboard controls", "/lab", "/atomfeed-console", "/bahmni/ot legacy"],
+      "localEvidence": [
+        "src/services/bahmni/dashboard.ts",
+        "src/features/clinical/ips.ts",
+        "../bahmni-docker-HCSBA/bahmni-standard/bahmni-proxy.conf",
+        "../standard-config-HCSBA/openmrs/apps/home/extension.json"
+      ],
+      "backendHops": [
+        {
+          "kind": "external-rest",
+          "owner": "HCSBA GES notification service",
+          "endpoints": ["/apinotificacion/ges*"],
+          "dataStores": ["External GES datastore; schema not present"],
+          "confidence": "pending"
+        },
+        {
+          "kind": "protected-integration-service",
+          "owner": "HCSBA IPS/OpenHIM mediator, disabled by default",
+          "endpoints": ["/openmrs/ips-mediator/*"],
+          "dataStores": ["OpenHIM/FHIR regional services; no local clinical persistence declared"],
+          "confidence": "confirmed"
+        },
+        {
+          "kind": "external-system",
+          "owner": "Institutional Operation Theatre system",
+          "endpoints": ["Pending integration contract"],
+          "dataStores": ["External institutional datastore"],
+          "confidence": "pending"
+        }
+      ]
+    }
+  ],
+  "directDataAccess": [
+    {
+      "id": "bahmnicore-sql-gateway",
+      "classification": "native-sql-behind-java-api",
+      "bypassesOpenmrsApi": false,
+      "runtimeOwner": "Bahmni Core OMOD",
+      "usedBy": ["clinical queues", "ADT ward lists", "dashboard appointments", "global properties"],
+      "handlers": ["emrapi.sqlSearch.activePatients", "emrapi.sqlSearch.activePatientsByProvider", "emrapi.sqlSearch.activePatientsByLocation", "emrapi.sqlSearch.patientsToAdmit", "emrapi.sqlSearch.admittedPatients", "emrapi.sqlSearch.patientsToDischarge", "bedManagement.sqlGet.patientListForAdmissionLocation", "bahmni.sqlGet.upComingAppointments", "bahmni.sqlGet.pastAppointments"],
+      "dataStores": ["OpenMRS DB; SQL text is resolved from global_property or module defaults"],
+      "localEvidence": [
+        "src/services/bahmni/clinical.ts",
+        "src/services/bahmni/ipd.ts",
+        "src/services/bahmni/dashboard.ts",
+        "../standard-config-HCSBA/openmrs/apps/clinical/extension.json",
+        "../standard-config-HCSBA/openmrs/apps/adt/extension.json"
+      ],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "reports-openmrs-db",
+      "classification": "runtime-jdbc-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "Bahmni Reports service",
+      "usedBy": ["MRSGeneric and built-in OpenMRS report types"],
+      "dataStores": ["OpenMRS DB", "obs", "person", "concept_view", "concept_name", "conditions", "other tables selected by the configured report generator"],
+      "localEvidence": [
+        "../bahmni-docker-HCSBA/bahmni-standard/docker-compose.yml",
+        "../standard-config-HCSBA/openmrs/apps/reports/sql/diagnosisCount.sql",
+        "../standard-config-HCSBA/openmrs/apps/reports/reports.json"
+      ],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "reports-openelis-sql",
+      "classification": "runtime-jdbc-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "Bahmni Reports service",
+      "usedBy": ["ElisGeneric reports"],
+      "dataStores": ["OpenELIS DB", "result"],
+      "localEvidence": ["../standard-config-HCSBA/openmrs/apps/reports/sql/testCount.sql", "../standard-config-HCSBA/openmrs/apps/reports/reports.json"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "reports-odoo-sql",
+      "classification": "runtime-jdbc-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "Bahmni Reports service",
+      "usedBy": ["ERPGeneric reports"],
+      "dataStores": ["Odoo DB", "account_move"],
+      "localEvidence": ["../standard-config-HCSBA/openmrs/apps/reports/sql/odooInvoiceSummary.sql", "../standard-config-HCSBA/openmrs/apps/reports/reports.json"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "masterdata-liquibase",
+      "classification": "deployment-sql-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "Bahmni Initializer/Liquibase during deployment",
+      "usedBy": ["users/providers", "roles", "concept mappings", "scheduler tasks", "global properties", "reporting metadata"],
+      "dataStores": ["OpenMRS DB: users, provider, role, user_role, concept*, global_property, scheduler_task_config, reporting_age_group, location_attribute_type"],
+      "localEvidence": ["../standard-config-HCSBA/masterdata/configuration/liquibase/liquibase.xml", "../standard-config-HCSBA/openmrs/migrations/liquibase.xml"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "openelis-liquibase",
+      "classification": "deployment-sql-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "OpenELIS configuration migrations",
+      "usedBy": ["OpenELIS organization/site configuration"],
+      "dataStores": ["OpenELIS DB: organization, site_information"],
+      "localEvidence": ["../standard-config-HCSBA/openelis/migrations/liquibase.xml"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "mart-etl",
+      "classification": "runtime-etl-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "Bahmni Mart",
+      "usedBy": ["analytics extraction"],
+      "dataStores": ["OpenMRS DB read", "PostgreSQL martdb write"],
+      "localEvidence": ["../bahmni-docker-HCSBA/bahmni-standard/docker-compose.yml"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "metabase-direct",
+      "classification": "analytics-db-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "Bahmni Metabase",
+      "usedBy": ["analytics dashboards"],
+      "dataStores": ["OpenMRS DB read", "martdb read", "metabasedb metadata"],
+      "localEvidence": ["../bahmni-docker-HCSBA/bahmni-standard/docker-compose.yml"],
+      "confidence": "confirmed"
+    },
+    {
+      "id": "atomfeed-console-direct",
+      "classification": "operations-db-direct",
+      "bypassesOpenmrsApi": true,
+      "runtimeOwner": "Bahmni Atomfeed Console",
+      "usedBy": ["atom feed operations and diagnostics"],
+      "dataStores": ["OpenMRS DB", "OpenELIS DB", "Odoo DB"],
+      "localEvidence": ["../bahmni-docker-HCSBA/bahmni-standard/docker-compose.yml"],
+      "confidence": "confirmed"
+    }
+  ],
+  "knownGaps": [
+    "Capture the exact OMOD inventory and versions running on HCSBA .205.",
+    "Export the effective values of every emrapi.sqlSearch.*, bedManagement.sqlGet.* and bahmni.sqlGet.* global property; configuration may override module defaults.",
+    "Confirm the deployed OpenMRS schema before treating derived table families as exact migration contracts.",
+    "Obtain the OIRS, GES and institutional Operation Theatre API/data ownership contracts.",
+    "Trace Odoo-connect and OpenELIS atom feed event payloads separately before migrating integration backends."
+  ],
+  "upstreamSources": [
+    "https://github.com/Bahmni/bahmni-core",
+    "https://github.com/openmrs/openmrs-module-bedmanagement",
+    "https://github.com/Bahmni/openmrs-module-appointments",
+    "https://github.com/Bahmni/bahmni-reports"
+  ]
+}

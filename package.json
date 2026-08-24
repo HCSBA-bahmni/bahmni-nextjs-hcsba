@@ -18,6 +18,7 @@
     "inventory:legacy:check": "node scripts/generate-legacy-inventory.mjs --check",
     "audit:dashboard": "node scripts/audit-dashboard-runtime.mjs",
     "audit:dashboard:functional": "node scripts/audit-dashboard-functional-coverage.mjs",
+    "audit:backend-map": "node scripts/check-backend-flow-map.mjs",
     "certification:consultation": "node scripts/check-consultation-gate.mjs",
     "gate:consultation": "node scripts/check-consultation-gate.mjs --require-ready",
     "certification:phase2": "node scripts/check-phase2-gate.mjs",

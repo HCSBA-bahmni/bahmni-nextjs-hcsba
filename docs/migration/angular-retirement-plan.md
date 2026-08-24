@@ -5,6 +5,10 @@ migración HCSBA desde `bahmni-web`/AngularJS hacia Next.js. El inventario
 reproducible vive en `../legacy-inventory.generated.json` y el avance por
 dominio se mantiene en `../migration-ledger.md`.
 
+La trazabilidad menú → API/OMOD → persistencia y los accesos SQL que influyen
+en cada flujo se mantienen en
+[`../architecture/backend-flow-map.md`](../architecture/backend-flow-map.md).
+
 ## Objetivo y criterio de avance
 
 El objetivo no es solamente redirigir rutas a Next.js. Cada funcionalidad debe
