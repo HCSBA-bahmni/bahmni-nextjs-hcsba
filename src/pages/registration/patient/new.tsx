@@ -6,6 +6,7 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { PatientForm } from "@/features/registration/PatientForm";
 import { executeRegistrationWorkflow } from "@/features/registration/executeWorkflow";
+import { useRequiredPatientAttributeCatalogs } from "@/features/registration/useRequiredPatientAttributeCatalogs";
 import { useRegistrationWorkflow } from "@/features/registration/useRegistrationWorkflow";
 import { getAddressLevels } from "@/services/bahmni/address";
 import { loadAppConfig } from "@/services/bahmni/config";
@@ -23,9 +24,10 @@ export default function NewPatient() {
   const addressLevels = useQuery({ queryKey: ["address-levels"], queryFn: getAddressLevels });
   const descriptor = useQuery({ queryKey: ["app-config", "registration"], queryFn: () => loadAppConfig("registration") });
   const config = descriptor.data ? parseRegistrationConfig(descriptor.data) : undefined;
+  const requiredAttributeCatalogs = useRequiredPatientAttributeCatalogs(attributes.data ?? [], config?.mandatoryAttributeNames ?? []);
   const workflow = useRegistrationWorkflow(undefined, config);
-  const loading = [identifiers, attributes, descriptor].some((query) => query.isLoading);
-  const failed = [identifiers, attributes, descriptor].some((query) => query.isError);
+  const loading = [identifiers, attributes, descriptor].some((query) => query.isLoading) || requiredAttributeCatalogs.isLoading;
+  const failed = [identifiers, attributes, descriptor].some((query) => query.isError) || requiredAttributeCatalogs.isError;
   const optionalFailure = relationships.isError || addressLevels.isError;
 
   return <AuthGuard><AppShell title="Nuevo paciente">
