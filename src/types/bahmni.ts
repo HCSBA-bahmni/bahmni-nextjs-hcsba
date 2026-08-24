@@ -1,6 +1,15 @@
 import { z } from "zod";
 
-export const referenceSchema = z.object({ uuid: z.string(), display: z.string().optional(), name: z.string().optional() }).loose();
+const referenceNameSchema = z.union([
+  z.string(),
+  z.object({ display: z.string().optional(), name: z.string().optional() }).loose(),
+]).nullish().transform((value) => typeof value === "string" ? value : value?.display ?? value?.name);
+
+export const referenceSchema = z.object({
+  uuid: z.string(),
+  display: z.string().nullish().transform((value) => value ?? undefined).optional(),
+  name: referenceNameSchema.optional(),
+}).loose();
 export type Reference = z.infer<typeof referenceSchema>;
 
 export const sessionSchema = z.object({

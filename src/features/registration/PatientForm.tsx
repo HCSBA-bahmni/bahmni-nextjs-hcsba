@@ -19,6 +19,7 @@ import { BahmniApiError } from "@/services/bahmni/http";
 import { getConceptAnswers, searchPersons, searchProviders, type IdentifierType, type PersonAttributeType } from "@/services/bahmni/metadata";
 import type { PatientFormValues, PatientIdentifierMetadataValues, Reference } from "@/types/bahmni";
 import { ageFromBirthDate, birthDateFromAge, type PatientAge } from "./age";
+import { buildAddressFieldLayout, type AddressKey } from "./addressFieldLayout";
 import { composeIdentifier, identifierSuffix, selectIdentifierSource, validateConfiguredIdentifier } from "./identifierConfig";
 import { buildPatientAttributeLayout, patientAttributeTranslationKey } from "./patientAttributeLayout";
 import { PatientPrint } from "./PatientPrint";
@@ -42,8 +43,6 @@ const fallbackPrintOptions = [
   { label: "Código de barras", translationKey: "REGISTRATION_PRINT_WITH_BARCODE", templateUrl: "/registration/registrationCardLayout/printWithBarcode.html" },
 ];
 
-type AddressKey = "address1" | "address2" | "address3" | "address4" | "address5" | "address6" | "cityVillage" | "countyDistrict" | "stateProvince" | "postalCode" | "country";
-const addressKeys = new Set<AddressKey>(["address1", "address2", "address3", "address4", "address5", "address6", "cityVillage", "countyDistrict", "stateProvince", "postalCode", "country"]);
 const dropdownA11y = (label: string) => ({ select: { "aria-label": label }, trigger: { "aria-label": `Abrir ${label}` } });
 const plainTranslation = (value: string) => value.replace(/<[^>]+>/g, "");
 
@@ -118,6 +117,10 @@ function HierarchyAddressField({ level, value, error, onChange, onSelect }: { le
   const [suggestions, setSuggestions] = useState<AddressEntry[]>([]);
   const complete = async (event: AutoCompleteCompleteEvent) => setSuggestions(event.query.trim().length < 2 ? [] : await searchAddressEntries(level.addressField, event.query));
   return <div className="field"><label htmlFor={`address-${level.addressField}`}>{level.name}{level.required ? " *" : ""}</label><AutoComplete inputId={`address-${level.addressField}`} value={value} suggestions={suggestions} field="name" completeMethod={(event) => void complete(event)} onChange={(event) => onChange(typeof event.value === "string" ? event.value : event.value?.name ?? "")} onSelect={(event) => onSelect(event.value as AddressEntry)} dropdown={false} /><small>Escriba al menos 2 caracteres para usar la jerarquía.</small>{error && <small className="field-error">{error}</small>}</div>;
+}
+
+function PlainAddressField({ level, value, error, onChange }: { level: AddressLevel; value: string; error?: string; onChange(value: string): void }) {
+  return <div className="field"><label htmlFor={`address-${level.addressField}`}>{level.name}{level.required ? " *" : ""}</label><InputText id={`address-${level.addressField}`} value={value} onChange={(event) => onChange(event.target.value)} />{error && <small className="field-error">{error}</small>}</div>;
 }
 
 function AdditionalIdentifierField({ type, value, metadataConfig, helpText, error, onChange, onGenerate, onRemove }: { type: IdentifierType; value: NonNullable<PatientFormValues["additionalIdentifiers"]>[number]; metadataConfig?: IdentifierMetadataConfig; helpText?: string; error?: string; onChange(value: NonNullable<PatientFormValues["additionalIdentifiers"]>[number]): void; onGenerate(sourceName?: string): Promise<string>; onRemove(): void }) {
@@ -216,7 +219,7 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
   const selectedIdentifierSource = identifierSources.find((source) => source.uuid === patient.identifierSourceUuid);
   const configuredDefaultPrefixMissing = Boolean(selectedIdentifierType?.primary && config?.defaultIdentifierPrefix && identifierSources.length && !identifierSources.some((source) => source.prefix === config.defaultIdentifierPrefix));
   const attributeLayout = useMemo(() => buildPatientAttributeLayout(attributeTypes, config), [attributeTypes, config]);
-  const orderedAddressLevels = config?.addressHierarchy.showAddressFieldsTopDown ? addressLevels : [...addressLevels].reverse();
+  const addressFieldLayout = buildAddressFieldLayout(addressLevels, config?.addressHierarchy.showAddressFieldsTopDown, config?.addressHierarchy.strictAutocompleteFromLevel);
   const translatedAttributeLabel = (attribute: PersonAttributeType) => {
     const fallback = attribute.description ?? attribute.display ?? attribute.name ?? "Atributo";
     return plainTranslation(t(patientAttributeTranslationKey(fallback), { defaultValue: fallback }));
@@ -309,7 +312,7 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
   const applyHierarchy = (currentField: AddressKey, entry: AddressEntry) => {
     setValue(currentField, entry.name);
     let parent = entry.parent;
-    while (parent) { if (parent.addressField && addressKeys.has(parent.addressField as AddressKey)) setValue(parent.addressField as AddressKey, parent.name); parent = parent.parent; }
+    while (parent) { if (parent.addressField && addressFieldLayout.some((level) => level.addressField === parent?.addressField)) setValue(parent.addressField as AddressKey, parent.name); parent = parent.parent; }
   };
   const changeIdentifierType = (typeUuid: string) => {
     const type = identifierTypes.find((item) => item.uuid === typeUuid);
@@ -387,7 +390,7 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
         <div className="field"><label htmlFor="identifier">Identificador</label><InputGroup>{selectedIdentifierSource?.prefix && <InputGroupAddon>{selectedIdentifierSource.prefix}</InputGroupAddon>}<InputText id="identifier" value={patient.identifierSuffix ?? ""} readOnly={config?.showEnterId === false} placeholder={selectedIdentifierType?.description ?? "Valor del identificador"} onChange={(event) => changeIdentifierSuffix(event.target.value)} /><Button type="button" icon="pi pi-refresh" aria-label="Generar identificador" onClick={async () => { try { const generatedIdentifier = await onGenerateId(selectedIdentifierSource?.prefix ?? selectedIdentifierSource?.name); setValue("identifier", generatedIdentifier); setValue("identifierSuffix", identifierSuffix(generatedIdentifier, selectedIdentifierSource?.prefix)); } catch { setSaveError("No fue posible generar el identificador."); } }} /></InputGroup>{configuredErrors.identifier && <small className="field-error">{configuredErrors.identifier}</small>}</div>
       </div>
       <h2 className="patient-section-title">Información de dirección</h2>
-      <div className="patient-profile-grid">{([ ["address1", "Dirección"], ["address2", "Complemento"] ] as const).map(([name, label]) => <div className="field" key={name}><label htmlFor={name}>{label}</label><InputText id={name} {...register(name)} /><small className="field-error">{configuredErrors[name]}</small></div>)}{orderedAddressLevels.filter((level) => addressKeys.has(level.addressField as AddressKey) && !["address1", "address2"].includes(level.addressField)).map((level) => { const field = level.addressField as AddressKey; return <HierarchyAddressField key={field} level={level} value={String(patient[field] ?? "")} error={configuredErrors[field]} onChange={(value) => setValue(field, value)} onSelect={(entry) => applyHierarchy(field, entry)} />; })}</div>
+      <div className="patient-profile-grid">{addressFieldLayout.map((level) => { const field: AddressKey = level.addressField; const props = { level, value: String(patient[field] ?? ""), error: configuredErrors[field], onChange: (value: string) => setValue(field, value) }; return level.strictHierarchy ? <HierarchyAddressField key={field} {...props} onSelect={(entry) => applyHierarchy(field, entry)} /> : <PlainAddressField key={field} {...props} />; })}</div>
       {(visibleAdditionalIdentifiers.length > 0 || onDemandIdentifierTypes.length > 0) && <><h2 className="patient-section-title">Identificadores adicionales</h2>{onDemandIdentifierTypes.length > 0 && <div className="field"><label htmlFor="addIdentifierType">Agregar tipo de identificador</label><Dropdown inputId="addIdentifierType" pt={dropdownA11y("Agregar tipo de identificador")} value={null} placeholder="Seleccione un tipo" options={onDemandIdentifierTypes} optionLabel="display" optionValue="uuid" onChange={(event) => { const type = extraTypes.find((item) => item.uuid === event.value); if (type) setValue("additionalIdentifiers", [...(getValues("additionalIdentifiers") ?? []), additionalValue(type)]); }} /></div>}<div className="patient-profile-grid">{visibleAdditionalIdentifiers.map(({ value: additional, index }) => { const type = identifierTypes.find((item) => item.uuid === additional.identifierTypeUuid); const typeName = type?.name ?? type?.display ?? ""; return type ? <AdditionalIdentifierField key={`${type.uuid}-${index}`} type={type} value={additional} metadataConfig={config?.identifierMetadata[typeName]} helpText={translatedHelp(config?.identifierHelpText[typeName])} error={configuredErrors[`additionalIdentifiers.${index}`]} onGenerate={onGenerateId} onChange={(value) => setValue(`additionalIdentifiers.${index}`, value)} onRemove={() => { const current = [...(getValues("additionalIdentifiers") ?? [])]; if (additional.uuid) current[index] = { ...additional, voided: true }; else current.splice(index, 1); setValue("additionalIdentifiers", current); }} /> : null; })}</div></>}
       {attributeLayout.otherInformation.length > 0 && <><h2 className="patient-section-title">Otra información</h2><div className="patient-profile-grid">{attributeLayout.otherInformation.map((attribute) => <DynamicAttributeField key={attribute.uuid} attribute={attribute} label={translatedAttributeLabel(attribute)} value={patient.attributes?.[attribute.uuid]} requiredByConfig={attributeRequired(attribute)} helpText={translatedHelp(config?.fieldHelpText[attributeName(attribute)])} error={configuredErrors[attribute.uuid]} onChange={(value) => setValue(`attributes.${attribute.uuid}`, value)} />)}</div></>}
     </section>

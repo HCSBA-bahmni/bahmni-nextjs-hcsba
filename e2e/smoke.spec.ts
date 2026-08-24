@@ -450,7 +450,7 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   let jumpAccepted = "";
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "location-1", display: "HCSBA" } }) }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "priv-1", name: "Add Patients" }], roles: [] }] }) }));
-  await page.route("**/bahmni_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showBirthTime: true, showSecondLastName: true, isLastNameMandatory: true, isSecondLastNameMandatory: true, defaultIdentifierPrefix: "HCSBA", prominentExtraIdentifierTypes: ["RUN"], onDemandExtraIdentifierTypes: ["Pasaporte"], identifierMetadata: { RUN: { typeCode: "1", use: "official", issuerCountryCode: "152" } }, patientInformation: { extra: { title: "Additional Patient Information", expanded: false, attributes: ["email", "givenNameLocal"] } }, patientSearch: { customAttributes: { label: "Teléfono", fields: ["phoneNumber"] }, socialAttributes: { label: "Nombre social", fields: ["givenNameLocal"] } }, relationshipTypeMap: { Doctor: "provider" }, printOptions: [{ translationKey: "REGISTRATION_PRINT_REG_CARD_LOCAL_KEY", templateUrl: "/registration/registrationCardLayout/print_local.html" }] } }) }));
+  await page.route("**/bahmni_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showBirthTime: true, showSecondLastName: true, isLastNameMandatory: true, isSecondLastNameMandatory: true, defaultIdentifierPrefix: "HCSBA", prominentExtraIdentifierTypes: ["RUN"], onDemandExtraIdentifierTypes: ["Pasaporte"], identifierMetadata: { RUN: { typeCode: "1", use: "official", issuerCountryCode: "152" } }, addressHierarchy: { showAddressFieldsTopDown: true, strictAutocompleteFromLevel: "cityVillage" }, patientInformation: { extra: { title: "Additional Patient Information", expanded: false, attributes: ["email", "givenNameLocal"] } }, patientSearch: { customAttributes: { label: "Teléfono", fields: ["phoneNumber"] }, socialAttributes: { label: "Nombre social", fields: ["givenNameLocal"] } }, relationshipTypeMap: { Doctor: "provider" }, printOptions: [{ translationKey: "REGISTRATION_PRINT_REG_CARD_LOCAL_KEY", templateUrl: "/registration/registrationCardLayout/print_local.html" }] } }) }));
   await page.route("**/implementation_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/bahmni/i18n/registration/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ REGISTRATION_LABEL_SAVE: "<u>G</u>uardar paciente traducido", REGISTRATION_TITLE_ADDITIONAL_PATIENT: "Información Adicional del Paciente", REGISTRATION_PRINT_REG_CARD_LOCAL_KEY: "Tarjeta base" }) }));
   await page.route("**/bahmni_config/openmrs/i18n/registration/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ REGISTRATION_PRINT_REG_CARD_LOCAL_KEY: "Tarjeta local HCSBA" }) }));
@@ -460,9 +460,18 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
     { uuid: "run-type", name: "RUN", display: "RUN", primary: false, required: false, format: "^\\d{1,8}-[0-9Kk]$", formatDescription: "RUN inválido", identifierSources: [] },
   ]) }));
   await page.route("**/openmrs/ws/rest/v1/personattributetype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "phone-type", name: "phoneNumber", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "email-type", name: "email", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "social-type", name: "givenNameLocal", format: "java.lang.String", sortWeight: 2, concept: null }] }) }));
-  await page.route("**/openmrs/ws/rest/v1/relationshiptype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/relationshiptype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [
+    { uuid: "legal-representative", name: null, display: "Representa legalmente a", aIsToB: "Representa legalmente a", bIsToA: "Es representado legalmente por" },
+    { uuid: "responsible-contact", name: null, display: "Es contacto responsable de", aIsToB: "Es contacto responsable de", bIsToA: "Tiene como contacto responsable a" },
+  ] }) }));
   await page.route("**/openmrs/ws/rest/v1/visittype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
-  await page.route("**/openmrs/module/addresshierarchy/ajax/getOrderedAddressHierarchyLevels.form", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([{ name: "Región", addressField: "stateProvince" }, { name: "Comuna", addressField: "cityVillage" }]) }));
+  await page.route("**/openmrs/module/addresshierarchy/ajax/getOrderedAddressHierarchyLevels.form", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify([
+    { name: "País", addressField: "country", required: true }, { name: "Región", addressField: "stateProvince", required: true },
+    { name: "Provincia", addressField: "countyDistrict", required: true }, { name: "Comuna", addressField: "cityVillage", required: true },
+    { name: "Tipo de vía", addressField: "address4" }, { name: "Nombre de vía", addressField: "address1" },
+    { name: "Número", addressField: "address2" }, { name: "Complemento", addressField: "address3" },
+    { name: "Código postal", addressField: "postalCode" },
+  ]) }));
   await page.route("**/openmrs/ws/rest/v1/idgen", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "HCSBA100" }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/patientprofile", async (route) => {
     patientPayload = route.request().postDataJSON() as Record<string, unknown>;
@@ -506,7 +515,10 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await expect(page.getByLabel("email")).toBeVisible();
   await page.getByLabel("email").fill("persona@hcsba.cl");
   await expect(page.getByLabel("email")).toBeVisible();
-  await expect(page.getByLabel("Región")).toBeVisible();
+  for (const label of ["País *", "Región *", "Provincia *", "Comuna *", "Tipo de vía", "Nombre de vía", "Número", "Complemento", "Código postal"]) {
+    await expect(page.getByLabel(label, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByText("Relaciones", { exact: true })).toBeVisible();
   await expect(page.getByTitle("Cambiar ubicación")).toHaveText("HCSBA");
   await page.getByLabel("Nombres").fill("Paciente");
   await page.getByLabel("Primer apellido").fill("Sintético");
