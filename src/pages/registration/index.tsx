@@ -9,6 +9,7 @@ import { AppShell } from "@/components/AppShell";
 import { parseRegistrationConfig } from "@/config-compat/registrationConfig";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
+import { BiometricPatientSearch } from "@/features/registration/BiometricPatientSearch";
 import { loadAppConfig } from "@/services/bahmni/config";
 import { searchPatients } from "@/services/bahmni/patients";
 import type { PatientSearchResult } from "@/types/bahmni";
@@ -60,6 +61,7 @@ export default function RegistrationSearch() {
       {fields.map(([name, label, placeholder]) => <div className="field" key={name}><label htmlFor={`search-${name}`}>{label}</label><InputText id={`search-${name}`} placeholder={placeholder} value={form[name]} onChange={(event) => setDraft((current) => ({ ...routeFields, ...current, [name]: event.target.value }))} onKeyDown={(event) => { if (event.key === "Enter") search(); }} /></div>)}
       <Button label="Buscar" icon="pi pi-search" disabled={!Object.values(form).some(Boolean)} onClick={search} />
       <Button label="Limpiar" outlined onClick={clear} />
+      <BiometricPatientSearch onOpenPatient={(patientUuid) => void router.push(formatPatientRoute(config?.searchByIdForwardUrl, patientUuid))} />
       <Button label="Nuevo paciente" icon="pi pi-user-plus" onClick={() => void router.push("/registration/patient/new")} />
     </div>
     {hasConflictingAttributes && <p className="error-banner" role="alert">Busque por teléfono o por nombre social en una consulta, no por ambos simultáneamente.</p>}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPatientImageDataUrl, normalizePatientSearchResult, patientImageUrl } from "./patients";
+import { isPatientImageDataUrl, normalizePatientSearchResult, patientImageUrl, patientSummaryFromProfile } from "./patients";
 
 describe("patient search response", () => {
   it("normalizes the Bahmni search wire format", () => {
@@ -10,6 +10,10 @@ describe("patient search response", () => {
 describe("patient image", () => {
   it("builds the authenticated OpenMRS image URL", () => {
     expect(patientImageUrl("patient/1", "refresh-token")).toBe("/openmrs/ws/rest/v1/patientImage?patientUuid=patient%2F1&q=refresh-token");
+  });
+
+  it("normalizes a full patient profile for biometric candidate review", () => {
+    expect(patientSummaryFromProfile({ patient: { uuid: "p1", identifiers: [{ identifier: "RUN-1", preferred: true }] }, person: { gender: "F", names: [{ givenName: "Ana", familyName: "Pérez", preferred: true }], addresses: [{ cityVillage: "Santiago" }] } }, "fallback")).toMatchObject({ uuid: "p1", identifier: "RUN-1", givenName: "Ana", familyName: "Pérez", gender: "F", address: "Santiago" });
   });
 
   it("distinguishes a newly captured image from the persisted image URL", () => {

@@ -127,6 +127,7 @@ export interface PatientFormValues {
   attributeUuids?: Record<string, string>;
   relationships: Array<{ relationshipTypeUuid: string; personUuid: string; personDisplay?: string; relationshipUuid?: string; voided?: boolean }>;
   image?: string;
+  biometricEnrollmentRequested?: boolean;
 }
 
 export interface PatientIdentifierMetadataValues {

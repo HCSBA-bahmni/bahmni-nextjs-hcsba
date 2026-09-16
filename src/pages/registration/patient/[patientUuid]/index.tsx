@@ -12,6 +12,7 @@ import { loadAppConfig } from "@/services/bahmni/config";
 import { getIdentifierTypes, getPersonAttributeTypes, getRelationshipTypes, type PersonAttributeType } from "@/services/bahmni/metadata";
 import { getPatientIdentifierMetadata, metadataValues, savePatientIdentifierMetadata, type IdentifierMetadataRecord } from "@/services/bahmni/identifierMetadata";
 import { generateIdentifier, getPatientProfile, isPatientImageDataUrl, patientImageUrl, savePatient, uploadPatientImage } from "@/services/bahmni/patients";
+import { enrollPatientBiometrics } from "@/services/biometrics";
 import type { PatientFormValues } from "@/types/bahmni";
 
 export function profileToForm(profile: Record<string, unknown>, uuid: string, attributeTypes: PersonAttributeType[], identifierMetadata: IdentifierMetadataRecord[] = []): Partial<PatientFormValues> {
@@ -74,9 +75,10 @@ export default function EditPatient() {
 
   return <AuthGuard><AppShell title="Editar paciente">
     {router.query.saved === "1" && <p role="status" className="success-banner">Paciente guardado correctamente.</p>}
+    {router.query.biometric === "failed" && <p role="alert" className="warning-banner">El paciente y su fotografía se guardaron, pero no fue posible registrar la plantilla biométrica. Puede volver a tomar la foto e intentarlo nuevamente.</p>}
     {loading && <p role="status">Cargando paciente y configuración…</p>}
     {failed && <p role="alert" className="error-banner">No fue posible cargar el perfil completo del paciente.</p>}
     {optionalFailure && <p role="status" className="warning-banner">Relaciones o dirección jerárquica no están disponibles temporalmente; el resto del perfil puede editarse.</p>}
-    {!loading && !failed && profile.data && config && <PatientForm initial={profileToForm(profile.data, uuid, attributes.data ?? [], identifierMetadata.data ?? [])} config={config} workflow={workflow} identifierTypes={identifiers.data ?? []} attributeTypes={attributes.data ?? []} relationshipTypes={relationships.data ?? []} addressLevels={addressLevels.data ?? []} onGenerateId={(identifierSourceName) => generateIdentifier(identifierSourceName ?? config.defaultIdentifierPrefix)} onSave={async (values, jumpAccepted, intent) => { await savePatient(values, jumpAccepted); await savePatientIdentifierMetadata(uuid, values); if (isPatientImageDataUrl(values.image)) await uploadPatientImage(uuid, values.image); await queryClient.invalidateQueries({ queryKey: ["patient", uuid] }); await queryClient.invalidateQueries({ queryKey: ["identifier-metadata", uuid] }); await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router); }} />}
+    {!loading && !failed && profile.data && config && <PatientForm initial={profileToForm(profile.data, uuid, attributes.data ?? [], identifierMetadata.data ?? [])} config={config} workflow={workflow} identifierTypes={identifiers.data ?? []} attributeTypes={attributes.data ?? []} relationshipTypes={relationships.data ?? []} addressLevels={addressLevels.data ?? []} onGenerateId={(identifierSourceName) => generateIdentifier(identifierSourceName ?? config.defaultIdentifierPrefix)} onSave={async (values, jumpAccepted, intent) => { await savePatient(values, jumpAccepted); await savePatientIdentifierMetadata(uuid, values); if (isPatientImageDataUrl(values.image)) await uploadPatientImage(uuid, values.image); if (values.biometricEnrollmentRequested && isPatientImageDataUrl(values.image)) { try { await enrollPatientBiometrics(uuid, values.image); } catch { await router.replace(`/registration/patient/${encodeURIComponent(uuid)}?saved=1&biometric=failed`); return; } } await queryClient.invalidateQueries({ queryKey: ["patient", uuid] }); await queryClient.invalidateQueries({ queryKey: ["identifier-metadata", uuid] }); await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router); }} />}
   </AppShell></AuthGuard>;
 }
