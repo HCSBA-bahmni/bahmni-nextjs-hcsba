@@ -8,3 +8,4 @@ test-results/
 !.example-env
 *.log
 *.tsbuildinfo
+*.portable-kit.bak
