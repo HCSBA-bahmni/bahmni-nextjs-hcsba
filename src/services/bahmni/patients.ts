@@ -82,6 +82,16 @@ export async function searchPatients(params: SearchPatientsParams): Promise<{ re
 
 export async function getPatientProfile(uuid: string): Promise<Record<string, unknown>> { return bahmniRequest(`/ws/rest/v1/patientprofile/${encodeURIComponent(uuid)}?v=full`); }
 
+export function patientImageUrl(patientUuid: string, cacheKey?: string | number): string {
+  const query = new URLSearchParams({ patientUuid });
+  if (cacheKey !== undefined) query.set("q", String(cacheKey));
+  return `/openmrs/ws/rest/v1/patientImage?${query.toString()}`;
+}
+
+export function isPatientImageDataUrl(image?: string): image is string {
+  return Boolean(image && /^data:image\/[a-z0-9.+-]+;base64,/i.test(image));
+}
+
 export async function savePatient(values: PatientFormValues, jumpAccepted = false): Promise<Record<string, unknown>> {
   const payload = toPatientProfilePayload(values);
   const path = values.uuid ? `/ws/rest/v1/bahmnicore/patientprofile/${encodeURIComponent(values.uuid)}` : "/ws/rest/v1/bahmnicore/patientprofile";
@@ -94,6 +104,7 @@ export async function generateIdentifier(identifierSourceName?: string): Promise
 }
 
 export async function uploadPatientImage(patientUuid: string, image: string): Promise<void> {
+  if (!isPatientImageDataUrl(image)) return;
   const base64EncodedImage = image.replace(/^data:image\/[^;]+;base64,/, "");
   await bahmniRequest("/ws/rest/v1/personimage/", { method: "POST", body: JSON.stringify({ person: { uuid: patientUuid }, base64EncodedImage }) });
 }

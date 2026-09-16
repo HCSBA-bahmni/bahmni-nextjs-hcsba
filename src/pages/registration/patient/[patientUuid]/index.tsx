@@ -11,7 +11,7 @@ import { getAddressLevels } from "@/services/bahmni/address";
 import { loadAppConfig } from "@/services/bahmni/config";
 import { getIdentifierTypes, getPersonAttributeTypes, getRelationshipTypes, type PersonAttributeType } from "@/services/bahmni/metadata";
 import { getPatientIdentifierMetadata, metadataValues, savePatientIdentifierMetadata, type IdentifierMetadataRecord } from "@/services/bahmni/identifierMetadata";
-import { generateIdentifier, getPatientProfile, savePatient, uploadPatientImage } from "@/services/bahmni/patients";
+import { generateIdentifier, getPatientProfile, isPatientImageDataUrl, patientImageUrl, savePatient, uploadPatientImage } from "@/services/bahmni/patients";
 import type { PatientFormValues } from "@/types/bahmni";
 
 export function profileToForm(profile: Record<string, unknown>, uuid: string, attributeTypes: PersonAttributeType[], identifierMetadata: IdentifierMetadataRecord[] = []): Partial<PatientFormValues> {
@@ -49,6 +49,7 @@ export function profileToForm(profile: Record<string, unknown>, uuid: string, at
     identifier: String(identifier.identifier ?? ""), identifierTypeUuid: String((identifier.identifierType as { uuid?: string } | undefined)?.uuid ?? identifier.identifierType ?? ""), identifierSourceUuid: String((identifier.identifierSource as { uuid?: string } | undefined)?.uuid ?? identifier.identifierSourceUuid ?? "") || undefined, identifierPrefix: String((identifier.identifierSource as { prefix?: string } | undefined)?.prefix ?? identifier.identifierPrefix ?? "") || undefined, additionalIdentifiers,
     address1: String(address.address1 ?? ""), address2: String(address.address2 ?? ""), address3: String(address.address3 ?? ""), address4: String(address.address4 ?? ""), address5: String(address.address5 ?? ""), address6: String(address.address6 ?? ""), cityVillage: String(address.cityVillage ?? ""), countyDistrict: String(address.countyDistrict ?? ""), stateProvince: String(address.stateProvince ?? ""), country: String(address.country ?? ""), postalCode: String(address.postalCode ?? ""),
     phoneNumber: phoneUuid ? String(attributes[phoneUuid] ?? "") : "", attributes, attributeUuids, relationships, dead: Boolean(person.dead), deathDate: typeof person.deathDate === "string" ? person.deathDate.slice(0, 10) : undefined,
+    image: patientImageUrl(uuid, Date.now()),
   };
 }
 
@@ -76,6 +77,6 @@ export default function EditPatient() {
     {loading && <p role="status">Cargando paciente y configuración…</p>}
     {failed && <p role="alert" className="error-banner">No fue posible cargar el perfil completo del paciente.</p>}
     {optionalFailure && <p role="status" className="warning-banner">Relaciones o dirección jerárquica no están disponibles temporalmente; el resto del perfil puede editarse.</p>}
-    {!loading && !failed && profile.data && config && <PatientForm initial={profileToForm(profile.data, uuid, attributes.data ?? [], identifierMetadata.data ?? [])} config={config} workflow={workflow} identifierTypes={identifiers.data ?? []} attributeTypes={attributes.data ?? []} relationshipTypes={relationships.data ?? []} addressLevels={addressLevels.data ?? []} onGenerateId={(identifierSourceName) => generateIdentifier(identifierSourceName ?? config.defaultIdentifierPrefix)} onSave={async (values, jumpAccepted, intent) => { await savePatient(values, jumpAccepted); await savePatientIdentifierMetadata(uuid, values); if (values.image) await uploadPatientImage(uuid, values.image); await queryClient.invalidateQueries({ queryKey: ["patient", uuid] }); await queryClient.invalidateQueries({ queryKey: ["identifier-metadata", uuid] }); await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router); }} />}
+    {!loading && !failed && profile.data && config && <PatientForm initial={profileToForm(profile.data, uuid, attributes.data ?? [], identifierMetadata.data ?? [])} config={config} workflow={workflow} identifierTypes={identifiers.data ?? []} attributeTypes={attributes.data ?? []} relationshipTypes={relationships.data ?? []} addressLevels={addressLevels.data ?? []} onGenerateId={(identifierSourceName) => generateIdentifier(identifierSourceName ?? config.defaultIdentifierPrefix)} onSave={async (values, jumpAccepted, intent) => { await savePatient(values, jumpAccepted); await savePatientIdentifierMetadata(uuid, values); if (isPatientImageDataUrl(values.image)) await uploadPatientImage(uuid, values.image); await queryClient.invalidateQueries({ queryKey: ["patient", uuid] }); await queryClient.invalidateQueries({ queryKey: ["identifier-metadata", uuid] }); await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router); }} />}
   </AppShell></AuthGuard>;
 }

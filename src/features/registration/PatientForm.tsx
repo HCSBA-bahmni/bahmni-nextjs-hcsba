@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import Image from "next/image";
 import { AutoComplete, type AutoCompleteCompleteEvent } from "primereact/autocomplete";
 import { Button } from "primereact/button";
 import { Calendar } from "primereact/calendar";
@@ -25,6 +24,7 @@ import { composeIdentifier, identifierSuffix, selectIdentifierSource, validateCo
 import { buildPatientAttributeLayout, patientAttributeTranslationKey } from "./patientAttributeLayout";
 import { LAST_PATIENT_FORM_STEP, PATIENT_FORM_STEPS, patientFormStepForErrorKeys } from "./patientFormSteps";
 import { PatientPrint } from "./PatientPrint";
+import { PatientPhotoControl } from "./PatientPhotoControl";
 import { useRegistrationTranslations } from "./useRegistrationTranslations";
 import type { RegistrationSubmitIntent, RegistrationWorkflowAction } from "./workflow";
 
@@ -251,7 +251,8 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
   const fileToImage = (file?: File) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return setSaveError("La fotografía no puede superar 5 MB.");
-    const reader = new FileReader(); reader.onload = () => setValue("image", String(reader.result)); reader.readAsDataURL(file);
+    setSaveError("");
+    const reader = new FileReader(); reader.onload = () => setValue("image", String(reader.result), { shouldDirty: true }); reader.readAsDataURL(file);
   };
   const validateConfigured = (values: PatientFormValues) => {
     const messages: Record<string, string> = {};
@@ -402,7 +403,7 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
 
     <div className="patient-form-stage" hidden={activeStep !== 0}>
       <section className="panel patient-profile-panel" aria-labelledby="patient-identification-title">
-        <div className="patient-profile-heading"><div><span className="patient-profile-kicker">{initial?.uuid ? "Paciente registrado" : "Nuevo paciente"}</span><strong>{patient.identifier || "Identificador por asignar"}</strong></div><div className="patient-photo-control">{patient.image && <Image unoptimized src={patient.image} alt="Fotografía del paciente" width={76} height={76} />}<label className="patient-photo-button">Foto<input aria-label="Fotografía del paciente" type="file" accept="image/*" capture="user" onChange={(event) => fileToImage(event.target.files?.[0])} /></label></div></div>
+        <div className="patient-profile-heading"><div><span className="patient-profile-kicker">{initial?.uuid ? "Paciente registrado" : "Nuevo paciente"}</span><strong>{patient.identifier || "Identificador por asignar"}</strong></div><PatientPhotoControl image={patient.image} patientName={[patient.givenName, patient.familyName].filter(Boolean).join(" ")} onCapture={(image) => setValue("image", image, { shouldDirty: true })} onFileSelect={fileToImage} /></div>
         <h2 id="patient-identification-title" className="patient-section-title">Datos de identificación</h2>
         <div className="patient-profile-grid">
         <div className="field patient-name-group"><label>Nombre del paciente *</label><div className="patient-name-inputs"><InputText id="givenName" aria-label="Nombres" placeholder="Nombres" {...register("givenName")} />{config?.showMiddleName !== false && <InputText id="middleName" aria-label="Segundo nombre" placeholder="Segundo nombre" {...register("middleName")} />}{config?.showLastName !== false && <InputText id="familyName" aria-label="Primer apellido" placeholder="Primer apellido" {...register("familyName")} />}{config?.showSecondLastName && <InputText id="familyName2" aria-label="Segundo apellido" placeholder="Segundo apellido" {...register("familyName2")} />}</div><small className="field-error">{errors.givenName?.message ?? configuredErrors.givenName ?? errors.familyName?.message ?? configuredErrors.familyName ?? errors.familyName2?.message ?? configuredErrors.familyName2}</small></div>
