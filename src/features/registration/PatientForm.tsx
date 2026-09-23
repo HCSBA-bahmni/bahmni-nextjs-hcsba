@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import Image from "next/image";
 import { AutoComplete, type AutoCompleteCompleteEvent } from "primereact/autocomplete";
 import { Button } from "primereact/button";
 import { Calendar } from "primereact/calendar";
@@ -25,6 +24,8 @@ import { composeIdentifier, identifierSuffix, selectIdentifierSource, validateCo
 import { buildPatientAttributeLayout, patientAttributeTranslationKey } from "./patientAttributeLayout";
 import { LAST_PATIENT_FORM_STEP, PATIENT_FORM_STEPS, patientFormStepForErrorKeys } from "./patientFormSteps";
 import { PatientPrint } from "./PatientPrint";
+import { PatientPhotoControl } from "./PatientPhotoControl";
+import { PatientBiometricVerification } from "./PatientBiometricVerification";
 import { useRegistrationTranslations } from "./useRegistrationTranslations";
 import type { RegistrationSubmitIntent, RegistrationWorkflowAction } from "./workflow";
 
@@ -34,7 +35,7 @@ const schema = z.object({
   birthDate: z.string().optional(), birthDateEstimated: z.boolean().optional(), ageYears: z.number().min(0).max(120).optional(), ageMonths: z.number().min(0).max(12).optional(), ageDays: z.number().min(0).max(31).optional(), birthTime: z.string().optional(), identifier: z.string().optional(), identifierTypeUuid: z.string().optional(), identifierSourceUuid: z.string().optional(), identifierPrefix: z.string().optional(), identifierSuffix: z.string().optional(), additionalIdentifiers: z.array(z.object({ uuid: z.string().optional(), identifier: z.string().optional(), identifierTypeUuid: z.string(), identifierSourceUuid: z.string().optional(), identifierPrefix: z.string().optional(), identifierSuffix: z.string().optional(), voided: z.boolean().optional(), metadata: z.object({ typeCode: z.string(), use: z.string(), systemUri: z.string().optional(), issuerCountryCode: z.string().optional(), issuerOrganization: z.string().optional(), documentType: z.string().optional(), validFrom: z.string().optional(), validTo: z.string().optional() }).optional() })).optional(), locationUuid: z.string().optional(),
   phoneNumber: z.string().optional(), address1: z.string().optional(), address2: z.string().optional(), address3: z.string().optional(), address4: z.string().optional(), address5: z.string().optional(), address6: z.string().optional(), cityVillage: z.string().optional(), stateProvince: z.string().optional(), countyDistrict: z.string().optional(), country: z.string().optional(), postalCode: z.string().optional(),
   dead: z.boolean().optional(), deathDate: z.string().optional(), causeOfDeathUuid: z.string().optional(), attributes: z.record(z.string(), z.unknown()), attributeUuids: z.record(z.string(), z.string()).optional(),
-  relationships: z.array(z.object({ relationshipTypeUuid: z.string(), personUuid: z.string(), personDisplay: z.string().optional(), relationshipUuid: z.string().optional(), voided: z.boolean().optional() })), image: z.string().optional(), uuid: z.string().optional(),
+  relationships: z.array(z.object({ relationshipTypeUuid: z.string(), personUuid: z.string(), personDisplay: z.string().optional(), relationshipUuid: z.string().optional(), voided: z.boolean().optional() })), image: z.string().optional(), biometricEnrollmentRequested: z.boolean().optional(), uuid: z.string().optional(),
 }).refine((value) => Boolean(value.birthDate || value.ageYears !== undefined || value.ageMonths !== undefined || value.ageDays !== undefined), { path: ["birthDate"], message: "Ingrese fecha de nacimiento o edad" })
   .refine((value) => !value.birthDate || ageFromBirthDate(value.birthDate) !== undefined, { path: ["birthDate"], message: "La fecha de nacimiento no puede ser futura" });
 
@@ -251,7 +252,8 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
   const fileToImage = (file?: File) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return setSaveError("La fotografía no puede superar 5 MB.");
-    const reader = new FileReader(); reader.onload = () => setValue("image", String(reader.result)); reader.readAsDataURL(file);
+    setSaveError("");
+    const reader = new FileReader(); reader.onload = () => setValue("image", String(reader.result), { shouldDirty: true }); reader.readAsDataURL(file);
   };
   const validateConfigured = (values: PatientFormValues) => {
     const messages: Record<string, string> = {};
@@ -402,7 +404,7 @@ export function PatientForm({ initial, identifierTypes, attributeTypes = [], rel
 
     <div className="patient-form-stage" hidden={activeStep !== 0}>
       <section className="panel patient-profile-panel" aria-labelledby="patient-identification-title">
-        <div className="patient-profile-heading"><div><span className="patient-profile-kicker">{initial?.uuid ? "Paciente registrado" : "Nuevo paciente"}</span><strong>{patient.identifier || "Identificador por asignar"}</strong></div><div className="patient-photo-control">{patient.image && <Image unoptimized src={patient.image} alt="Fotografía del paciente" width={76} height={76} />}<label className="patient-photo-button">Foto<input aria-label="Fotografía del paciente" type="file" accept="image/*" capture="user" onChange={(event) => fileToImage(event.target.files?.[0])} /></label></div></div>
+        <div className="patient-profile-heading"><div><span className="patient-profile-kicker">{initial?.uuid ? "Paciente registrado" : "Nuevo paciente"}</span><strong>{patient.identifier || "Identificador por asignar"}</strong>{initial?.uuid && <PatientBiometricVerification patientUuid={initial.uuid} />}</div><PatientPhotoControl image={patient.image} patientName={[patient.givenName, patient.familyName].filter(Boolean).join(" ")} onCapture={(image, options) => { setValue("image", image, { shouldDirty: true }); setValue("biometricEnrollmentRequested", options?.enrollBiometric ?? false, { shouldDirty: true }); }} onFileSelect={(file) => { setValue("biometricEnrollmentRequested", false); fileToImage(file); }} /></div>
         <h2 id="patient-identification-title" className="patient-section-title">Datos de identificación</h2>
         <div className="patient-profile-grid">
         <div className="field patient-name-group"><label>Nombre del paciente *</label><div className="patient-name-inputs"><InputText id="givenName" aria-label="Nombres" placeholder="Nombres" {...register("givenName")} />{config?.showMiddleName !== false && <InputText id="middleName" aria-label="Segundo nombre" placeholder="Segundo nombre" {...register("middleName")} />}{config?.showLastName !== false && <InputText id="familyName" aria-label="Primer apellido" placeholder="Primer apellido" {...register("familyName")} />}{config?.showSecondLastName && <InputText id="familyName2" aria-label="Segundo apellido" placeholder="Segundo apellido" {...register("familyName2")} />}</div><small className="field-error">{errors.givenName?.message ?? configuredErrors.givenName ?? errors.familyName?.message ?? configuredErrors.familyName ?? errors.familyName2?.message ?? configuredErrors.familyName2}</small></div>

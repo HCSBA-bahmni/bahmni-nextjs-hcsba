@@ -13,6 +13,7 @@ import { loadAppConfig } from "@/services/bahmni/config";
 import { getIdentifierTypes, getPersonAttributeTypes, getRelationshipTypes } from "@/services/bahmni/metadata";
 import { savePatientIdentifierMetadata } from "@/services/bahmni/identifierMetadata";
 import { generateIdentifier, savePatient, uploadPatientImage } from "@/services/bahmni/patients";
+import { enrollPatientBiometrics } from "@/services/biometrics";
 import type { PatientFormValues } from "@/types/bahmni";
 
 export default function NewPatient() {
@@ -43,6 +44,13 @@ export default function NewPatient() {
         if (!uuid) throw new Error("El servidor no devolvió el UUID del paciente creado.");
         await savePatientIdentifierMetadata(uuid, values);
         if (values.image) await uploadPatientImage(uuid, values.image);
+        if (values.biometricEnrollmentRequested && values.image) {
+          try { await enrollPatientBiometrics(uuid, values.image); }
+          catch {
+            await router.replace(`/registration/patient/${encodeURIComponent(uuid)}?saved=1&biometric=failed`);
+            return;
+          }
+        }
         await executeRegistrationWorkflow(intent, uuid, workflow.visitLocationUuid, router);
       }}
     />}

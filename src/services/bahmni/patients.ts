@@ -82,6 +82,43 @@ export async function searchPatients(params: SearchPatientsParams): Promise<{ re
 
 export async function getPatientProfile(uuid: string): Promise<Record<string, unknown>> { return bahmniRequest(`/ws/rest/v1/patientprofile/${encodeURIComponent(uuid)}?v=full`); }
 
+export function patientSummaryFromProfile(profile: Record<string, unknown>, fallbackUuid: string): PatientSearchResult {
+  const patient = (profile.patient ?? profile) as Record<string, unknown>;
+  const person = (profile.person ?? (patient.person as Record<string, unknown> | undefined) ?? profile) as Record<string, unknown>;
+  const names = (person.names as Array<Record<string, unknown>> | undefined) ?? [];
+  const name = names.find((entry) => entry.preferred === true) ?? names[0] ?? {};
+  const identifiers = (patient.identifiers as Array<Record<string, unknown>> | undefined) ?? [];
+  const identifier = identifiers.find((entry) => entry.preferred === true) ?? identifiers[0] ?? {};
+  const addresses = (person.addresses as Array<Record<string, unknown>> | undefined) ?? [];
+  const address = addresses.find((entry) => entry.preferred === true) ?? addresses[0] ?? {};
+  return {
+    uuid: String(patient.uuid ?? person.uuid ?? fallbackUuid),
+    identifier: String(identifier.identifier ?? ""),
+    givenName: String(name.givenName ?? ""),
+    middleName: typeof name.middleName === "string" ? name.middleName : undefined,
+    familyName: String(name.familyName ?? ""),
+    familyName2: typeof name.familyName2 === "string" ? name.familyName2 : undefined,
+    gender: typeof person.gender === "string" ? person.gender : undefined,
+    birthDate: typeof person.birthdate === "string" ? person.birthdate : undefined,
+    address: [address.address1, address.cityVillage, address.stateProvince].filter((value) => typeof value === "string" && value).join(", "),
+  };
+}
+
+export async function getPatientSummaries(patientUuids: string[]): Promise<Map<string, PatientSearchResult>> {
+  const settled = await Promise.allSettled(patientUuids.map(async (uuid) => patientSummaryFromProfile(await getPatientProfile(uuid), uuid)));
+  return new Map(settled.flatMap((entry, index) => entry.status === "fulfilled" ? [[patientUuids[index]!, entry.value] as const] : []));
+}
+
+export function patientImageUrl(patientUuid: string, cacheKey?: string | number): string {
+  const query = new URLSearchParams({ patientUuid });
+  if (cacheKey !== undefined) query.set("q", String(cacheKey));
+  return `/openmrs/ws/rest/v1/patientImage?${query.toString()}`;
+}
+
+export function isPatientImageDataUrl(image?: string): image is string {
+  return Boolean(image && /^data:image\/[a-z0-9.+-]+;base64,/i.test(image));
+}
+
 export async function savePatient(values: PatientFormValues, jumpAccepted = false): Promise<Record<string, unknown>> {
   const payload = toPatientProfilePayload(values);
   const path = values.uuid ? `/ws/rest/v1/bahmnicore/patientprofile/${encodeURIComponent(values.uuid)}` : "/ws/rest/v1/bahmnicore/patientprofile";
@@ -94,6 +131,7 @@ export async function generateIdentifier(identifierSourceName?: string): Promise
 }
 
 export async function uploadPatientImage(patientUuid: string, image: string): Promise<void> {
+  if (!isPatientImageDataUrl(image)) return;
   const base64EncodedImage = image.replace(/^data:image\/[^;]+;base64,/, "");
   await bahmniRequest("/ws/rest/v1/personimage/", { method: "POST", body: JSON.stringify({ person: { uuid: patientUuid }, base64EncodedImage }) });
 }

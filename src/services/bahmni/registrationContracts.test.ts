@@ -35,6 +35,13 @@ describe("Registration HTTP contracts", () => {
     expect(JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body))).toEqual({ person: { uuid: "p1" }, base64EncodedImage: "QUJD" });
   });
 
+  it("does not upload the persisted patient image URL as base64", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await uploadPatientImage("p1", "/openmrs/ws/rest/v1/patientImage?patientUuid=p1");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("closes visits with the Bahmni query parameter contract", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(undefined, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
