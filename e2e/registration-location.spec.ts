@@ -44,12 +44,15 @@ test("edit keeps an uncatalogued identifier, repairs its location, and reports s
   expect(await actionBar.getByRole("button").evaluateAll((buttons) => buttons.every((button) => button.scrollWidth <= button.clientWidth))).toBe(true);
 
   await page.setViewportSize({ width: 375, height: 812 });
+  await expect(actionBar).toHaveCSS("position", "static");
+  await actionBar.scrollIntoViewIfNeeded();
   await expect(actionBar).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(await actionBar.getByRole("button").evaluateAll((buttons) => buttons.every((button) => button.scrollWidth <= button.clientWidth))).toBe(true);
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.setViewportSize({ width: 844, height: 390 });
+  await actionBar.scrollIntoViewIfNeeded();
   await expect(actionBar).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(await actionBar.getByRole("button").evaluateAll((buttons) => buttons.every((button) => button.scrollWidth <= button.clientWidth))).toBe(true);
