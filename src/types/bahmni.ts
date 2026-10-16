@@ -104,6 +104,7 @@ export interface PatientFormValues {
     identifierSourceUuid?: string;
     identifierPrefix?: string;
     identifierSuffix?: string;
+    locationUuid?: string;
     voided?: boolean;
     metadata?: PatientIdentifierMetadataValues;
   }>;

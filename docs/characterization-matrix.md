@@ -5,7 +5,7 @@
 | Sesión | `GET/DELETE /ws/rest/v1/session`, `JSESSIONID`, limpieza 401 y retorno por proveedor | Cliente directo, `credentials: include`, redirección global 401, logout y contexto recordado | Unitario + E2E Chromium; pendiente expiración real HCSBA |
 | Login/OTP | Basic `usuario:clave[:otp]`, 204/401/410/429, `resendOTP`, proveedor activo, locale y whitelist | Mismo header, estados explícitos, proveedor obligatorio, preferencia de locale y retorno seguro | Unitario + E2E sin OTP; pendiente usuario OTP de prueba |
 | Ubicación | Login Locations, atributos de proveedor, cookie `{uuid,name}` y `POST /session` | Restaura solo una ubicación aún permitida; si no, selección explícita | Unitario + E2E Chromium; pendiente atributos de proveedor reales |
-| Home | `home/extension.json`, orden, online, privilegio | Merge standard/implementation y filtro de privilegios | Unitario; pendiente 3 perfiles |
+| Home y navegación | `home/extension.json`, orden, online, privilegios efectivos no retirados | Merge standard/implementation; Registro y Clínico en la barra también requieren su privilegio | Unitario y E2E con 4 perfiles sintéticos; cuenta real `demo.registro` validada en `.205` desde localhost (ver `migration/registration-demo-role.md`) |
 | Paciente | `bahmnicore/patientprofile` | Envelope patient/person, `Jump-Accepted` | Mapper unitario; comparar fixture real |
 | Búsqueda | `bahmni/search/patient` | Filtros URL, paginación | Pendiente fixture HCSBA anonimizado |
 | Visita | REST visit + `bahmnicore/visit/endVisit` | Guardar separado de iniciar; acción por visita activa, mapping por ubicación y cierre protegido ante admisión | Unitario; pendiente fixture HCSBA |

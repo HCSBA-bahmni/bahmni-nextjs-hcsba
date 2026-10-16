@@ -1,11 +1,36 @@
 import Cookies from "js-cookie";
 import { afterEach, describe, expect, it } from "vitest";
-import { getGrantedEncounterProvider, parseFavouriteObsTemplates, serializeFavouriteObsTemplates } from "./auth";
+import { getGrantedEncounterProvider, hasPrivilege, parseFavouriteObsTemplates, serializeFavouriteObsTemplates } from "./auth";
 import type { BahmniUser } from "@/types/bahmni";
 
 const user = (privileges: string[]) => ({
   uuid: "user", username: "doctor", privileges: privileges.map((name) => ({ uuid: name, name })), roles: [],
 }) as BahmniUser;
+
+describe("OpenMRS effective privileges", () => {
+  it("uses privileges instead of role names to grant application access", () => {
+    const registrationUser = { ...user(["app:registration"]), roles: [{ name: "HCSBA-Registro-Demo" }] };
+    expect(hasPrivilege(registrationUser, "app:registration")).toBe(true);
+    expect(hasPrivilege(registrationUser, "app:clinical")).toBe(false);
+    expect(hasPrivilege({ ...user([]), roles: [{ name: "Doctor" }] }, "app:clinical")).toBe(false);
+  });
+
+  it.each([true, "true"] as const)("does not grant a retired privilege (%s)", (retired) => {
+    const retiredUser = { ...user([]), privileges: [{ name: "app:clinical", retired }] };
+    expect(hasPrivilege(retiredUser, "app:clinical")).toBe(false);
+  });
+
+  it.each([false, "false", undefined] as const)("accepts an active privilege (%s)", (retired) => {
+    expect(hasPrivilege({ ...user([]), privileges: [{ name: "app:registration", retired }] }, "app:registration")).toBe(true);
+  });
+
+  it("requires all configured privileges and preserves unrestricted extensions", () => {
+    expect(hasPrivilege(user(["app:registration"]), ["app:registration", "Add Patients"])).toBe(false);
+    expect(hasPrivilege(user(["app:registration", "Add Patients"]), ["app:registration", "Add Patients"])).toBe(true);
+    expect(hasPrivilege(user([]))).toBe(true);
+    expect(hasPrivilege(null, "app:registration")).toBe(false);
+  });
+});
 
 describe("legacy granted encounter provider cookie", () => {
   afterEach(() => Cookies.remove("app.clinical.grantProviderAccessData"));

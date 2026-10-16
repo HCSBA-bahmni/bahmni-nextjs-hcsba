@@ -280,7 +280,9 @@ export async function getPasswordPolicies(): Promise<Record<string, string>> {
 
 export function hasPrivilege(user: BahmniUser | null, required?: string | string[]): boolean {
   if (!required || (Array.isArray(required) && required.length === 0)) return true;
-  const privileges = new Set(user?.privileges.map((privilege) => privilege.name ?? privilege.display).filter(Boolean));
+  const privileges = new Set(user?.privileges
+    .filter((privilege) => privilege.retired !== true && privilege.retired !== "true")
+    .map((privilege) => privilege.name ?? privilege.display).filter(Boolean));
   const requiredList = Array.isArray(required) ? required : [required];
   return requiredList.every((privilege) => privileges.has(privilege));
 }

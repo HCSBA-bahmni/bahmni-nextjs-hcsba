@@ -20,11 +20,11 @@ describe("Registration HTTP contracts", () => {
   it("preserves update UUIDs and sends Jump-Accepted", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ patient: { uuid: "p1" } }), { status: 200, headers: { "content-type": "application/json" } }));
     vi.stubGlobal("fetch", fetchMock);
-    await savePatient({ uuid: "p1", nameUuid: "n1", addressUuid: "a1", identifierUuid: "i1", givenName: "Ana", familyName: "Pérez", gender: "F", birthDate: "1990-01-01", identifier: "12-3", identifierTypeUuid: "type", attributes: {}, relationships: [] }, true);
+    await savePatient({ uuid: "p1", nameUuid: "n1", addressUuid: "a1", identifierUuid: "i1", givenName: "Ana", familyName: "Pérez", gender: "F", birthDate: "1990-01-01", identifier: "12-3", identifierTypeUuid: "type", locationUuid: "location-1", attributes: {}, relationships: [] }, true);
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(request.headers).toBeInstanceOf(Headers);
     expect((request.headers as Headers).get("Jump-Accepted")).toBe("true");
-    expect(JSON.parse(String(request.body))).toMatchObject({ patient: { uuid: "p1", person: { uuid: "p1", names: [{ uuid: "n1" }], addresses: [{ uuid: "a1" }] }, identifiers: [{ uuid: "i1" }] } });
+    expect(JSON.parse(String(request.body))).toMatchObject({ patient: { uuid: "p1", person: { uuid: "p1", names: [{ uuid: "n1" }], addresses: [{ uuid: "a1" }] }, identifiers: [{ uuid: "i1", location: "location-1" }] } });
   });
 
   it("uploads only base64 image data to personimage", async () => {

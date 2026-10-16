@@ -5,7 +5,7 @@ import { estimatedBirthDate, toPatientProfilePayload } from "./mappers";
 describe("patientprofile mapper", () => {
   it("uses the Bahmni patient/person envelope", () => {
     const result = toPatientProfilePayload({ givenName: "Ana", familyName: "Pérez", familyName2: "Soto", gender: "F", birthDate: "1990-01-02", identifier: "123", identifierTypeUuid: "type", locationUuid: "loc", phoneNumber: "555", attributes: { "social-uuid": "Anita", "phone-uuid": "555" }, relationships: [] });
-    expect(result.patient.identifiers).toEqual([{ identifier: "123", identifierType: "type", preferred: true, voided: false }]);
+    expect(result.patient.identifiers).toEqual([{ identifier: "123", identifierType: "type", location: "loc", preferred: true, voided: false }]);
     expect(result.patient.person).toMatchObject({ gender: "F", birthdate: "1990-01-02", birthdateEstimated: false });
     expect(result.patient.person.names).toEqual([expect.objectContaining({ familyName: "Pérez", familyName2: "Soto", display: "Ana Pérez Soto" })]);
     expect(result.patient.person.attributes).toEqual(expect.arrayContaining([expect.objectContaining({ attributeType: { uuid: "social-uuid" }, value: "Anita" }), expect.objectContaining({ attributeType: { uuid: "phone-uuid" }, value: "555" })]));
@@ -20,11 +20,15 @@ describe("patientprofile mapper", () => {
     expect(result.patient.identifiers).toEqual([{ identifier: undefined, identifierSourceUuid: "source", identifierPrefix: "RUT*", identifierType: "type", preferred: true, voided: false }]);
   });
   it("preserves additional identifiers independently of the preferred identifier", () => {
-    const result = toPatientProfilePayload({ givenName: "Ana", familyName: "Pérez", gender: "F", identifier: "RUN*1-9", identifierTypeUuid: "run", attributes: {}, relationships: [], additionalIdentifiers: [{ uuid: "passport-id", identifier: "31113", identifierTypeUuid: "passport" }] });
+    const result = toPatientProfilePayload({ givenName: "Ana", familyName: "Pérez", gender: "F", identifier: "RUN*1-9", identifierTypeUuid: "run", locationUuid: "session-location", attributes: {}, relationships: [], additionalIdentifiers: [{ uuid: "passport-id", identifier: "31113", identifierTypeUuid: "passport", locationUuid: "original-location" }] });
     expect(result.patient.identifiers).toEqual([
-      expect.objectContaining({ identifier: "RUN*1-9", identifierType: "run", preferred: true }),
-      expect.objectContaining({ uuid: "passport-id", identifier: "31113", identifierType: "passport", preferred: false, voided: false }),
+      expect.objectContaining({ identifier: "RUN*1-9", identifierType: "run", location: "session-location", preferred: true }),
+      expect.objectContaining({ uuid: "passport-id", identifier: "31113", identifierType: "passport", location: "original-location", preferred: false, voided: false }),
     ]);
+  });
+  it("uses the active registration location for a new additional identifier", () => {
+    const result = toPatientProfilePayload({ givenName: "Ana", familyName: "Pérez", gender: "F", identifier: "HCSBA1", identifierTypeUuid: "clinical", locationUuid: "session-location", attributes: {}, relationships: [], additionalIdentifiers: [{ identifier: "12345678-5", identifierTypeUuid: "run" }] });
+    expect(result.patient.identifiers[1]).toMatchObject({ identifier: "12345678-5", location: "session-location" });
   });
 });
 

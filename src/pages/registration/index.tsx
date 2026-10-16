@@ -10,6 +10,7 @@ import { parseRegistrationConfig } from "@/config-compat/registrationConfig";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { BiometricPatientSearch } from "@/features/registration/BiometricPatientSearch";
+import { MpiFlowLink } from "@/features/registration/MpiFlowLink";
 import { loadAppConfig } from "@/services/bahmni/config";
 import { searchPatients } from "@/services/bahmni/patients";
 import type { PatientSearchResult } from "@/types/bahmni";
@@ -68,6 +69,7 @@ export default function RegistrationSearch() {
       </div>
       <div className="registration-secondary-actions" aria-label="Acciones de registro">
         <Button label="Nuevo paciente" icon="pi pi-user-plus" onClick={() => void router.push("/registration/patient/new")} />
+        <MpiFlowLink />
       </div>
     </div>
     {hasConflictingAttributes && <p className="error-banner" role="alert">Busque por teléfono o por nombre social en una consulta, no por ambos simultáneamente.</p>}

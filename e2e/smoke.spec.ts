@@ -450,9 +450,17 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   let jumpAccepted = "";
   let nationalityCatalogRequests = 0;
   let countryOfOriginCatalogRequests = 0;
+  let optionalCatalogRequests = 0;
+  await page.route("**/openmrs/**", (route) => route.fulfill({ status: 404, contentType: "application/json", body: "{}" }));
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "location-1", display: "HCSBA" } }) }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user-1", username: "superman", display: "superman", privileges: [{ uuid: "priv-1", name: "Add Patients" }], roles: [] }] }) }));
-  await page.route("**/bahmni_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showBirthTime: true, showSecondLastName: true, isLastNameMandatory: true, isSecondLastNameMandatory: true, mandatoryPersonAttributes: ["nationality", "countryOfOrigin"], defaultIdentifierPrefix: "HCSBA", prominentExtraIdentifierTypes: ["RUN"], onDemandExtraIdentifierTypes: ["Pasaporte"], identifierMetadata: { RUN: { typeCode: "1", use: "official", issuerCountryCode: "152" } }, addressHierarchy: { showAddressFieldsTopDown: true, strictAutocompleteFromLevel: "cityVillage" }, patientInformation: { extra: { title: "Additional Patient Information", expanded: false, attributes: ["email", "givenNameLocal"] } }, patientSearch: { customAttributes: { label: "Teléfono", fields: ["phoneNumber"] }, socialAttributes: { label: "Nombre social", fields: ["givenNameLocal"] } }, relationshipTypeMap: { Doctor: "provider" }, printOptions: [{ translationKey: "REGISTRATION_PRINT_REG_CARD_LOCAL_KEY", templateUrl: "/registration/registrationCardLayout/print_local.html" }] } }) }));
+  await page.route("**/openmrs/ws/rest/v1/provider**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "provider-1", display: "Profesional sintético", retired: false, attributes: [] }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/location**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "location-1", display: "HCSBA" }] }) }));
+  await page.route("**/openmrs/ws/fhir2/R4/Patient?*", (route) => route.fulfill({ contentType: "application/fhir+json", body: JSON.stringify({ resourceType: "Bundle", type: "searchset", entry: [] }) }));
+  await page.route("**/openmrs/ws/rest/v1/patient?q=*", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [] }) }));
+  await page.route("**/openmrs/mpi-admission-gateway/fhir/Patient?*", (route) => route.fulfill({ contentType: "application/fhir+json", headers: { "X-MPI-Outcome": "no-match", "X-MPI-Source": "minsal", "X-MPI-Purpose": "admision" }, body: JSON.stringify({ resourceType: "Bundle", type: "searchset", entry: [] }) }));
+  await page.route("**/openmrs/mpi-admission-gateway/_sync/*", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ resultado: "creado", crid: "synthetic-crid", vinculado: true }) }));
+  await page.route("**/bahmni_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ config: { showBirthTime: true, showSecondLastName: true, isLastNameMandatory: true, isSecondLastNameMandatory: true, mandatoryPersonAttributes: ["nationality", "countryOfOrigin"], defaultIdentifierPrefix: "HCSBA", prominentExtraIdentifierTypes: ["RUN"], onDemandExtraIdentifierTypes: ["Pasaporte"], identifierMetadata: { RUN: { typeCode: "1", use: "official", issuerCountryCode: "152" } }, addressHierarchy: { showAddressFieldsTopDown: true, strictAutocompleteFromLevel: "cityVillage" }, patientInformation: { extra: { title: "Additional Patient Information", expanded: false, attributes: ["email", "givenNameLocal", "optionalCatalog"] } }, patientSearch: { customAttributes: { label: "Teléfono", fields: ["phoneNumber"] }, socialAttributes: { label: "Nombre social", fields: ["givenNameLocal"] } }, relationshipTypeMap: { Doctor: "provider" }, printOptions: [{ translationKey: "REGISTRATION_PRINT_REG_CARD_LOCAL_KEY", templateUrl: "/registration/registrationCardLayout/print_local.html" }] } }) }));
   await page.route("**/implementation_config/openmrs/apps/registration/app.json", (route) => route.fulfill({ status: 404 }));
   await page.route("**/bahmni/i18n/registration/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ REGISTRATION_LABEL_SAVE: "<u>G</u>uardar paciente traducido", REGISTRATION_TITLE_ADDITIONAL_PATIENT: "Información Adicional del Paciente", REGISTRATION_PRINT_REG_CARD_LOCAL_KEY: "Tarjeta base" }) }));
   await page.route("**/bahmni_config/openmrs/i18n/registration/locale_es.json", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ REGISTRATION_PRINT_REG_CARD_LOCAL_KEY: "Tarjeta local HCSBA" }) }));
@@ -461,16 +469,21 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
     { uuid: "id-type", name: "Patient Identifier", primary: true, required: true, format: "^HCSBA[0-9]+$", formatDescription: "Ficha HCSBA inválida", identifierSources: [{ uuid: "source-rut-history", name: "RUT histórico", prefix: "RUT*" }, { uuid: "source-hcsba", name: "Identificador clínico HCSBA", prefix: "HCSBA" }] },
     { uuid: "run-type", name: "RUN", display: "RUN", primary: false, required: false, format: "^\\d{1,8}-[0-9Kk]$", formatDescription: "RUN inválido", identifierSources: [] },
   ]) }));
-  await page.route("**/openmrs/ws/rest/v1/personattributetype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "phone-type", name: "phoneNumber", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "email-type", name: "email", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "social-type", name: "givenNameLocal", format: "java.lang.String", sortWeight: 2, concept: null }, { uuid: "nationality-type", name: "nationality", display: "Nacionalidad", format: "org.openmrs.Concept", concept: { uuid: "nationality-concept", display: "Nacionalidad EIS" } }, { uuid: "country-origin-type", name: "countryOfOrigin", display: "País de origen", format: "org.openmrs.Concept", concept: { uuid: "country-origin-concept", display: "País de origen EIS" } }] }) }));
+  await page.route("**/openmrs/ws/rest/v1/personattributetype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "phone-type", name: "phoneNumber", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "email-type", name: "email", format: "java.lang.String", sortWeight: null, concept: null }, { uuid: "social-type", name: "givenNameLocal", format: "java.lang.String", sortWeight: 2, concept: null }, { uuid: "optional-type", name: "optionalCatalog", display: "Catálogo opcional", format: "org.openmrs.Concept", concept: { uuid: "optional-concept", display: "Catálogo opcional" } }, { uuid: "nationality-type", name: "nationality", display: "Nacionalidad", format: "org.openmrs.Concept", concept: { uuid: "nationality-concept", display: "Nacionalidad EIS" } }, { uuid: "country-origin-type", name: "countryOfOrigin", display: "País de origen", format: "org.openmrs.Concept", concept: { uuid: "country-origin-concept", display: "País de origen EIS" } }] }) }));
   await page.route("**/openmrs/ws/rest/v1/concept/nationality-concept**", async (route) => {
     nationalityCatalogRequests += 1;
     await new Promise((resolve) => setTimeout(resolve, 1_000));
-    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ answers: [{ uuid: "country-cl", display: "Chile" }] }) });
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ answers: [{ uuid: "country-ar", display: "Argentina" }, { uuid: "country-cl", display: "Chile" }, { uuid: "country-pe", display: "Perú" }] }) });
   });
   await page.route("**/openmrs/ws/rest/v1/concept/country-origin-concept**", async (route) => {
     countryOfOriginCatalogRequests += 1;
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     await route.fulfill({ contentType: "application/json", body: JSON.stringify({ answers: [{ uuid: "country-cl", display: "Chile" }] }) });
+  });
+  await page.route("**/openmrs/ws/rest/v1/concept/optional-concept**", async (route) => {
+    optionalCatalogRequests += 1;
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await route.fulfill({ contentType: "application/json", body: JSON.stringify({ answers: [{ uuid: "optional-a", display: "Opción A" }, { uuid: "optional-b", display: "Opción B" }] }) });
   });
   await page.route("**/openmrs/ws/rest/v1/relationshiptype**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [
     { uuid: "legal-representative", name: null, display: "Representa legalmente a", aIsToB: "Representa legalmente a", bIsToA: "Es representado legalmente por" },
@@ -485,6 +498,7 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
     { name: "Código postal", addressField: "postalCode" },
   ]) }));
   await page.route("**/openmrs/ws/rest/v1/idgen", (route) => route.fulfill({ status: 200, contentType: "text/plain", body: "HCSBA100" }));
+  await page.route("**/openmrs/ws/rest/v1/bahmnicore/patientprofile/patient-created", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ patient: { uuid: "patient-created", person: { uuid: "patient-created", names: [{ givenName: "Paciente", familyName: "Sintético", familyName2: "EIS", preferred: true }], addresses: [], attributes: [], gender: "F", birthdate: "1996-01-01", birthdateEstimated: true }, identifiers: [{ uuid: "primary-native", identifier: "HCSBA100", preferred: true, identifierType: { uuid: "id-type" }, location: { uuid: "location-1" } }, { uuid: "run-native", identifier: "12345678-5", preferred: false, identifierType: { uuid: "run-type" }, location: { uuid: "location-1" } }] }, relationships: [] }) }));
   await page.route("**/openmrs/ws/rest/v1/bahmnicore/patientprofile", async (route) => {
     patientPayload = route.request().postDataJSON() as Record<string, unknown>;
     jumpAccepted = (await route.request().allHeaders())["jump-accepted"] ?? "";
@@ -504,17 +518,37 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await page.goto("/bahmni/registration/patient/new");
   await expect(page.getByRole("status")).toContainText("Cargando configuración de Registro");
   await expect(page.getByRole("heading", { name: "Nuevo paciente" })).toBeVisible();
+  const mpiAdmissionGate = page.getByRole("region", { name: "Verificación de identidad MPI" });
+  const formNavigation = page.getByRole("navigation", { name: "Etapas del registro del paciente" });
+  await expect(formNavigation.or(mpiAdmissionGate)).toBeVisible();
+  if (await mpiAdmissionGate.isVisible().catch(() => false)) {
+    await mpiAdmissionGate.getByLabel("RUN", { exact: true }).fill("12345678-5");
+    await mpiAdmissionGate.getByRole("button", { name: "Consultar identidad" }).click();
+    await mpiAdmissionGate.getByRole("button", { name: "Confirmar documento y completar EIS" }).click();
+  }
   expect(nationalityCatalogRequests).toBe(1);
   expect(countryOfOriginCatalogRequests).toBe(1);
-  await expect(page.getByRole("navigation", { name: "Etapas del registro del paciente" })).toBeVisible();
-  await expect(page.getByText("Identificación y datos personales", { exact: true })).toBeVisible();
+  expect(optionalCatalogRequests).toBe(1);
+  await expect(formNavigation).toBeVisible();
+  const activeStepVisual = await formNavigation.locator(".p-steps-item.p-highlight .p-menuitem-link").evaluate((element) => {
+    const style = window.getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, borderTopWidth: style.borderTopWidth, boxShadow: style.boxShadow, height: element.getBoundingClientRect().height };
+  });
+  expect(["transparent", "rgba(0, 0, 0, 0)"]).toContain(activeStepVisual.backgroundColor);
+  expect(activeStepVisual.borderTopWidth).toBe("0px");
+  expect(activeStepVisual.boxShadow).toBe("none");
+  expect(activeStepVisual.height).toBeLessThan(72);
+  await expect(page.locator(".p-steps-title").getByText("Identificación y datos personales", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Datos de identificación" })).toBeVisible();
+  await expect(page.getByLabel("Nombres", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Segundo nombre", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Primer apellido", { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.getByText("Paso 1 de 3", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await page.setViewportSize({ width: 1366, height: 768 });
   await expect(page.getByRole("heading", { name: "Información de dirección" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Guardar paciente traducido" })).toHaveCount(0);
-  await expect(page.getByLabel("Fuente o prefijo del identificador", { exact: true })).toHaveValue("source-hcsba");
-  await expect(page.getByLabel("Prefijo del identificador", { exact: true })).toHaveText("HCSBA");
-  await page.getByRole("button", { name: "Generar identificador" }).click();
-  await expect(page.getByLabel("Identificador", { exact: true })).toHaveValue("100");
   await expect(page.getByLabel("Fecha de nacimiento", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Hora de nacimiento", { exact: true })).toBeVisible();
   await page.getByLabel("Años", { exact: true }).pressSequentially("30");
@@ -526,6 +560,9 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await page.getByLabel("Nombres").fill("Paciente");
   await page.getByLabel("Primer apellido").fill("Sintético");
   await page.getByLabel("Segundo apellido").fill("EIS");
+  await page.getByLabel("RUN", { exact: true }).fill("12.345.678-5");
+  await page.getByLabel("RUN", { exact: true }).press("Tab");
+  await expect(page.getByLabel("RUN", { exact: true })).toHaveValue("12345678-5");
   await page.getByRole("button", { name: "Abrir Género" }).click();
   await page.getByRole("option", { name: "Femenino" }).click();
   await page.getByRole("button", { name: "Siguiente" }).click();
@@ -543,15 +580,18 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await expect(page.getByLabel("Nombre de vía", { exact: true })).toHaveValue("Calle de prueba");
   await page.getByRole("button", { name: "Siguiente" }).click();
   await expect(page.getByRole("heading", { name: "Información adicional" })).toBeVisible();
+  await expect(page.getByLabel("Fuente o prefijo del identificador", { exact: true })).toHaveValue("source-hcsba");
+  await expect(page.getByLabel("Prefijo del identificador", { exact: true })).toHaveText("HCSBA");
+  await page.getByRole("button", { name: "Generar identificador" }).click();
+  await expect(page.getByLabel("Identificador", { exact: true })).toHaveValue("100");
   await page.getByRole("button", { name: "Abrir Nacionalidad" }).click();
+  await page.getByPlaceholder("Buscar nacionalidad").fill("chi");
+  await expect(page.getByRole("option", { name: "Argentina" })).toBeHidden();
   await page.locator('.p-dropdown-item[aria-label="Chile"][aria-selected="false"]').last().click();
   await page.getByRole("button", { name: "Abrir País de origen" }).click();
   await page.locator('.p-dropdown-item[aria-label="Chile"][aria-selected="false"]').last().click();
   expect(nationalityCatalogRequests).toBe(1);
   expect(countryOfOriginCatalogRequests).toBe(1);
-  await page.getByLabel("RUN", { exact: true }).fill("12.345.678-5");
-  await page.getByLabel("RUN", { exact: true }).press("Tab");
-  await expect(page.getByLabel("RUN", { exact: true })).toHaveValue("12345678-5");
   await expect(page.locator(".actions .p-dropdown-label")).toHaveText("Tarjeta local HCSBA");
   await expect(page.getByRole("button", { name: "Guardar paciente traducido" })).toBeVisible();
   await expect(page.getByText("Otra información", { exact: true })).toBeVisible();
@@ -560,6 +600,9 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await page.getByText("Información Adicional del Paciente", { exact: true }).click();
   await expect(page.getByLabel("email")).toBeVisible();
   await page.getByLabel("email").fill("persona@hcsba.cl");
+  await page.getByRole("button", { name: "Abrir Catálogo opcional" }).click();
+  await page.getByRole("option", { name: "Opción B" }).click();
+  expect(optionalCatalogRequests).toBe(1);
   await expect(page.getByLabel("email")).toBeVisible();
   await expect(page.getByText("Relaciones", { exact: true })).toBeVisible();
   await expect(page.getByTitle("Cambiar ubicación")).toHaveText("HCSBA");
@@ -572,8 +615,8 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   expect(patientPayload).toMatchObject({
     patient: {
       identifiers: [
-        { identifier: "HCSBA100", identifierType: "id-type", preferred: true },
-        { identifier: "12345678-5", identifierType: "run-type", preferred: false },
+        { identifier: "HCSBA100", identifierType: "id-type", location: "location-1", preferred: true },
+        { identifier: "12345678-5", identifierType: "run-type", location: "location-1", preferred: false },
       ],
       person: { names: [{ givenName: "Paciente", familyName: "Sintético", familyName2: "EIS" }], gender: "F", birthdateEstimated: true },
     },

@@ -2,6 +2,7 @@
 
 - [Compatibilidad de Form Builder / Form 2](./form2-runtime-compatibility.md)
 - [Formulario dinámico de alta y edición de pacientes](./patient-registration-dynamic-layout.md)
+- [Demo con acceso solo al menú Registro](./migration/registration-demo-role.md)
 - [Matriz de caracterización](./characterization-matrix.md)
 - [Matriz del dashboard clínico](./clinical-dashboard-matrix.md)
 - [Trazabilidad de pruebas del dashboard](./clinical-dashboard-test-trace.md)

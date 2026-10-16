@@ -28,8 +28,8 @@ export function AppShell({ children, title, mainClassName }: { children: ReactNo
       <Link href="/home" className="brand" aria-label="Inicio HCSBA">HCSBA <span>Bahmni</span></Link>
       <nav aria-label="Navegación principal">
         <Link href="/home" className={isActive("/home") ? "active" : undefined}>Inicio</Link>
-        <Link href="/registration" className={isActive("/registration") ? "active" : undefined}>Registro</Link>
-        <Link href="/clinical" className={isActive("/clinical") ? "active" : undefined}>Clínico</Link>
+        {hasPrivilege(user, "app:registration") && <Link href="/registration" className={isActive("/registration") ? "active" : undefined}>Registro</Link>}
+        {hasPrivilege(user, "app:clinical") && <Link href="/clinical" className={isActive("/clinical") ? "active" : undefined}>Clínico</Link>}
         {hasPrivilege(user, "app:appointments") && <Link href="/appointments" className={isActive("/appointments") ? "active" : undefined}>Citas</Link>}
         {hasPrivilege(user, "app:orders") && <Link href="/orders" className={isActive("/orders") ? "active" : undefined}>Órdenes</Link>}
         {hasPrivilege(user, "app:adt") && <Link href="/bedmanagement" className={isActive("/bedmanagement") ? "active" : undefined}>Camas</Link>}

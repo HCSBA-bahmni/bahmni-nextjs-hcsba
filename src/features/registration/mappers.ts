@@ -24,6 +24,7 @@ export function toPatientProfilePayload(values: PatientFormValues): PatientProfi
     identifierSourceUuid: values.identifierSourceUuid,
     identifierPrefix: values.identifierPrefix,
     identifierType: values.identifierTypeUuid,
+    location: values.locationUuid,
     preferred: true,
     voided: false,
   }] : [];
@@ -38,6 +39,7 @@ export function toPatientProfilePayload(values: PatientFormValues): PatientProfi
       identifierSourceUuid: identifier.identifierSourceUuid,
       identifierPrefix: identifier.identifierPrefix,
       identifierType: identifier.identifierTypeUuid,
+      location: identifier.locationUuid ?? values.locationUuid,
       preferred: false,
       voided: identifier.voided ?? Boolean(identifier.uuid && !value),
     }];

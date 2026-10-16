@@ -23,3 +23,8 @@ NEXT_PUBLIC_IPS_REGIONAL_BASE=/openmrs/ips-mediator/regional
 NEXT_PUBLIC_IPS_VHL_GENERATE_PATH=/openmrs/ips-mediator/vhl/_generate
 NEXT_PUBLIC_IPS_VHL_RESOLVE_PATH=/openmrs/ips-mediator/vhl/_resolve
 NEXT_PUBLIC_ICVP_FROM_BUNDLE_PATH=/openmrs/ips-mediator/icvpcert/_from-bundle
+
+# MPI admission: off (default), preview (read-only synthetic laboratory), integrated
+# (real OpenCR/Bahmni only). The browser calls a same-origin gateway, never OpenHIM directly.
+NEXT_PUBLIC_MPI_ADMISSION_MODE=off
+NEXT_PUBLIC_MPI_ADMISSION_BASE=/openmrs/mpi-admission-gateway
