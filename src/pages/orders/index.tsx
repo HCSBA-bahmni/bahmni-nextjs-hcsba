@@ -32,7 +32,7 @@ export default function OrdersSearchPage() {
   const selectedQueue = queues[selectedIndex];
   const patients = useMemo(() => filterClinicalPatients(selectedQueue?.data ?? [], filter), [selectedQueue?.data, filter]);
 
-  return <AuthGuard><AppShell title="Órdenes">
+  return <AuthGuard><AppShell mainClassName="orders-page">
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:orders requerido por el módulo legacy.</p>}
     {allowed && <section className="panel clinical-search-panel">
       <header className="clinical-search-header"><span className="clinical-search-icon"><i className="pi pi-list" aria-hidden="true" /></span><div><h2>Órdenes</h2><p>Busque y seleccione un paciente para cumplir sus órdenes.</p></div></header>

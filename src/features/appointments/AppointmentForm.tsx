@@ -7,6 +7,7 @@ import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Checkbox } from "primereact/checkbox";
 import { InputNumber } from "primereact/inputnumber";
+import { MultiSelect } from "primereact/multiselect";
 import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -97,6 +98,12 @@ export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot
   const canManageOwn = canManageOwnAppointments(privilegeNames);
   const authorized = hasPrivilege(user, "app:appointments") && (canManage || canManageOwn) && (!existing.data || canEditAppointment(existing.data, provider?.uuid, privilegeNames));
   const visibleProviders = canManage ? providers.data ?? [] : (providers.data ?? []).filter((entry) => entry.uuid === provider?.uuid);
+  const selectedProviders = form.providerUuids.map((uuid) => {
+    const entry = providers.data?.find((item) => item.uuid === uuid)
+      ?? existing.data?.providers.find((item) => item.uuid === uuid)
+      ?? (existing.data?.provider?.uuid === uuid ? existing.data.provider : undefined);
+    return { uuid, name: entry ? displayName(entry) : "Proveedor no disponible" };
+  });
 
   useEffect(() => {
     if (!existing.data) return;
@@ -110,7 +117,7 @@ export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot
     const end = initialSlot ? DateTime.fromJSDate(initialSlot.end, { zone: APPOINTMENTS_TIME_ZONE }) : typeof router.query.end === "string" ? DateTime.fromISO(router.query.end).setZone(APPOINTMENTS_TIME_ZONE) : null;
     const selectedProvider = initialSlot?.providerUuid === null
       ? undefined
-      : initialSlot?.providerUuid ?? (typeof router.query.provider === "string" ? router.query.provider : provider?.uuid);
+      : initialSlot?.providerUuid ?? (typeof router.query.provider === "string" ? router.query.provider : undefined);
     const providerUuids = initialSlot?.providerUuid === null ? [] : selectedProvider ? [selectedProvider] : undefined;
     const timer = window.setTimeout(() => setForm((current) => ({ ...current, ...(start?.isValid ? { date: start.toISODate()!, startTime: start.toFormat("HH:mm") } : {}), ...(end?.isValid ? { endTime: end.toFormat("HH:mm") } : {}), ...(providerUuids ? { providerUuids } : {}) })), 0);
     return () => window.clearTimeout(timer);
@@ -197,7 +204,9 @@ export function AppointmentForm({ appointmentUuid, embedded = false, initialSlot
       <div className="form-grid">
         <div className="field"><label htmlFor="appointment-service">Servicio *</label><select id="appointment-service" required value={form.serviceUuid} disabled={Boolean(appointmentUuid && !config.data.isServiceOnAppointmentEditable)} onChange={(event) => { set("serviceUuid", event.target.value); set("serviceTypeUuid", ""); }}><option value="">Seleccionar</option>{services.data?.map((service) => <option key={service.uuid} value={service.uuid}>{service.speciality ? `${displayName(service.speciality)} · ` : ""}{displayName(service)}</option>)}</select></div>
         {config.data.enableServiceTypes && <div className="field"><label htmlFor="appointment-service-type">Tipo de servicio</label><select id="appointment-service-type" value={form.serviceTypeUuid} onChange={(event) => set("serviceTypeUuid", event.target.value)}><option value="">Sin tipo</option>{selectedService?.serviceTypes.map((type) => <option key={type.uuid} value={type.uuid}>{displayName(type)}</option>)}</select></div>}
-        <div className="field"><label htmlFor="appointment-providers">Proveedor(es)</label><select id="appointment-providers" multiple size={Math.min(5, config.data.maxAppointmentProviders + 1)} value={form.providerUuids} onChange={(event) => set("providerUuids", [...event.target.selectedOptions].map((option) => option.value).slice(0, config.data.maxAppointmentProviders))}>{visibleProviders.map((entry) => <option key={entry.uuid} value={entry.uuid}>{displayName(entry)}</option>)}</select><small>{canManage ? `Máximo ${config.data.maxAppointmentProviders}` : "Sólo puedes gestionar tus propias citas"}</small></div>
+        <div className="field"><label htmlFor="appointment-providers">Proveedor(es)</label><MultiSelect inputId="appointment-providers" className="appointment-provider-select" panelClassName="appointment-provider-options" value={form.providerUuids} options={visibleProviders.map((entry) => ({ label: displayName(entry), value: entry.uuid }))} filter showSelectAll={false} selectionLimit={config.data.maxAppointmentProviders} placeholder="Seleccionar proveedores" maxSelectedLabels={1} selectedItemsLabel="{0} proveedores seleccionados" aria-describedby="appointment-providers-help" onChange={(event) => set("providerUuids", (event.value as string[]).slice(0, config.data.maxAppointmentProviders))} /><small id="appointment-providers-help">{canManage ? `Máximo ${config.data.maxAppointmentProviders}` : "Sólo puedes gestionar tus propias citas"}</small>
+        </div>
+        {selectedProviders.length > 0 && <section className="appointment-selected-provider-section" aria-labelledby="appointment-selected-provider-title"><h3 id="appointment-selected-provider-title">Proveedores seleccionados</h3><ul className="appointment-selected-providers" aria-labelledby="appointment-selected-provider-title">{selectedProviders.map((entry) => <li key={entry.uuid}><span>{entry.name}</span><Button type="button" text rounded icon="pi pi-times" aria-label={`Quitar ${entry.name}`} tooltip="Quitar proveedor" tooltipOptions={{ position: "left", className: "appointment-provider-tooltip" }} onClick={() => set("providerUuids", form.providerUuids.filter((uuid) => uuid !== entry.uuid))} /></li>)}</ul></section>}
         <div className="field"><label htmlFor="appointment-location">Ubicación</label><select id="appointment-location" value={form.locationUuid} onChange={(event) => set("locationUuid", event.target.value)}><option value="">Sin ubicación</option>{locations.data?.map((entry) => <option key={entry.uuid} value={entry.uuid}>{displayName(entry)}</option>)}</select></div>
         <div className="field"><label htmlFor="appointment-date">Fecha *</label><input id="appointment-date" type="date" required value={form.date} onChange={(event) => set("date", event.target.value)} /></div>
         <div className="field"><label htmlFor="appointment-start">Inicio *</label><input id="appointment-start" type="time" required value={form.startTime} onChange={(event) => set("startTime", event.target.value)} /></div>

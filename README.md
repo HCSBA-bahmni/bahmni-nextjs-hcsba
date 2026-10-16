@@ -38,6 +38,10 @@ El sitio se sirve bajo `/bahmni`. El navegador consume `/openmrs`, `/bahmni_conf
 
 La certificación con datos reales requiere usuarios y pacientes sintéticos de HCSBA. El contrato de autenticación está en [docs/migration/auth-session-location.md](docs/migration/auth-session-location.md), el estado transversal en [docs/migration-ledger.md](docs/migration-ledger.md), la evidencia v1 en [docs/characterization-matrix.md](docs/characterization-matrix.md), los cortes en [docs/proxy-cutovers.md](docs/proxy-cutovers.md) y el inventario completo se genera con `npm run inventory:legacy`.
 
+Para cambios de interfaz, seguir las [directrices visuales HCSBA](docs/DISENO_VISUAL.md).
+El [registro por menu](docs/REVISION_VISUAL.md) distingue los ajustes compartidos,
+las comprobaciones en navegador y los apartados pendientes de revision.
+
 ## Imagen y rollback
 
 Construir `hcsba/bahmni-next-web:0.1.0-rc.0`. Producción debe promover el mismo digest con tag semántico, nunca `latest`. El rollback consiste en quitar las reglas específicas Next del proxy; no existen migraciones de datos.

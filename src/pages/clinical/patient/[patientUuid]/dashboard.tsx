@@ -9,10 +9,8 @@ import { AppShell } from "@/components/AppShell";
 import { parseClinicalDashboardConfig } from "@/config-compat/clinicalConfig";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
-import { ClinicalDashboardSectionCard } from "@/features/clinical/ClinicalDashboardSection";
-import { ClinicalDashboardMasonryItem } from "@/features/clinical/ClinicalDashboardMasonryItem";
+import { ClinicalDashboardSections } from "@/features/clinical/ClinicalDashboardSections";
 import { dashboardControlTypes } from "@/features/clinical/DashboardControlRegistry";
-import { createDashboardLayout } from "@/features/clinical/dashboardLayout";
 import { isDashboardControlVisible } from "@/features/clinical/dashboardVisibility";
 import { activeConsultationRoute, patientAdtUrl } from "@/features/clinical/navigationLinks";
 import { getUnopenedDashboardTabs, getVisibleDashboardTabs } from "@/features/clinical/clinicalDashboardTabs";
@@ -53,7 +51,6 @@ export default function ClinicalDashboardPage() {
   const patient = profile.data ? toClinicalPatientContext(profile.data, patientUuid) : undefined;
   const ipsEnabled = runtimeConfig.data?.integrations.ips.enabled === true;
   const visibleSections = (currentTab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege) && isDashboardControlVisible(section.type, { ipsEnabled }));
-  const dashboardLayout = createDashboardLayout(visibleSections);
   const pendingTypes = [...new Set(visibleSections.filter((section) => !dashboardControlTypes.has(section.type)).map((section) => section.type))];
   const locale = user?.userProperties?.defaultLocale ?? "es";
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Santiago";
@@ -136,17 +133,28 @@ export default function ClinicalDashboardPage() {
     {allowed && (profile.isError || dashboard.isError || visits.isError || visitLocation.isError || visitSummary.isError) && <p role="alert" className="error-banner">No fue posible cargar completamente el contexto clínico.</p>}
     {allowed && !loading && patient && currentTab && dashboardContext && <div className="clinical-dashboard-workspace">
       <div className="clinical-dashboard-fixed">
-      <section className="clinical-patient-header panel"><div><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div><div className="clinical-visit-status"><strong>{selectedVisit?.visitType?.display ?? selectedVisit?.visitType?.name ?? "Sin visita activa"}</strong>{selectedVisit && <span>{selectedVisit.stopDatetime ? "Visita cerrada" : "Visita activa"}</span>}</div><div className="toolbar"><Button outlined label="Volver a búsqueda" icon="pi pi-users" onClick={() => void router.push("/clinical")} />{canAccessAdt && selectedVisit && <Button outlined label="Camas" icon="pi pi-building" aria-label="Ir al módulo de camas del paciente" onClick={() => void router.push(patientAdtUrl(patientUuid, selectedVisit.uuid))} />}<Button label="Consulta" icon="pi pi-file-edit" disabled={!consultationEnabled} tooltip={!consultationEnabled ? "Consulta permanece protegida hasta completar su certificación." : undefined} onClick={() => void router.push(activeConsultationRoute(patientUuid, activeVisit?.uuid, enrollmentUuid))} /></div></section>
+      <header className="app-page-heading clinical-dashboard-title"><span className="clinical-eyebrow">HCSBA</span><h1>Clínico</h1></header>
+      <section className="clinical-patient-header panel patient-context-strip clinical-dashboard-patient-context">
+        <div className="patient-context-identity">
+          <span className="patient-context-avatar" aria-hidden="true">{patient.name.charAt(0).toLocaleUpperCase()}</span>
+          <div><small>Paciente seleccionado</small><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div>
+        </div>
+        <dl className="patient-context-meta">
+          <div><dt>Visita</dt><dd>{selectedVisit?.visitType?.display ?? selectedVisit?.visitType?.name ?? "Sin visita activa"}</dd></div>
+          <div><dt>Estado</dt><dd>{selectedVisit ? selectedVisit.stopDatetime ? "Visita cerrada" : "Visita activa" : "Sin visita abierta"}</dd></div>
+        </dl>
+        <div className="toolbar patient-context-actions"><Button outlined label="Volver a búsqueda" icon="pi pi-users" onClick={() => void router.push("/clinical")} />{canAccessAdt && selectedVisit && <Button outlined label="Camas" icon="pi pi-building" aria-label="Ir al módulo de camas del paciente" onClick={() => void router.push(patientAdtUrl(patientUuid, selectedVisit.uuid))} />}<Button label="Consulta" icon="pi pi-file-edit" disabled={!consultationEnabled} tooltip={!consultationEnabled ? "Consulta permanece protegida hasta completar su certificación." : undefined} onClick={() => void router.push(activeConsultationRoute(patientUuid, activeVisit?.uuid, enrollmentUuid))} /></div>
+      </section>
       {pendingConsultation && !consultationEnabled && <p role="status" className="warning-banner">Se conservó el paciente y la visita. Consulta permanece protegida hasta terminar su certificación funcional.</p>}
       <nav className="clinical-tabs" aria-label="Dashboards clínicos">
         <div className="clinical-tab-list">
           {visibleTabs.map((tab) => <div key={tab.id} className={`clinical-tab ${tab.id === currentTab.id ? "selected" : ""}`}>
             <Button text={tab.id !== currentTab.id} label={String(t(tab.translationKey, { defaultValue: tab.id }))} onClick={() => openTab(tab.id)} />
-            {!tab.displayByDefault && <Button text icon="pi pi-times" className="clinical-tab-close" aria-label={`Cerrar ${String(t(tab.translationKey, { defaultValue: tab.id }))}`} onClick={() => closeTab(tab.id)} />}
+            {!tab.displayByDefault && <Button text icon="pi pi-times" className="clinical-tab-close" aria-label={`Cerrar ${String(t(tab.translationKey, { defaultValue: tab.id }))}`} tooltip={`Cerrar ${String(t(tab.translationKey, { defaultValue: tab.id }))}`} onClick={() => closeTab(tab.id)} />}
           </div>)}
           {unopenedTabs.length > 0 && <>
             <Menu model={unopenedTabItems} popup ref={dashboardMenuRef} id="clinical-dashboard-menu" />
-            <Button text icon="pi pi-plus" className="clinical-tab-add" aria-label="Abrir otro dashboard" aria-haspopup aria-controls="clinical-dashboard-menu" onClick={(event) => dashboardMenuRef.current?.toggle(event)} />
+            <Button text icon="pi pi-plus" className="clinical-tab-add" aria-label="Abrir otro dashboard" tooltip="Abrir otro dashboard" aria-haspopup aria-controls="clinical-dashboard-menu" onClick={(event) => dashboardMenuRef.current?.toggle(event)} />
           </>}
         </div>
       </nav>
@@ -155,34 +163,7 @@ export default function ClinicalDashboardPage() {
       {!dashboardReady && <div className="clinical-dashboard-loader flex flex-column align-items-center justify-content-center gap-3 fadein animation-duration-300" role="status" aria-live="polite"><ProgressSpinner strokeWidth="3" /><span>Cargando…</span></div>}
       <div ref={dashboardScrollRef} className={`clinical-dashboard-scroll transition-duration-300 ${dashboardReady ? "opacity-100" : "opacity-0 pointer-events-none"}`} tabIndex={dashboardReady ? 0 : -1} aria-label="Contenido del dashboard clínico">
         {pendingTypes.length > 0 && <details className="warning-banner clinical-coverage"><summary>Controles configurados pendientes de migración en esta primera entrega ({pendingTypes.length})</summary><p>{pendingTypes.join(", ")}</p></details>}
-        <div className="clinical-dashboard-layout">
-          {dashboardLayout.map((block, blockIndex) => block.kind === "full" ? (
-            <ClinicalDashboardMasonryItem
-              key={`${currentTab.id}-${block.item.section.id}`}
-              section={block.item.section}
-              layoutOrder={block.item.layoutOrder}
-            >
-              <ClinicalDashboardSectionCard section={block.item.section} context={dashboardContext} />
-            </ClinicalDashboardMasonryItem>
-          ) : (
-            <div className="clinical-dashboard-columns" key={`${currentTab.id}-columns-${blockIndex}`}>
-              <div className="clinical-dashboard-column">
-                {block.left.map(({ section, layoutOrder }) => (
-                  <ClinicalDashboardMasonryItem key={`${currentTab.id}-${section.id}`} section={section} layoutOrder={layoutOrder}>
-                    <ClinicalDashboardSectionCard section={section} context={dashboardContext} />
-                  </ClinicalDashboardMasonryItem>
-                ))}
-              </div>
-              <div className="clinical-dashboard-column">
-                {block.right.map(({ section, layoutOrder }) => (
-                  <ClinicalDashboardMasonryItem key={`${currentTab.id}-${section.id}`} section={section} layoutOrder={layoutOrder}>
-                    <ClinicalDashboardSectionCard section={section} context={dashboardContext} />
-                  </ClinicalDashboardMasonryItem>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ClinicalDashboardSections key={currentTab.id} sections={visibleSections} context={dashboardContext} />
       </div>
       </div>
     </div>}

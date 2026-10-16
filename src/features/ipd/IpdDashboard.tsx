@@ -108,14 +108,15 @@ export function IpdDashboard({ patientUuid, visitUuid }: Props) {
   const fromCareView = router.query.source === "careViewDashboard";
   const firstSectionId = sections[0] ? `ipd-section-${sections[0].componentKey.toLowerCase()}` : "ipd-dashboard-top";
 
-  return <AuthGuard><AppShell mainClassName="ipd-page ipd-individual-dashboard">
+  return <AuthGuard><AppShell title="Hospitalización" mainClassName="ipd-page ipd-individual-dashboard">
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:adt requerido por el dashboard IPD.</p>}
     {allowed && loading && <p role="status" className="ipd-empty">Cargando dashboard IPD…</p>}
     {allowed && failed && <p role="alert" className="error-banner">No fue posible cargar completamente el dashboard IPD. Reintente actualizando la vista.</p>}
-    {allowed && !loading && patient && context && configQuery.data && <>
+    {allowed && !loading && patient && context && configQuery.data && <div className="hcsba-patient-workspace ipd-individual-workspace">
+      <aside className="ipd-individual-sidebar">
       <section className="panel ipd-individual-patient-header" id="ipd-dashboard-top">
         <Image src={patient.image} alt="" width={64} height={64} unoptimized />
-        <div className="ipd-individual-patient-identity"><span className="clinical-eyebrow">Hospitalización</span><h1>{patient.name}</h1><p>{patient.identifier} · {patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div>
+        <div className="ipd-individual-patient-identity"><span className="clinical-eyebrow">Paciente seleccionado</span><h2>{patient.name}</h2><p>{patient.identifier} · {patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div>
         <div className="ipd-individual-bed"><i className="pi pi-building" /><span><small>Cama actual</small><strong>{assignedLabel}</strong></span></div>
         <div className="toolbar">
           {fromCareView && <Button outlined label="Volver a Vista de cuidados" icon="pi pi-heart" onClick={() => void router.push("/bedmanagement/care-view")} />}
@@ -124,12 +125,12 @@ export function IpdDashboard({ patientUuid, visitUuid }: Props) {
         </div>
       </section>
 
-      <div className="ipd-individual-layout">
         <nav className="panel ipd-individual-nav" aria-label="Secciones del dashboard IPD">
           <strong>Resumen IPD</strong>
           {sections.map((section) => <a href={`#ipd-section-${section.componentKey.toLowerCase()}`} key={section.componentKey}><i className={sectionIcons[section.componentKey] ?? "pi pi-circle"} /><span>{sectionTitles[section.componentKey] ?? section.title}</span></a>)}
         </nav>
-        <main className="ipd-individual-content">
+      </aside>
+        <div className="ipd-individual-content">
           {sections.map((section) => {
             const id = `ipd-section-${section.componentKey.toLowerCase()}`;
             const mapped = clinicalSection(section, configQuery.data);
@@ -138,8 +139,7 @@ export function IpdDashboard({ patientUuid, visitUuid }: Props) {
               <div>{mapped ? <ClinicalDashboardSectionCard section={mapped} context={context} /> : section.componentKey === "VT" ? <IpdVitalsSection patientUuid={patientUuid} config={configQuery.data.vitalsConfig} locale={context.locale} timeZone={context.timeZone} /> : section.componentKey === "NT" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="nursing" readOnly={dashboardReadOnly} /> : section.componentKey === "DC" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="drug-chart" readOnly={dashboardReadOnly} /> : <p className="warning-banner">El componente configurado {section.componentKey} aún no dispone de adaptador.</p>}</div>
             </section>;
           })}
-        </main>
-      </div>
-    </>}
+        </div>
+    </div>}
   </AppShell></AuthGuard>;
 }

@@ -330,11 +330,13 @@ export function ProgramPatientDetail() {
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:clinical requerido para Programas.</p>}
     {allowed && loading && <p role="status">Cargando programas del paciente…</p>}
     {allowed && (profile.isError || enrollments.isError) && <p role="alert" className="error-banner">No fue posible cargar los programas del paciente.</p>}
-    {allowed && !loading && patient && <main className="program-patient-workspace">
-      <section className="clinical-patient-header panel"><div><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div><div className="toolbar"><Button outlined label="Volver a Programas" icon="pi pi-users" onClick={() => void router.push("/clinical/programs")} /></div></section>
+    {allowed && !loading && patient && <div className="program-patient-workspace hcsba-patient-workspace">
+      <aside className="panel hcsba-patient-sidebar"><div className="patient-context-identity"><span className="patient-context-avatar" aria-hidden="true">{patient.name.charAt(0)}</span><div><small>Paciente seleccionado</small><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div></div><div className="toolbar patient-context-actions"><Button outlined label="Volver a Programas" icon="pi pi-users" onClick={() => void router.push("/clinical/programs")} /></div></aside>
+      <div className="hcsba-patient-content">
+      <ProgramEnrollmentPanel open={enrolling} patientUuid={patientUuid} activeProgramUuids={new Set(activePrograms.map((program) => text(object(program.raw.program).uuid)))} onToggle={() => setEnrolling((current) => !current)} />
       <section className="program-section"><header><h2>Programas activos</h2><span>{activePrograms.length}</span></header>{activePrograms.length > 0 ? <div className="program-card-grid">{activePrograms.map((program) => <ProgramCard key={program.uuid} program={program} patientUuid={patientUuid} />)}</div> : <p className="program-empty">El paciente no tiene programas activos.</p>}</section>
       <section className="program-section"><header><h2>Programas históricos</h2><span>{pastPrograms.length}</span></header>{pastPrograms.length > 0 ? <div className="program-card-grid">{pastPrograms.map((program) => <ProgramCard key={program.uuid} program={program} patientUuid={patientUuid} />)}</div> : <p className="program-empty">El paciente no tiene programas finalizados.</p>}</section>
-      <ProgramEnrollmentPanel open={enrolling} patientUuid={patientUuid} activeProgramUuids={new Set(activePrograms.map((program) => text(object(program.raw.program).uuid)))} onToggle={() => setEnrolling((current) => !current)} />
-    </main>}
+      </div>
+    </div>}
   </AppShell></AuthGuard>;
 }

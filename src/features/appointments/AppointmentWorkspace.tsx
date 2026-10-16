@@ -257,10 +257,10 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
             <Button outlined label="Hoy" onClick={() => setDate(new Date())} />
             {section === "calendar" && <><Button outlined={calendarView !== "week"} disabled={calendarView === "week"} label="Semana" onClick={() => setCalendarView("week")} /><Button outlined={calendarView !== "day"} disabled={calendarView === "day"} label="Día" onClick={() => setCalendarView("day")} /></>}
             <span className="appointments-date-center">
-              <Button outlined icon="pi pi-chevron-left" aria-label="Periodo anterior" onClick={() => movePeriod(-1)} />
+              <Button outlined icon="pi pi-chevron-left" aria-label="Periodo anterior" tooltip="Periodo anterior" onClick={() => movePeriod(-1)} />
               <label htmlFor="appointments-date" className="sr-only">Fecha de la agenda</label>
               <DatePicker inputId="appointments-date" value={date} onChange={(event) => event.value instanceof Date && setDate(event.value)} dateFormat="dd/mm/yy" showIcon />
-              <Button outlined icon="pi pi-chevron-right" aria-label="Periodo siguiente" onClick={() => movePeriod(1)} />
+              <Button outlined icon="pi pi-chevron-right" aria-label="Periodo siguiente" tooltip="Periodo siguiente" onClick={() => movePeriod(1)} />
             </span>
           </div>
           {loading && <p role="status">{appointmentText.loading}</p>}
@@ -272,11 +272,10 @@ export function AppointmentWorkspace({ section }: { section: AppointmentSection 
           </section>}
           {!loading && !failed && calendarConfig && (section === "list" || section === "waitlist") && <AppointmentTable appointments={visible} config={calendarConfig} />}
         </div>
-        {(newAppointmentOpen || routedNewAppointmentSlot) && <aside className="appointment-create-sidebar" aria-label={appointmentText.newAppointment}>
-          <header className="appointment-create-sidebar-header"><h2>{appointmentText.newAppointment}</h2><Button text rounded icon="pi pi-times" aria-label="Cerrar nueva cita" onClick={closeNewAppointment} /></header>
-          <div className="appointment-create-sidebar-content"><AppointmentForm embedded initialSlot={newAppointmentSlot ?? routedNewAppointmentSlot} onCancel={closeNewAppointment} onSaved={closeNewAppointment} /></div>
-        </aside>}
       </div>
+      {(newAppointmentOpen || routedNewAppointmentSlot) && <Dialog visible modal={false} position="right" blockScroll={false} header={appointmentText.newAppointment} className="appointment-create-dialog" draggable={false} resizable={false} onHide={closeNewAppointment}>
+        <AppointmentForm embedded initialSlot={newAppointmentSlot ?? routedNewAppointmentSlot} onCancel={closeNewAppointment} onSaved={closeNewAppointment} />
+      </Dialog>}
     </>}
     <Dialog visible={selected.length > 0} header={selected.length > 1 ? `${selected.length} citas en el mismo horario` : "Detalle de cita"} onHide={() => setSelected([])} className="appointment-detail-dialog">{calendarConfig && selected.map((appointment) => <article key={appointment.uuid} className="appointment-group-detail"><dl className="appointment-details"><div><dt>Paciente</dt><dd>{patientName(appointment)}</dd></div><div><dt>Horario</dt><dd>{dateTimeOf(appointment.startDateTime).setLocale("es").toFormat("dd/MM/yyyy HH:mm")}–{dateTimeOf(appointment.endDateTime).toFormat("HH:mm")}</dd></div><div><dt>Servicio</dt><dd>{displayName(appointment.service)}</dd></div><div><dt>Proveedor</dt><dd>{providerNames(appointment)}</dd></div><div><dt>Ubicación</dt><dd>{displayName(appointment.location)}</dd></div><div><dt>Estado</dt><dd>{statusLabel(appointment.status)}</dd></div>{Boolean(appointment.additionalInfo.BED_NUMBER_KEY) && <div><dt>Cama</dt><dd>{String(appointment.additionalInfo.BED_NUMBER_KEY)}</dd></div>}<div><dt>Comentarios</dt><dd>{appointment.comments || "—"}</dd></div></dl><AppointmentActions appointment={appointment} config={calendarConfig} /></article>)}</Dialog>
   </AppShell></AuthGuard>;

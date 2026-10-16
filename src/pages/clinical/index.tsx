@@ -106,7 +106,7 @@ export default function ClinicalSearchPage() {
     if (query) void router.push({ pathname: "/clinical", query: { tab: selectedTab.id, q: query } }, undefined, { shallow: true });
   };
 
-  return <AuthGuard><AppShell title="Clínico">
+  return <AuthGuard><AppShell>
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:clinical requerido por el módulo legacy.</p>}
     {allowed && <section className="panel clinical-search-panel">
       <header className="clinical-search-header"><span className="clinical-search-icon"><i className="pi pi-heart" aria-hidden="true" /></span><div><h2>Consulta clínica</h2><p>Busque y seleccione un paciente para continuar.</p></div></header>

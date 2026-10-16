@@ -178,12 +178,12 @@ function LocationCard({ location, kind, icon, canManage, onOpen, onEdit, onDelet
       {location.description && <span>{location.description}</span>}
     </button>
     {canManage && <div className="admin-location-card-actions" aria-label={`Acciones de ${location.name}`}>
-      <Button text rounded icon="pi pi-pencil" aria-label={`Editar ${kind} ${location.name}`} onClick={onEdit} />
+      <Button text rounded icon="pi pi-pencil" aria-label={`Editar ${kind} ${location.name}`} tooltip={`Editar ${kind} ${location.name}`} onClick={onEdit} />
       <Button text rounded severity="danger" icon="pi pi-trash" aria-label={`Eliminar ${kind} ${location.name}`} disabled={deleteDisabled} tooltip={deleteDisabled ? "Elimine primero las salas contenidas." : undefined} onClick={onDelete} />
     </div>}
   </article>;
 }
 
-function BedCell({ bed, onEdit, onDelete }: { bed: AdminBed; onEdit: () => void; onDelete: () => void }) { return <article className="admin-bed-cell"><div><i className="pi pi-inbox" /><strong>{bed.bedNumber}</strong><span>{bed.bedType?.displayName || bed.bedType?.name || "Sin tipo"}</span></div><footer><Button text rounded icon="pi pi-pencil" aria-label={`Editar cama ${bed.bedNumber}`} onClick={onEdit} /><Button text rounded severity="danger" icon="pi pi-trash" aria-label={`Eliminar cama ${bed.bedNumber}`} onClick={onDelete} /></footer></article>; }
+function BedCell({ bed, onEdit, onDelete }: { bed: AdminBed; onEdit: () => void; onDelete: () => void }) { return <article className="admin-bed-cell"><div><i className="pi pi-inbox" /><strong>{bed.bedNumber}</strong><span>{bed.bedType?.displayName || bed.bedType?.name || "Sin tipo"}</span></div><footer><Button text rounded icon="pi pi-pencil" aria-label={`Editar cama ${bed.bedNumber}`} tooltip={`Editar cama ${bed.bedNumber}`} onClick={onEdit} /><Button text rounded severity="danger" icon="pi pi-trash" aria-label={`Eliminar cama ${bed.bedNumber}`} tooltip={`Eliminar cama ${bed.bedNumber}`} onClick={onDelete} /></footer></article>; }
 function AdminList({ title, onAdd, children }: { title: string; onAdd: () => void; children: React.ReactNode }) { return <div className="admin-reference-list"><header><h3>{title}</h3><Button icon="pi pi-plus" label="Agregar nuevo" onClick={onAdd} /></header><div className="admin-reference-table">{children}</div></div>; }
 function DialogFooter({ saving, cancel }: { saving: boolean; cancel: () => void }) { return <div className="admin-dialog-actions"><Button type="button" outlined label="Cancelar" onClick={cancel} /><Button type="submit" label={saving ? "Guardando…" : "Guardar"} loading={saving} /></div>; }

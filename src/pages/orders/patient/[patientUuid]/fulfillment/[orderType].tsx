@@ -43,8 +43,19 @@ export default function OrderFulfillmentPage() {
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:orders requerido por el módulo legacy.</p>}
     {allowed && loading && <p role="status">Cargando órdenes…</p>}
     {allowed && (profile.isError || fulfillment.isError) && <p role="alert" className="error-banner">No fue posible cargar las órdenes configuradas para este paciente.</p>}
-    {allowed && patient && fulfillment.data && <>
-      <section className="clinical-patient-header panel"><div><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div><div className="clinical-visit-status"><strong>{orderType}</strong><span>{fulfillment.data.formName}</span></div><div className="toolbar"><Button outlined icon="pi pi-users" label="Volver a búsqueda" onClick={() => void router.push("/orders")} /></div></section>
+    {allowed && patient && fulfillment.data && <div className="hcsba-patient-workspace orders-fulfillment-workspace">
+      <aside className="panel hcsba-patient-sidebar orders-patient-context">
+        <div className="patient-context-identity">
+          <span className="patient-context-avatar" aria-hidden="true">{patient.name.charAt(0).toLocaleUpperCase()}</span>
+          <div><small>Paciente seleccionado</small><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div>
+        </div>
+        <dl className="patient-context-meta">
+          <div><dt>Módulo</dt><dd>{orderType}</dd></div>
+          <div><dt>Formulario</dt><dd>{fulfillment.data.formName}</dd></div>
+        </dl>
+        <div className="toolbar patient-context-actions"><Button outlined icon="pi pi-users" label="Volver a búsqueda" onClick={() => void router.push("/orders")} /></div>
+      </aside>
+      <div className="hcsba-patient-content">
       <section className="panel orders-fulfillment-panel"><header className="clinical-card-header"><h2>{orderType}</h2><span>{fulfillment.data.orders.length} órdenes</span></header>
         {saveMessage && <p role={saveMessage.kind === "error" ? "alert" : "status"} className={saveMessage.kind === "error" ? "error-banner" : "success-banner"}>{saveMessage.text}</p>}
         {fulfillment.data.orders.length === 0 && <div className="clinical-search-empty"><i className="pi pi-inbox" aria-hidden="true" /><strong>Sin órdenes</strong><span>No hay {orderType} presentes para este paciente.</span></div>}
@@ -55,6 +66,7 @@ export default function OrderFulfillmentPage() {
         })}</div>
         <div className="toolbar orders-save-toolbar"><Button icon="pi pi-save" label={saving ? "Guardando…" : "Guardar"} loading={saving} disabled={saving || !location?.uuid} onClick={() => void save()} /></div>
       </section>
-    </>}
+      </div>
+    </div>}
   </AppShell></AuthGuard>;
 }

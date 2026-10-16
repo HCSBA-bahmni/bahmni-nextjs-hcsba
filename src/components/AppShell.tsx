@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { Button } from "primereact/button";
 import { useEffect, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthContext";
@@ -8,6 +9,8 @@ import { hasPrivilege } from "@/services/bahmni/auth";
 export function AppShell({ children, title, mainClassName }: { children: ReactNode; title?: string; mainClassName?: string }) {
   const { user, location, quickLogoutComboKey, signOut } = useAuth();
   const keycloakAuth = isKeycloakAuth();
+  const router = useRouter();
+  const isActive = (href: string) => router.pathname === href || router.pathname.startsWith(`${href}/`);
 
   useEffect(() => {
     const quickLogout = (event: KeyboardEvent) => {
@@ -24,11 +27,13 @@ export function AppShell({ children, title, mainClassName }: { children: ReactNo
     <header className="topbar">
       <Link href="/home" className="brand" aria-label="Inicio HCSBA">HCSBA <span>Bahmni</span></Link>
       <nav aria-label="Navegación principal">
-        <Link href="/home">Inicio</Link>
-        <Link href="/registration">Registro</Link>
-        <Link href="/clinical">Clínico</Link>
-        {hasPrivilege(user, "app:appointments") && <Link href="/appointments">Citas</Link>}
-        {hasPrivilege(user, "app:adt") && <Link href="/bedmanagement">Camas</Link>}
+        <Link href="/home" className={isActive("/home") ? "active" : undefined}>Inicio</Link>
+        <Link href="/registration" className={isActive("/registration") ? "active" : undefined}>Registro</Link>
+        <Link href="/clinical" className={isActive("/clinical") ? "active" : undefined}>Clínico</Link>
+        {hasPrivilege(user, "app:appointments") && <Link href="/appointments" className={isActive("/appointments") ? "active" : undefined}>Citas</Link>}
+        {hasPrivilege(user, "app:orders") && <Link href="/orders" className={isActive("/orders") ? "active" : undefined}>Órdenes</Link>}
+        {hasPrivilege(user, "app:adt") && <Link href="/bedmanagement" className={isActive("/bedmanagement") ? "active" : undefined}>Camas</Link>}
+        {hasPrivilege(user, "app:admin") && <Link href="/admin" className={isActive("/admin") ? "active" : undefined}>Admin</Link>}
       </nav>
       <div className="session-summary">
         {keycloakAuth
@@ -38,6 +43,9 @@ export function AppShell({ children, title, mainClassName }: { children: ReactNo
         <Button text severity="secondary" icon="pi pi-sign-out" label="Salir" onClick={() => void signOut()} />
       </div>
     </header>
-    <main className={`page-container${mainClassName ? ` ${mainClassName}` : ""}`}>{title && <h1>{title}</h1>}{children}</main>
+    <main className={`page-container${mainClassName ? ` ${mainClassName}` : ""}`}>
+      {title && <header className="app-page-heading"><span className="clinical-eyebrow">HCSBA</span><h1>{title}</h1></header>}
+      {children}
+    </main>
   </div>;
 }

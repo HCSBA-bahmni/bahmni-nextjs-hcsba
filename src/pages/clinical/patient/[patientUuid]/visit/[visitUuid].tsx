@@ -117,31 +117,35 @@ export default function ClinicalVisitPage() {
     {allowed && loading && <p role="status">Cargando resumen de la visita…</p>}
     {allowed && failed && <p role="alert" className="error-banner">No fue posible cargar completamente la visita seleccionada.</p>}
     {allowed && !loading && !failed && patient && selectedVisit && currentTab && dashboardContext && <div className="clinical-visit-workspace">
-      <header className="clinical-visit-header panel">
-        <div className="clinical-visit-patient">
-          <span className="clinical-eyebrow">{patient.identifier}</span><h1>{patient.name}</h1><button type="button" onClick={() => void router.push({ pathname: `/clinical/patient/${patientUuid}/dashboard`, query: { visitUuid } })}>Volver al dashboard del paciente</button>
-        </div>
-        <nav className="clinical-visit-tabs" aria-label="Secciones de la visita">{tabs.map((tab) => <Button key={tab.id} text={tab.id !== currentTab.id} label={String(t(tab.translationKey, { defaultValue: tab.id }))} onClick={() => navigateTab(tab.id)} />)}</nav>
-        <div className="toolbar"><Button outlined icon="pi pi-print" label="Imprimir" onClick={() => window.print()} /><Button icon="pi pi-file-edit" label="Consulta" disabled={runtimeConfig.data?.features.clinicalConsultationEnabled !== true} onClick={() => void router.push(activeConsultationRoute(patientUuid, activeVisit?.uuid))} /></div>
-      </header>
+      <aside className="panel clinical-visit-context">
+        <header className="clinical-visit-context-header"><span className="patient-context-avatar" aria-hidden="true">{patient.name.charAt(0).toLocaleUpperCase()}</span><div><small>Paciente seleccionado</small><span className="clinical-eyebrow">{patient.identifier}</span><h1>{patient.name}</h1><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div></header>
+        <dl className="patient-context-meta clinical-visit-context-meta"><div><dt>Visita</dt><dd>{visitTypeLabel(selectedVisit, visitSummary.data)}</dd></div><div><dt>Estado</dt><dd>{selectedVisit.stopDatetime ? "Visita cerrada" : "Visita activa"}</dd></div></dl>
+        <div className="toolbar clinical-visit-context-actions"><Button outlined icon="pi pi-arrow-left" label="Dashboard" onClick={() => void router.push({ pathname: `/clinical/patient/${patientUuid}/dashboard`, query: { visitUuid } })} /><Button outlined icon="pi pi-print" label="Imprimir" onClick={() => window.print()} /><Button icon="pi pi-file-edit" label="Consulta" disabled={runtimeConfig.data?.features.clinicalConsultationEnabled !== true} onClick={() => void router.push(activeConsultationRoute(patientUuid, activeVisit?.uuid))} /></div>
+      </aside>
 
-      <nav className="clinical-visit-selector panel" aria-label="Navegar entre visitas">
-        <Button text rounded className="clinical-visit-selector-button" icon="pi pi-chevron-left" aria-label="Visita anterior" disabled={!previousVisit} onClick={() => navigateVisit(previousVisit)} />
-        <div className="clinical-visit-selector-value">
-          <strong>{formatVisitDate(selectedVisit.startDatetime, locale, timeZone)}{selectedVisit.stopDatetime ? ` – ${formatVisitDate(selectedVisit.stopDatetime, locale, timeZone)}` : ""}</strong>
-          <span className="clinical-visit-type">{visitTypeLabel(selectedVisit, visitSummary.data)}</span>
-          {!selectedVisit.stopDatetime && <i className="pi pi-star-fill" role="img" aria-label="Visita activa" title="Visita activa" />}
-        </div>
-        <Button text rounded className="clinical-visit-selector-button" icon="pi pi-chevron-right" aria-label="Visita siguiente" disabled={!nextVisit} onClick={() => navigateVisit(nextVisit)} />
-      </nav>
+      <div className="clinical-visit-main-column">
+        <header className="clinical-visit-header panel">
+          <nav className="clinical-visit-tabs" aria-label="Secciones de la visita">{tabs.map((tab) => <Button key={tab.id} text={tab.id !== currentTab.id} label={String(t(tab.translationKey, { defaultValue: tab.id }))} onClick={() => navigateTab(tab.id)} />)}</nav>
+        </header>
 
-      {showProviderInfo && <section className="clinical-visit-provider panel" aria-label="Contexto de atención">
-        <div><span className="clinical-visit-provider-icon"><i className="pi pi-user" /></span><span><small>Profesional</small><strong>{visitProvider ?? "—"}</strong></span></div>
-        <div><span className="clinical-visit-provider-icon"><i className="pi pi-building" /></span><span><small>Centro de atención</small><strong>{certificateLocation?.name ?? certificateLocation?.display ?? "—"}</strong>{certificateLocationAddress && <em>{certificateLocationAddress}</em>}</span></div>
-      </section>}
+        <nav className="clinical-visit-selector panel" aria-label="Navegar entre visitas">
+          <Button text rounded className="clinical-visit-selector-button" icon="pi pi-chevron-left" aria-label="Visita anterior" tooltip="Visita anterior" disabled={!previousVisit} onClick={() => navigateVisit(previousVisit)} />
+          <div className="clinical-visit-selector-value">
+            <strong>{formatVisitDate(selectedVisit.startDatetime, locale, timeZone)}{selectedVisit.stopDatetime ? ` – ${formatVisitDate(selectedVisit.stopDatetime, locale, timeZone)}` : ""}</strong>
+            <span className="clinical-visit-type">{visitTypeLabel(selectedVisit, visitSummary.data)}</span>
+            {!selectedVisit.stopDatetime && <i className="pi pi-star-fill" role="img" aria-label="Visita activa" title="Visita activa" />}
+          </div>
+          <Button text rounded className="clinical-visit-selector-button" icon="pi pi-chevron-right" aria-label="Visita siguiente" tooltip="Visita siguiente" disabled={!nextVisit} onClick={() => navigateVisit(nextVisit)} />
+        </nav>
 
-      {pendingTypes.length > 0 && <p role="alert" className="warning-banner">Controles de esta pestaña pendientes de adaptador: {pendingTypes.join(", ")}.</p>}
-      <div className="clinical-visit-sections">{visibleSections.map((section) => <ClinicalDashboardSectionCard key={`${currentTab.id}-${section.id}`} section={section} context={dashboardContext} />)}</div>
+        {showProviderInfo && <section className="clinical-visit-provider panel" aria-label="Contexto de atención">
+          <div><span className="clinical-visit-provider-icon"><i className="pi pi-user" /></span><span><small>Profesional</small><strong>{visitProvider ?? "—"}</strong></span></div>
+          <div><span className="clinical-visit-provider-icon"><i className="pi pi-building" /></span><span><small>Centro de atención</small><strong>{certificateLocation?.name ?? certificateLocation?.display ?? "—"}</strong>{certificateLocationAddress && <em>{certificateLocationAddress}</em>}</span></div>
+        </section>}
+
+        {pendingTypes.length > 0 && <p role="alert" className="warning-banner">Controles de esta pestaña pendientes de adaptador: {pendingTypes.join(", ")}.</p>}
+        <div className="clinical-visit-sections">{visibleSections.map((section) => <ClinicalDashboardSectionCard key={`${currentTab.id}-${section.id}`} section={section} context={dashboardContext} />)}</div>
+      </div>
     </div>}
   </AppShell></AuthGuard>;
 }

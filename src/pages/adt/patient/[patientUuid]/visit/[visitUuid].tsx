@@ -9,7 +9,7 @@ import { parseClinicalDashboardConfig } from "@/config-compat/clinicalConfig";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { configuredAdtActionCodes, dischargeEncounterUuid, type AdtActionCode } from "@/features/adt/adtRules";
-import { ClinicalDashboardSectionCard } from "@/features/clinical/ClinicalDashboardSection";
+import { ClinicalDashboardSections } from "@/features/clinical/ClinicalDashboardSections";
 import { toClinicalPatientContext } from "@/features/clinical/patientContext";
 import { useClinicalTranslations } from "@/features/clinical/useClinicalTranslations";
 import { getDispositionActionConcepts, undoDischarge } from "@/services/bahmni/adt";
@@ -84,12 +84,18 @@ export default function AdtPatientPage() {
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:adt requerido por la configuración legacy.</p>}
     {allowed && loading && <p role="status">Cargando movimiento y contexto del paciente…</p>}
     {allowed && failed && <p role="alert" className="error-banner">No fue posible cargar completamente la configuración ADT.</p>}
-    {allowed && !loading && patient && context && <>
-      <section className="clinical-patient-header panel"><div><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div><div className="clinical-visit-status"><strong>{visit?.visitType?.display ?? visit?.visitType?.name ?? "IPD"}</strong><span>{visit?.stopDatetime ? "Visita cerrada" : "Visita activa"}</span></div><div className="toolbar"><Button outlined label="Dashboard" icon="pi pi-home" onClick={() => void router.push({ pathname: `/clinical/patient/${patientUuid}/dashboard`, query: { visitUuid } })} /><Button label="Mapa de camas" icon="pi pi-building" onClick={() => void router.push({ pathname: `/bedmanagement/patient/${patientUuid}`, query: { visitUuid } })} /></div></section>
-      <section className="panel adt-action-panel"><label htmlFor="adt-action">Movimiento del paciente</label><Dropdown inputId="adt-action" value={selectedCode} options={options} placeholder="Seleccionar" onChange={(event) => setSelectedCode(event.value as AdtActionCode)} />{selectedCode && <span className="toolbar">{actionExtensions.map((extension) => { const params = record(extension.extensionParams); const action = String(params.action ?? ""); const label = action === "cancel" ? "Cancelar" : selectedCode === "UNDO_DISCHARGE" ? "Deshacer alta" : String(params.display ?? spanishLabel[selectedCode]); return <Button key={extension.id} outlined={action === "cancel"} severity={selectedCode === "DISCHARGE" || selectedCode === "UNDO_DISCHARGE" ? "danger" : undefined} label={label} loading={reversal.isPending && action === "undoDischarge"} onClick={() => invoke(action)} />; })}</span>}</section>
-      {assignedBed.isError && <p className="warning-banner">No fue posible confirmar la cama actual; las acciones ADT están deshabilitadas.</p>}
-      {!assignedBed.isError && options.length === 0 && <p className="warning-banner">La visita tiene un estado que no corresponde a ninguna acción configurada en el concepto Disposition.</p>}
-      <div className="adt-dashboard-layout">{(tab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege)).map((section) => <ClinicalDashboardSectionCard key={section.id} section={section} context={context} />)}</div>
-    </>}
+    {allowed && !loading && patient && context && <div className="adt-workspace">
+      <aside className="panel adt-patient-card">
+        <header className="adt-patient-card-header"><span className="patient-context-avatar" aria-hidden="true">{patient.name.charAt(0).toLocaleUpperCase()}</span><div><small>Paciente seleccionado</small><span className="clinical-eyebrow">{patient.identifier}</span><h2>{patient.name}</h2><p>{patient.gender || "Sexo no registrado"}{patient.age !== undefined ? ` · ${patient.age} años` : ""}</p></div></header>
+        <dl className="patient-context-meta adt-patient-visit"><div><dt>Visita</dt><dd>{visit?.visitType?.display ?? visit?.visitType?.name ?? "IPD"}</dd></div><div><dt>Estado</dt><dd>{visit?.stopDatetime ? "Visita cerrada" : "Visita activa"}</dd></div></dl>
+        <div className="toolbar adt-patient-actions"><Button outlined label="Dashboard" icon="pi pi-home" onClick={() => void router.push({ pathname: `/clinical/patient/${patientUuid}/dashboard`, query: { visitUuid } })} /><Button label="Mapa de camas" icon="pi pi-building" onClick={() => void router.push({ pathname: `/bedmanagement/patient/${patientUuid}`, query: { visitUuid } })} /></div>
+      </aside>
+      <div className="adt-main-column">
+        <section className="panel adt-action-panel"><label htmlFor="adt-action">Movimiento del paciente</label><Dropdown inputId="adt-action" value={selectedCode} options={options} placeholder="Seleccionar" onChange={(event) => setSelectedCode(event.value as AdtActionCode)} />{selectedCode && <span className="toolbar">{actionExtensions.map((extension) => { const params = record(extension.extensionParams); const action = String(params.action ?? ""); const label = action === "cancel" ? "Cancelar" : selectedCode === "UNDO_DISCHARGE" ? "Deshacer alta" : String(params.display ?? spanishLabel[selectedCode]); return <Button key={extension.id} outlined={action === "cancel"} severity={selectedCode === "DISCHARGE" || selectedCode === "UNDO_DISCHARGE" ? "danger" : undefined} label={label} loading={reversal.isPending && action === "undoDischarge"} onClick={() => invoke(action)} />; })}</span>}</section>
+        {assignedBed.isError && <p className="warning-banner adt-context-message">No fue posible confirmar la cama actual; las acciones ADT están deshabilitadas.</p>}
+        {!assignedBed.isError && options.length === 0 && <p className="warning-banner adt-context-message">La visita tiene un estado que no corresponde a ninguna acción configurada en el concepto Disposition.</p>}
+        <ClinicalDashboardSections sections={(tab?.sections ?? []).filter((section) => hasPrivilege(user, section.requiredPrivilege))} context={context} />
+      </div>
+    </div>}
   </AppShell></AuthGuard>;
 }

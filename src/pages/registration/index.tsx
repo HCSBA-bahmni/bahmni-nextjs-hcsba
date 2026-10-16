@@ -56,13 +56,19 @@ export default function RegistrationSearch() {
   const openPatient = (patient: PatientSearchResult) => void router.push(formatPatientRoute(config?.searchByIdForwardUrl, patient.uuid));
   const onPage = (event: DataTablePageEvent) => void router.push({ pathname: "/registration", query: cleanQuery(routeFields, (event.page ?? 0) + 1) });
 
-  return <AuthGuard><AppShell title="Registro de pacientes"><section className="panel">
-    <div className="toolbar registration-search-fields">
-      {fields.map(([name, label, placeholder]) => <div className="field" key={name}><label htmlFor={`search-${name}`}>{label}</label><InputText id={`search-${name}`} placeholder={placeholder} value={form[name]} onChange={(event) => setDraft((current) => ({ ...routeFields, ...current, [name]: event.target.value }))} onKeyDown={(event) => { if (event.key === "Enter") search(); }} /></div>)}
-      <Button label="Buscar" icon="pi pi-search" disabled={!Object.values(form).some(Boolean)} onClick={search} />
-      <Button label="Limpiar" outlined onClick={clear} />
-      <BiometricPatientSearch onOpenPatient={(patientUuid) => void router.push(formatPatientRoute(config?.searchByIdForwardUrl, patientUuid))} />
-      <Button label="Nuevo paciente" icon="pi pi-user-plus" onClick={() => void router.push("/registration/patient/new")} />
+  return <AuthGuard><AppShell title="Registro de pacientes"><section className="panel registration-search-panel">
+    <div className="registration-search-layout">
+      <div className="registration-search-filters" aria-label="Filtros de búsqueda de pacientes">
+        {fields.map(([name, label, placeholder]) => <div className="field" key={name}><label htmlFor={`search-${name}`}>{label}</label><InputText id={`search-${name}`} placeholder={placeholder} value={form[name]} onChange={(event) => setDraft((current) => ({ ...routeFields, ...current, [name]: event.target.value }))} onKeyDown={(event) => { if (event.key === "Enter") search(); }} /></div>)}
+      </div>
+      <div className="registration-search-actions" aria-label="Acciones de búsqueda">
+        <Button label="Buscar" icon="pi pi-search" disabled={!Object.values(form).some(Boolean)} onClick={search} />
+        <Button label="Limpiar" outlined onClick={clear} />
+        <BiometricPatientSearch onOpenPatient={(patientUuid) => void router.push(formatPatientRoute(config?.searchByIdForwardUrl, patientUuid))} />
+      </div>
+      <div className="registration-secondary-actions" aria-label="Acciones de registro">
+        <Button label="Nuevo paciente" icon="pi pi-user-plus" onClick={() => void router.push("/registration/patient/new")} />
+      </div>
     </div>
     {hasConflictingAttributes && <p className="error-banner" role="alert">Busque por teléfono o por nombre social en una consulta, no por ambos simultáneamente.</p>}
     {result.isError && <p className="error-banner" role="alert">No fue posible consultar pacientes. Revise los criterios e intente nuevamente.</p>}

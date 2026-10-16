@@ -112,7 +112,7 @@ function ComplexMediaInput({ control, value, patientUuid, inputId, onChange }: {
       {isVideo ? <video controls preload="metadata" src={`/document_images/${cleanValue}`} />
         : isPdf ? <a href={`/document_images/${cleanValue}`} target="_blank" rel="noreferrer"><i className="pi pi-file-pdf" /><span>Abrir PDF</span></a>
           : <img src={`/document_images/${cleanValue}`} alt={control.label.value || control.concept?.name || "Imagen clínica"} />}
-      <Button type="button" rounded outlined severity={voided ? "secondary" : "danger"} icon={voided ? "pi pi-undo" : "pi pi-trash"} aria-label={voided ? "Restaurar archivo" : "Eliminar archivo"} onClick={() => onChange(voided ? cleanValue : `${cleanValue}voided`)} />
+      <Button type="button" rounded outlined severity={voided ? "secondary" : "danger"} icon={voided ? "pi pi-undo" : "pi pi-trash"} aria-label={voided ? "Restaurar archivo" : "Eliminar archivo"} tooltip={voided ? "Restaurar archivo" : "Eliminar archivo"} onClick={() => onChange(voided ? cleanValue : `${cleanValue}voided`)} />
     </div>}
     {error && <small className="field-error" role="alert">{error}</small>}
   </div>;
@@ -165,8 +165,8 @@ export function Form2Renderer({ definition, observations = [], translations = {}
     return <div className="form2-repeater">{Array.from({ length: count }, (_, index) => <div className="form2-repeat" key={`${repeatKey}:${index}`}>
       {renderControlInstance(control, parentPath, index)}
       <div className="form2-repeat-actions">
-        {index === count - 1 && <Button type="button" rounded outlined size="small" icon="pi pi-plus" aria-label={`Agregar ${translate(control)}`} onClick={() => setRepeatCounts((current) => ({ ...current, [repeatKey]: count + 1 }))} />}
-        {index === count - 1 && index > 0 && <Button type="button" rounded outlined size="small" severity="danger" icon="pi pi-trash" aria-label={`Eliminar ${translate(control)}`} onClick={() => removeRepeat(control, parentPath, index, repeatKey, count)} />}
+        {index === count - 1 && <Button type="button" rounded outlined size="small" icon="pi pi-plus" aria-label={`Agregar ${translate(control)}`} tooltip={`Agregar ${translate(control)}`} onClick={() => setRepeatCounts((current) => ({ ...current, [repeatKey]: count + 1 }))} />}
+        {index === count - 1 && index > 0 && <Button type="button" rounded outlined size="small" severity="danger" icon="pi pi-trash" aria-label={`Eliminar ${translate(control)}`} tooltip={`Eliminar ${translate(control)}`} onClick={() => removeRepeat(control, parentPath, index, repeatKey, count)} />}
       </div>
     </div>)}</div>;
   }
@@ -214,7 +214,7 @@ export function Form2Renderer({ definition, observations = [], translations = {}
                     : datatype === "date" || datatype === "datetime" ? <Calendar inputId={id} inputClassName={inputClassName} value={parseDateValue(value)} disabled={computed} dateFormat="dd/mm/yy" showIcon showTime={datatype === "datetime"} hourFormat="24" maxDate={control.properties.allowFutureDates === false ? new Date() : undefined} onChange={(event) => update(control, formatDateValue(event.value instanceof Date ? event.value : null, datatype === "datetime"), valueKey)} />
                       : datatype === "text" ? <InputTextarea id={id} className={inputClassName} autoResize rows={2} value={String(value ?? "")} disabled={computed} onChange={(event) => update(control, event.target.value, valueKey)} />
                         : <InputText id={id} className={inputClassName} value={String(value ?? "")} disabled={computed} onChange={(event) => update(control, event.target.value, valueKey)} />}
-      </div>{control.properties.notes && <Button type="button" className="form2-notes-toggle" text rounded icon={openNotes[valueKey] ? "pi pi-file-edit" : "pi pi-file-plus"} aria-label={`${openNotes[valueKey] ? "Ocultar" : "Agregar"} notas de ${fieldLabel}`} onClick={() => setOpenNotes((current) => ({ ...current, [valueKey]: !current[valueKey] }))} />}</div>
+      </div>{control.properties.notes && <Button type="button" className="form2-notes-toggle" text rounded icon={openNotes[valueKey] ? "pi pi-file-edit" : "pi pi-file-plus"} aria-label={`${openNotes[valueKey] ? "Ocultar" : "Agregar"} notas de ${fieldLabel}`} tooltip={`${openNotes[valueKey] ? "Ocultar" : "Agregar"} notas de ${fieldLabel}`} onClick={() => setOpenNotes((current) => ({ ...current, [valueKey]: !current[valueKey] }))} />}</div>
       <div className="form2-field-meta">{normalRange && <small className="form2-range"><i className="pi pi-chart-line" /> Rango normal: {normalRange}{control.units ? ` ${control.units}` : ""}</small>}{control.properties.abnormal && <Button type="button" size="small" severity={abnormalState[valueKey] ? "danger" : "secondary"} outlined={!abnormalState[valueKey]} icon={abnormalState[valueKey] ? "pi pi-exclamation-triangle" : "pi pi-check"} label="Anormal" disabled={!value || computed} onClick={() => setAbnormalState((current) => ({ ...current, [valueKey]: !current[valueKey] }))} />}</div>
       {error && <small className="field-error" role="alert">{issueMessage(error, control)}</small>}{!error && warning && <small className="field-warning" role="status">{issueMessage(warning, control)}</small>}
       {control.properties.notes && openNotes[valueKey] && <div className="form2-notes"><label htmlFor={`${id}-notes`}>Notas</label><InputTextarea id={`${id}-notes`} autoResize rows={2} value={comments[valueKey] ?? ""} onChange={(event) => setComments((current) => ({ ...current, [valueKey]: event.target.value }))} /></div>}

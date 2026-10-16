@@ -576,7 +576,7 @@ function TreatmentShareActions({ section, label, onPrint, onEmail, busy }: { sec
       { label: "Descargar receta", icon: "pi pi-download", disabled: working, command: onPrint },
       { label: "Enviar por correo", icon: "pi pi-envelope", disabled: working, command: onEmail },
     ]} />
-    <Button text rounded icon="pi pi-share-alt" aria-label={`Compartir receta de ${label}`} aria-haspopup="menu" aria-controls={menuId} loading={working} onClick={(event) => menu.current?.toggle(event)} />
+    <Button text rounded icon="pi pi-share-alt" aria-label={`Compartir receta de ${label}`} tooltip={`Compartir receta de ${label}`} aria-haspopup="menu" aria-controls={menuId} loading={working} onClick={(event) => menu.current?.toggle(event)} />
   </span>;
 }
 

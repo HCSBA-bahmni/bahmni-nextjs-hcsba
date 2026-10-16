@@ -22,6 +22,7 @@ import "@/styles/appointments.css";
 import "@/styles/document-upload.css";
 import "@/styles/admin-audit-log.css";
 import "@/styles/admin-beds.css";
+import "@/styles/visual-system.css";
 
 export default function App({ Component, pageProps }: AppProps) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }));

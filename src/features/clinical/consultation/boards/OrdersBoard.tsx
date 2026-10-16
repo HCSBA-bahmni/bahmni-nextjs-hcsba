@@ -153,9 +153,9 @@ export function OrdersBoard() {
                   return <li key={order.clientId}>
                     <span className={discontinued ? "discontinued" : ""}>{displayName(order.concept)}</span>
                     <div>
-                      {urgentEnabled && !discontinued && <Button text rounded icon="pi pi-exclamation-triangle" aria-label={`${order.isUrgent ? "Quitar urgencia de" : "Marcar urgente"} ${displayName(order.concept)}`} aria-pressed={order.isUrgent === true} className={order.isUrgent ? "urgent" : ""} disabled={Boolean(order.uuid)} onClick={() => patchOrder(order.clientId, { isUrgent: !order.isUrgent, dirty: true })} />}
-                      <Button text rounded icon="pi pi-file-edit" aria-label={`Notas de ${displayName(order.concept)}`} className={order.commentToFulfiller ? "has-notes" : ""} onClick={() => openNotes(order)} />
-                      <Button text rounded severity={discontinued ? "secondary" : "danger"} icon={discontinued ? "pi pi-undo" : "pi pi-times"} aria-label={`${discontinued ? "Restaurar" : "Quitar"} ${displayName(order.concept)}`} onClick={() => toggleOrder({ uuid: order.concept.uuid, name: order.concept.name, names: [], set: false, setMembers: [] })} />
+                      {urgentEnabled && !discontinued && <Button text rounded icon="pi pi-exclamation-triangle" aria-label={`${order.isUrgent ? "Quitar urgencia de" : "Marcar urgente"} ${displayName(order.concept)}`} tooltip={`${order.isUrgent ? "Quitar urgencia de" : "Marcar urgente"} ${displayName(order.concept)}`} aria-pressed={order.isUrgent === true} className={order.isUrgent ? "urgent" : ""} disabled={Boolean(order.uuid)} onClick={() => patchOrder(order.clientId, { isUrgent: !order.isUrgent, dirty: true })} />}
+                      <Button text rounded icon="pi pi-file-edit" aria-label={`Notas de ${displayName(order.concept)}`} tooltip={`Notas de ${displayName(order.concept)}`} className={order.commentToFulfiller ? "has-notes" : ""} onClick={() => openNotes(order)} />
+                      <Button text rounded severity={discontinued ? "secondary" : "danger"} icon={discontinued ? "pi pi-undo" : "pi pi-times"} aria-label={`${discontinued ? "Restaurar" : "Quitar"} ${displayName(order.concept)}`} tooltip={`${discontinued ? "Restaurar" : "Quitar"} ${displayName(order.concept)}`} onClick={() => toggleOrder({ uuid: order.concept.uuid, name: order.concept.name, names: [], set: false, setMembers: [] })} />
                     </div>
                   </li>;
                 })}</ul>
@@ -182,7 +182,7 @@ export function OrdersBoard() {
       </section>;
     })}
 
-    <Dialog visible={Boolean(selectedNoteOrder)} modal header={`${t("ENTER_ORDER_NOTE_LABEL", { defaultValue: "Nota de la orden" })} - ${selectedNoteOrder ? displayName(selectedNoteOrder.concept) : ""}`} onHide={closeNotes} footer={selectedNoteOrder?.uuid
+    <Dialog visible={Boolean(selectedNoteOrder)} modal className="order-note-dialog" header={`${t("ENTER_ORDER_NOTE_LABEL", { defaultValue: "Nota de la orden" })} - ${selectedNoteOrder ? displayName(selectedNoteOrder.concept) : ""}`} onHide={closeNotes} footer={selectedNoteOrder?.uuid
       ? <Button label="Cerrar" onClick={closeNotes} />
       : <div className="toolbar"><Button outlined label="Cancelar" onClick={closeNotes} /><Button label={t("OKAY_LABEL", { defaultValue: "Aceptar" })} onClick={saveNotes} /></div>}>
       <InputTextarea aria-label="Nota de la orden" autoFocus rows={4} autoResize disabled={Boolean(selectedNoteOrder?.uuid)} value={noteText} onChange={(event) => setNoteText(event.target.value)} />

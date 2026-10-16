@@ -124,7 +124,7 @@ function LeafField({ concept, observation, conceptSetUI, onChange }: { concept: 
   return <div className="field bacteriology-concept-field">
     <label htmlFor={id}>{label}</label>
     <div className="bacteriology-concept-control">{control}{text(concept.units) && <small>{text(concept.units)}</small>}</div>
-    <Button type="button" className="bacteriology-comment-toggle" text rounded icon={showComment ? "pi pi-file-edit" : "pi pi-file-plus"} aria-label={`${showComment ? "Ocultar" : "Agregar"} notas de ${label}`} onClick={() => setShowComment((current) => !current)} />
+    <Button type="button" className="bacteriology-comment-toggle" text rounded icon={showComment ? "pi pi-file-edit" : "pi pi-file-plus"} aria-label={`${showComment ? "Ocultar" : "Agregar"} notas de ${label}`} tooltip={`${showComment ? "Ocultar" : "Agregar"} notas de ${label}`} onClick={() => setShowComment((current) => !current)} />
     {showComment && <div className="bacteriology-concept-comment"><label htmlFor={`${id}-notes`}>Notas</label><InputTextarea id={`${id}-notes`} autoResize rows={2} maxLength={255} value={text(observation.comment)} onChange={(event) => setComment(event.target.value)} /></div>}
   </div>;
 }

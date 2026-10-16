@@ -44,7 +44,7 @@ export function ClinicalDashboardSectionCard({ section, context }: { section: Cl
     <h2>{String(title)}</h2>
     <span className="clinical-card-header-actions">
       {adapter.HeaderAction && <adapter.HeaderAction section={section} context={context} />}
-      {adapter.supportsExpanded && <Button text rounded icon="pi pi-window-maximize" aria-label={`Ampliar ${String(title)}`} onClick={() => setExpanded(true)} />}
+      {adapter.supportsExpanded && <Button text rounded icon="pi pi-window-maximize" aria-label={`Ampliar ${String(title)}`} tooltip={`Ampliar ${String(title)}`} onClick={() => setExpanded(true)} />}
       <Button
         text
         rounded

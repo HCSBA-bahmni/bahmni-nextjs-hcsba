@@ -20,14 +20,14 @@ describe("dashboard de Administración", () => {
     expect(resolveAdminExtensionUrl("/bahmni/admin/beds")).toEqual({ href: "/bahmni/admin/beds", kind: "next" });
   });
 
-  it("conserva literalmente la URL OWA para el rollback independiente de Beds", () => {
+  it("redirige la configuración legacy de Beds a la pantalla migrada en Next", () => {
     expect(resolveAdminExtensionUrl("/openmrs/owa/bedmanagement/admissionLocations.html")).toEqual({
-      href: "/openmrs/owa/bedmanagement/admissionLocations.html",
-      kind: "service",
+      href: "/bahmni/admin/beds",
+      kind: "next",
     });
     expect(resolveAdminExtensionUrl("/openmrs/owa/bedmanagement/admissionLocations.html?locale=es#/locations")).toEqual({
-      href: "/openmrs/owa/bedmanagement/admissionLocations.html?locale=es#/locations",
-      kind: "service",
+      href: "/bahmni/admin/beds",
+      kind: "next",
     });
   });
 

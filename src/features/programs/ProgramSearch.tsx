@@ -68,7 +68,7 @@ export function ProgramSearch() {
     if (value && !isActiveTab) void router.push({ pathname: "/clinical/programs", query: { tab: selectedTab?.id, q: value } }, undefined, { shallow: true });
   };
 
-  return <AuthGuard><AppShell title="Programas">
+  return <AuthGuard><AppShell>
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:clinical requerido para Programas.</p>}
     {allowed && <section className="panel clinical-search-panel">
       <header className="clinical-search-header"><span className="clinical-search-icon"><i className="pi pi-book" aria-hidden="true" /></span><div><h2>Programas</h2><p>Busque y seleccione un paciente para gestionar sus enrolamientos.</p></div></header>

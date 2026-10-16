@@ -117,10 +117,10 @@ export function BacteriologyBoard() {
       <header><h2 id="saved-specimens-title">Muestras guardadas</h2></header>
       <div className="bacteriology-saved-list">{saved.map((specimen) => <article key={specimen.clientId}>
         <div><strong>{specimenName(specimen)}</strong>{specimen.identifier && <span>#{specimen.identifier}</span>}<span>Agregada el {specimenDate(specimen.dateCollected, context.locale, context.timeZone)}</span></div>
-        <div className="consultation-row-actions"><Button type="button" text icon="pi pi-pencil" aria-label={`Editar ${specimenName(specimen)}`} onClick={() => updateDraft((current) => ({
+        <div className="consultation-row-actions"><Button type="button" text icon="pi pi-pencil" aria-label={`Editar ${specimenName(specimen)}`} tooltip={`Editar ${specimenName(specimen)}`} onClick={() => updateDraft((current) => ({
           ...current,
           specimens: current.specimens.map((item) => item.clientId === specimen.clientId ? { ...item, editing: true } : item),
-        }))} /><Button type="button" text severity="danger" icon="pi pi-times" aria-label={`Anular ${specimenName(specimen)}`} onClick={() => remove(specimen)} /></div>
+        }))} /><Button type="button" text severity="danger" icon="pi pi-times" aria-label={`Anular ${specimenName(specimen)}`} tooltip={`Anular ${specimenName(specimen)}`} onClick={() => remove(specimen)} /></div>
       </article>)}</div>
     </section>}
   </div>;

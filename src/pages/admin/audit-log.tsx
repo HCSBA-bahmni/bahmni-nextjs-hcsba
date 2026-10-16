@@ -100,7 +100,7 @@ export default function AuditLogPage() {
   const label = (key: string, fallback: string) => String(t(key, { defaultValue: fallback }));
   const message = (entry: AuditLogEntry) => String(t(entry.messageKey, { ...entry, params: entry.params, defaultValue: entry.messageKey }));
 
-  return <AuthGuard><AppShell title={label("ADMIN_APP_HEADER", "Administración")}>
+  return <AuthGuard><AppShell>
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:admin requerido por el módulo de Administración.</p>}
     {allowed && <main className="audit-log-page">
       <section className="panel audit-log-hero">

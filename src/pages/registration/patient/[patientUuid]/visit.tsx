@@ -235,8 +235,9 @@ export default function VisitPage() {
     {loading && <p role="status">Cargando visita y formulario de Registro…</p>}
     {!loading && !visitLocation.data && <section className="panel"><p role="alert" className="error-banner">La ubicación de inicio de sesión no tiene una ubicación de visita asociada.</p><Button label="Volver al paciente" onClick={() => void router.push(`/registration/patient/${patientUuid}`)} /></section>}
     {!loading && visitLocation.data && !activeVisit && <section className="panel"><p role="alert" className="error-banner">No hay una visita activa para este paciente en la ubicación de visita actual.</p><Button label="Volver al paciente" onClick={() => void router.push(`/registration/patient/${patientUuid}`)} /></section>}
-    {!loading && activeVisit && <>
-      <section className="panel"><h2>{plainTranslation(t("REGISTRATION_LABEL_SUMMARY", { defaultValue: "Resumen" }))}</h2><dl className="patient-summary"><div><dt>{summary?.identifierType}</dt><dd>{summary?.identifier || "—"}</dd></div><div><dt>{plainTranslation(t("REGISTRATION_LABEL_PATIENT_NAME", { defaultValue: "Nombre del paciente" }))}</dt><dd>{summary?.name || "—"}</dd></div></dl></section>
+    {!loading && activeVisit && <div className="hcsba-patient-workspace registration-visit-workspace">
+      <aside className="panel hcsba-patient-sidebar"><div className="patient-context-identity"><span className="patient-context-avatar" aria-hidden="true">{summary?.name?.charAt(0) || "P"}</span><div><small>Paciente seleccionado</small><span className="clinical-eyebrow">{summary?.identifier || "—"}</span><h2>{summary?.name || "—"}</h2></div></div><div className="toolbar patient-context-actions"><Button outlined icon="pi pi-arrow-left" label="Volver al paciente" onClick={() => void router.push(`/registration/patient/${patientUuid}`)} /></div></aside>
+      <div className="hcsba-patient-content">
       {missingForms.length > 0 && <p role="alert" className="error-banner">No se encontraron formularios publicados para: {missingForms.join(", ")}.</p>}
       {availableForms.map(({ form, latest }) => <RegistrationFormSection key={publishedFormIdentity(form).uuid} form={form} patientUuid={patientUuid} observations={encounter.data?.observations ?? []} latest={latest} onChange={updateForm} />)}
       {availableForms.length === 0 && missingForms.length === 0 && <section className="panel"><p>No hay formularios de segunda página habilitados para sus privilegios.</p></section>}
@@ -246,6 +247,7 @@ export default function VisitPage() {
         <Button type="button" label={plainTranslation(t("REGISTRATION_LABEL_SAVE", { defaultValue: "Guardar" }))} icon="pi pi-save" loading={working} disabled={missingForms.length > 0} onClick={() => void save(false)} />
         {canGoClinical && <Button type="button" label={plainTranslation(t("REGISTRATION_TO_CLINICAL", { defaultValue: "Guardar e ir al panel del paciente" }))} icon="pi pi-arrow-right" loading={working} disabled={missingForms.length > 0} onClick={() => void save(true)} />}
       </div>
-    </>}
+      </div>
+    </div>}
   </AppShell></AuthGuard>;
 }

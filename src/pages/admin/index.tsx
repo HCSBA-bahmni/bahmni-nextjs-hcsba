@@ -25,7 +25,7 @@ export default function AdminDashboardPage() {
 
   const visible = (extensions.data ?? []).filter((extension) => extension.extensionPointId === "org.bahmni.admin.dashboard" && hasPrivilege(user, extension.requiredPrivilege) && extension.online !== false);
 
-  return <AuthGuard><AppShell title="Administración" mainClassName="admin-dashboard-page">
+  return <AuthGuard><AppShell mainClassName="admin-dashboard-page">
     {!allowed && <p role="alert" className="error-banner">No tiene el privilegio app:admin requerido por el módulo de Administración.</p>}
     {allowed && <>
       <section className="panel admin-dashboard-hero">

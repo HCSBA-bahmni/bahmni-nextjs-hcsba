@@ -292,7 +292,7 @@ export function CareView() {
           </div>
 
           <div className="care-view-period">
-            <div><Button text icon="pi pi-chevron-left" aria-label="Período anterior" disabled={!timeWindow || !moveCareWindow(timeWindow, -1, windowHours)} onClick={() => moveWindow(-1)} /><Button outlined label="Período actual" onClick={resetCurrentWindow} /><Button text icon="pi pi-chevron-right" aria-label="Período siguiente" disabled={!timeWindow || !moveCareWindow(timeWindow, 1, windowHours)} onClick={() => moveWindow(1)} /></div>
+            <div><Button text icon="pi pi-chevron-left" aria-label="Período anterior" tooltip="Período anterior" disabled={!timeWindow || !moveCareWindow(timeWindow, -1, windowHours)} onClick={() => moveWindow(-1)} /><Button outlined label="Período actual" onClick={resetCurrentWindow} /><Button text icon="pi pi-chevron-right" aria-label="Período siguiente" tooltip="Período siguiente" disabled={!timeWindow || !moveCareWindow(timeWindow, 1, windowHours)} onClick={() => moveWindow(1)} /></div>
             <strong>{timeWindow ? `${timeWindow.start.toFormat("dd LLL yyyy")} · ${formatTime(timeWindow.start)}–${formatTime(timeWindow.end)}` : "—"}</strong>
             {!isCurrentShift && <span className="care-view-past-warning"><i className="pi pi-info-circle" /> Consultando un período distinto del turno vigente</span>}
           </div>
