@@ -5,6 +5,7 @@ import { AppShell } from "./AppShell";
 
 vi.mock("@/features/auth/AuthContext", () => ({ useAuth: vi.fn() }));
 vi.mock("@/features/auth/authMode", () => ({ isKeycloakAuth: () => false }));
+vi.mock("next/router", () => ({ useRouter: () => ({ pathname: "/home" }) }));
 
 afterEach(cleanup);
 

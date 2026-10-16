@@ -34,7 +34,7 @@ describe("MPI admission contract", () => {
       .mockResolvedValueOnce(response(legacy))
       .mockResolvedValueOnce(response(detail));
     vi.stubGlobal("fetch", fetchMock);
-    await expect(lookupLocalPatientByRun("19.547.137-1")).resolves.toMatchObject([{ id: "openmrs-legacy" }]);
+    await expect(lookupLocalPatientByRun("12.345.678-5")).resolves.toMatchObject([{ id: "openmrs-legacy" }]);
     expect(fetchMock.mock.calls[1]?.[0]).toContain("/ws/rest/v1/patient?q=12345678-5");
   });
 

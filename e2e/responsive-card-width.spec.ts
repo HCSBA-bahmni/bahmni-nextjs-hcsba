@@ -220,9 +220,9 @@ for (const width of [390, 620, 700, 768, 900, 1024, 1180, 1280, 1920]) {
       <div class="program-card-grid"><article class="program-card">Programa corto</article><article class="program-card">Programa con un titulo mas largo</article></div>
       <div class="ipd-nursing-task-board"><article>Turno</article><article>Actividades pendientes</article></div></main>
     </div>`);
-    for (const module of [".clinical-dashboard-page", ".adt-page"]) {
-      const stacked = width <= (module === ".adt-page" ? 1180 : 900);
-      const geometry = await page.locator(`${module} .clinical-dashboard-item`).evaluateAll((items) => items.map((item) => {
+    for (const moduleSelector of [".clinical-dashboard-page", ".adt-page"]) {
+      const stacked = width <= (moduleSelector === ".adt-page" ? 1180 : 900);
+      const geometry = await page.locator(`${moduleSelector} .clinical-dashboard-item`).evaluateAll((items) => items.map((item) => {
         const container = item.closest(".clinical-dashboard-columns")!;
         const column = item.closest(".clinical-dashboard-column")!;
         const target = getComputedStyle(column).display === "contents" ? container : column;
