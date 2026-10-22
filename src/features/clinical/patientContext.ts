@@ -23,14 +23,16 @@ const records = (value: unknown): Array<Record<string, unknown>> => Array.isArra
 export function toClinicalPatientContext(profile: Record<string, unknown>, uuid: string): ClinicalPatientContext {
   const patient = record(profile.patient ?? profile);
   const person = record(patient.person ?? profile.person ?? patient);
-  const name = records(person.names)[0] ?? {};
+  const names = records(person.names).filter(name=>name.voided!==true);
+  const name = names.find(name=>name.preferred===true) ?? names[0] ?? {};
   const identifiers = records(patient.identifiers);
   const identifier = identifiers.find((item) => item.preferred === true) ?? identifiers[0] ?? {};
   const runIdentifier = identifiers.find((item) => {
     const type = record(item.identifierType);
     return String(type.name ?? type.display ?? "").trim().toUpperCase() === "RUN";
   });
-  const address = records(person.addresses)[0] ?? {};
+  const addresses = records(person.addresses).filter(address=>address.voided!==true);
+  const address = addresses.find(address=>address.preferred===true) ?? addresses[0] ?? {};
   const attributes = records(person.attributes).flatMap((attribute) => {
     const type = record(attribute.attributeType);
     const rawValue = attribute.value;

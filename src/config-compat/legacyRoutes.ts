@@ -107,6 +107,7 @@ export function resolveExtensionUrl(rawUrl?: string): ResolvedExtensionUrl {
 
   const resolved = new URL(rawUrl, "https://hcsba.local/bahmni/home/");
   let href = `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  if (/^\/bahmni\/patient-management(?:\/|$)/i.test(resolved.pathname)) return { href, kind: "next" };
   if (/^\/bahmni\/registration(?:\/index\.html)?/i.test(resolved.pathname)) {
     const nextRoute = resolveLegacyRoute(resolved.pathname, resolved.hash);
     href = `/bahmni${nextRoute}${resolved.search}`;

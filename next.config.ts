@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   turbopack: { root: process.cwd() },
   experimental: { externalDir: false },
+  async redirects() {
+    return [{ source: "/registration/reviews", destination: "/patient-management", permanent: false }];
+  },
   async headers() {
     return [{ source: "/(.*)", headers: [
       { key: "Referrer-Policy", value: "same-origin" },

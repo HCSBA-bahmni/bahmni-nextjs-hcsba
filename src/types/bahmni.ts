@@ -81,6 +81,7 @@ export interface PatientFormValues {
   nameUuid?: string;
   addressUuid?: string;
   identifierUuid?: string;
+  primaryIdentifierMetadata?: PatientIdentifierMetadataValues;
   givenName: string;
   middleName?: string;
   familyName: string;

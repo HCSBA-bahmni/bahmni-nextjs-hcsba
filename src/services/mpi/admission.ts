@@ -25,7 +25,7 @@ const legacyPatientSearchSchema = z.object({
   }).loose()),
   links: z.array(z.object({ rel: z.string() }).loose()).optional(),
 }).loose();
-const syncSchema = z.object({ resultado: z.string(), crid: z.string().optional(), vinculado: z.boolean().optional() }).loose();
+const syncSchema = z.object({ resultado: z.string(), crid: z.string().optional(), vinculado: z.boolean().optional(), caseId: z.string().optional(), preferredUuid: z.string().optional() }).loose();
 
 export type MpiPatient = z.infer<typeof patientSchema>;
 export type MpiAdmissionMode = "off" | "preview" | "integrated";
@@ -49,7 +49,7 @@ export const mpiAdmissionMode: MpiAdmissionMode = ["preview", "integrated"].incl
 
 // The gateway is same-origin and owns the OpenHIM credential. Never put an OpenHIM password here.
 const gatewayBase = process.env.NEXT_PUBLIC_MPI_ADMISSION_BASE ?? "/openmrs/mpi-admission-gateway";
-function gatewayPath(path: string): string {
+export function gatewayPath(path: string): string {
   if (!gatewayBase.startsWith("/") || gatewayBase.startsWith("//") || gatewayBase.includes("..")) {
     throw new MpiAdmissionError("La ruta del gateway MPI debe ser del mismo origen.");
   }
@@ -155,13 +155,17 @@ export async function lookupMpiIdentityForAdmission(run: string, signal?: AbortS
   return lookup;
 }
 
-export async function syncPatientWithMpi(patientUuid: string): Promise<{ crid?: string }> {
+export async function syncPatientWithMpi(patientUuid: string, review?: import("./localIdentity").IdentityReview): Promise<{ crid?: string }> {
   const response = await fetch(gatewayPath(`/_sync/${encodeURIComponent(patientUuid)}`), {
-    method: "POST", credentials: "include", headers: { Accept: "application/json" },
+    method: "POST", credentials: "include", headers: { Accept: "application/json", ...(review ? { "Content-Type": "application/json" } : {}) },
+    ...(review ? { body: JSON.stringify({ review }) } : {}),
   });
   if (!response.ok) throw new MpiAdmissionError("La ficha se guardó, pero no se pudo sincronizar con el MPI.", response.status);
   const result = syncSchema.safeParse(await response.json().catch(() => undefined));
-  if (!result.success || !["creado", "actualizado"].includes(result.data.resultado) || !result.data.crid || result.data.vinculado !== true) {
+  if (result.success && result.data.resultado === "revision-pendiente" && typeof result.data.caseId === "string") return {};
+  const verifiedConsolidation = result.success && result.data.resultado === "consolidacion-verificada"
+    && result.data.preferredUuid === patientUuid && Boolean(result.data.caseId);
+  if (!result.success || (!["creado", "actualizado"].includes(result.data.resultado) && !verifiedConsolidation) || !result.data.crid || result.data.vinculado !== true) {
     throw new MpiAdmissionError("La ficha se guardó, pero su vínculo CRID sigue pendiente.");
   }
   return { crid: result.data.crid };

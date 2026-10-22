@@ -19,6 +19,13 @@ function deps() {
 }
 
 describe("new patient MPI write sequence", () => {
+  it("syncs a passport-only chart when the local identity capability is enabled", async () => {
+    const services = { ...deps(), localIdentityEnabled: true };
+    const passport = { ...values, additionalIdentifiers: [{ identifierTypeUuid: "passport", identifier: "P000123" }] };
+    await expect(saveNewPatientWithMpi(passport, false, "integrated", undefined, types, services)).resolves.toEqual({ uuid: "patient-1" });
+    expect(services.calls).toEqual(["profile", "eis", "mpi"]);
+    expect(services.saveProfile).toHaveBeenCalledTimes(1);
+  });
   it("writes the EIS patient once, then metadata, then the CRID link", async () => {
     const services = deps();
     await expect(saveNewPatientWithMpi(values, false, "integrated", "12345678-5", types, services)).resolves.toEqual({ uuid: "patient-1" });

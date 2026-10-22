@@ -13,6 +13,8 @@ import type { Form2Observation } from "@/features/forms/form2";
 import { formatRegistrationDestination } from "@/features/registration/workflow";
 import { publishedFormIdentity, RegistrationFormSection } from "@/features/registration/RegistrationFormSection";
 import { useRegistrationTranslations } from "@/features/registration/useRegistrationTranslations";
+import { IdentityReviewStatus } from "@/features/registration/IdentityReviewStatus";
+import { ClinicalChartGuard } from "@/features/registration/ClinicalChartGuard";
 import { visitsAtEffectiveLocation } from "@/features/registration/visitLocation";
 import { audit } from "@/services/bahmni/audit";
 import { hasPrivilege } from "@/services/bahmni/auth";
@@ -76,7 +78,8 @@ function extensionFormPresentation(extension: Record<string, unknown>) {
 function patientSummary(profile: Record<string, unknown>) {
   const patient = (profile.patient ?? profile) as Record<string, unknown>;
   const person = (patient.person ?? profile.person ?? patient) as Record<string, unknown>;
-  const name = ((person.names as Array<Record<string, unknown>> | undefined) ?? [])[0] ?? {};
+  const names = ((person.names as Array<Record<string, unknown>> | undefined) ?? []).filter(n=>n.voided!==true);
+  const name = names.find(n=>n.preferred===true) ?? names[0] ?? {};
   const identifiers = (patient.identifiers as Array<Record<string, unknown>> | undefined) ?? [];
   const identifier = identifiers.find((item) => item.preferred === true) ?? identifiers[0] ?? {};
   return {
@@ -227,6 +230,8 @@ export default function VisitPage() {
   };
 
   return <AuthGuard><AppShell title="Detalles de Registro">
+    <ClinicalChartGuard patientUuid={patientUuid}>
+    <IdentityReviewStatus patientUuid={patientUuid} />
     {error && <div role="alert" className="error-banner">
       <p>{error}</p>
       {saveDiagnostic && <details><summary>Detalles técnicos seguros</summary><pre>{JSON.stringify(saveDiagnostic, null, 2)}</pre></details>}
@@ -249,5 +254,6 @@ export default function VisitPage() {
       </div>
       </div>
     </div>}
+    </ClinicalChartGuard>
   </AppShell></AuthGuard>;
 }

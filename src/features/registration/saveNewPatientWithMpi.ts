@@ -11,6 +11,8 @@ export class MissingPatientUuidError extends Error {
 }
 
 interface SaveDependencies {
+  localIdentityEnabled?: boolean;
+  pendingReview?: boolean;
   saveProfile(values: PatientFormValues, jumpAccepted: boolean): Promise<Record<string, unknown>>;
   saveMetadata(uuid: string, values: PatientFormValues): Promise<unknown>;
   syncMpi(uuid: string): Promise<unknown>;
@@ -29,7 +31,7 @@ export async function saveNewPatientWithMpi(
 ): Promise<NewPatientSaveResult> {
   if (mode === "preview") throw new Error("El laboratorio MPI no permite guardar fichas clínicas.");
   const currentRun = runFromForm(values, identifierTypes);
-  if (mode === "integrated" && normalizeChileRun(currentRun ?? "") !== normalizeChileRun(confirmedRun ?? "")) {
+  if (mode === "integrated" && !deps.pendingReview && normalizeChileRun(currentRun ?? "") !== normalizeChileRun(confirmedRun ?? "")) {
     throw new Error("El RUN cambió después de verificar la identidad. Vuelva a consultar el MPI antes de guardar.");
   }
   const saved = await deps.saveProfile(values, jumpAccepted);
@@ -38,7 +40,7 @@ export async function saveNewPatientWithMpi(
   try { await deps.saveMetadata(uuid, values); }
   catch { return { uuid, pending: "eis" }; }
   if (mode === "integrated") {
-    if (!confirmedRun) return { uuid, pending: "no-run" };
+    if (!confirmedRun && !deps.localIdentityEnabled) return { uuid, pending: "no-run" };
     try { await deps.syncMpi(uuid); }
     catch { return { uuid, pending: "mpi" }; }
   }

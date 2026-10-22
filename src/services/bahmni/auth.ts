@@ -171,7 +171,7 @@ export async function saveUserProperties(userUuid: string, userProperties: Recor
 
 export async function saveDefaultLocale(user: BahmniUser, locale: string): Promise<BahmniUser> {
   persistLocale(locale);
-  if (user.userProperties?.defaultLocale === locale) return user;
+  if (user.userProperties?.defaultLocale === locale || !hasPrivilege(user, "Edit Users")) return user;
   return saveUserProperties(user.uuid, { ...(user.userProperties ?? {}), defaultLocale: locale });
 }
 

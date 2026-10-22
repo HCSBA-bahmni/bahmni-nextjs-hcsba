@@ -41,7 +41,8 @@ function isRunIdentifier(item: Record<string, unknown>): boolean {
 function patientView(profile: Record<string, unknown> | undefined) {
   const patient = record(profile?.patient ?? profile);
   const person = record(patient.person);
-  const names = Array.isArray(person.names) ? record(person.names[0]) : {};
+  const nameRows = Array.isArray(person.names) ? person.names.map(record).filter(n=>n.voided!==true) : [];
+  const names = nameRows.find(n=>n.preferred===true) ?? nameRows[0] ?? {};
   const identifierRows = Array.isArray(patient.identifiers) ? patient.identifiers.map(record) : [];
   const identifier = identifierRows.find((item) => item.preferred === true) ?? identifierRows[0] ?? {};
   const runIdentifier = identifierRows.find(isRunIdentifier);

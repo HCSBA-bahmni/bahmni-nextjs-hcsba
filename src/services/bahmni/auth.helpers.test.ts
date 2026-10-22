@@ -1,6 +1,6 @@
 import Cookies from "js-cookie";
-import { afterEach, describe, expect, it } from "vitest";
-import { getGrantedEncounterProvider, hasPrivilege, parseFavouriteObsTemplates, serializeFavouriteObsTemplates } from "./auth";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { getGrantedEncounterProvider, hasPrivilege, parseFavouriteObsTemplates, serializeFavouriteObsTemplates, saveDefaultLocale } from "./auth";
 import type { BahmniUser } from "@/types/bahmni";
 
 const user = (privileges: string[]) => ({
@@ -8,6 +8,13 @@ const user = (privileges: string[]) => ({
 }) as BahmniUser;
 
 describe("OpenMRS effective privileges", () => {
+  it("keeps a local language preference without granting user administration to registration", async () => {
+    const fetch = vi.fn(); vi.stubGlobal("fetch", fetch);
+    const admission = user(["app:registration"]);
+    await expect(saveDefaultLocale(admission, "es")).resolves.toEqual(admission);
+    expect(Cookies.get("bahmni.locale")).toBe("es"); expect(fetch).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
   it("uses privileges instead of role names to grant application access", () => {
     const registrationUser = { ...user(["app:registration"]), roles: [{ name: "HCSBA-Registro-Demo" }] };
     expect(hasPrivilege(registrationUser, "app:registration")).toBe(true);

@@ -28,20 +28,20 @@ test.beforeEach(async ({ page }) => {
 test("no match can be confirmed, but synthetic preview cannot save into OpenMRS", async ({ page }) => {
   await page.route("**/openmrs/mpi-admission-gateway/fhir/Patient?*", (route) => route.fulfill({ contentType: "application/fhir+json", headers: { "X-MPI-Outcome": "no-match", "X-MPI-Source": "minsal", "X-MPI-Purpose": "admision" }, body: bundle([]) }));
   await page.goto("/bahmni/registration/patient/new");
-  await expect(page.getByRole("heading", { name: "Verificación de identidad MPI" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verificar datos del paciente" })).toBeVisible();
   const accessibility = await new AxeBuilder({ page }).include(".mpi-admission-gate").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
   await page.getByLabel("RUN", { exact: true }).fill("12345678-5");
   await page.getByRole("button", { name: "Consultar identidad" }).click();
-  await expect(page.getByText("No se encontró ficha local ni identidad MPI")).toBeVisible();
-  await page.getByRole("button", { name: "Confirmar documento y completar EIS" }).click();
+  await expect(page.getByText("No se encontraron antecedentes para este RUN")).toBeVisible();
+  await page.getByRole("button", { name: "Continuar con estos datos" }).click();
   await expect(page.getByRole("heading", { name: "Datos de identificación" })).toBeVisible();
   await expect(page.getByText("Prueba MPI sintética", { exact: false })).toBeVisible();
   await expect(page.getByLabel("RUN", { exact: true })).toHaveValue("12345678-5");
   await expect(page.getByRole("button", { name: "Generar RUN" })).toHaveCount(0);
   await page.getByRole("button", { name: "Siguiente" }).click();
   await page.getByRole("button", { name: "Siguiente" }).click();
-  await expect(page.getByRole("heading", { name: "Identificador clínico OpenMRS" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Número de ficha del hospital" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Guardar paciente" })).toBeDisabled();
 });
 
@@ -54,7 +54,7 @@ test("a legacy CLRUN* patient is opened instead of creating another chart", asyn
   await page.getByLabel("RUN", { exact: true }).fill("12345678-5");
   await page.getByRole("button", { name: "Consultar identidad" }).click();
   await expect(page.getByRole("button", { name: "Abrir ficha existente" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /completar EIS/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Continuar con estos datos/ })).toHaveCount(0);
 });
 
 test("RUN is manual in the first step and the clinical number is assigned later", async ({ page }) => {
@@ -62,13 +62,13 @@ test("RUN is manual in the first step and the clinical number is assigned later"
   await page.goto("/bahmni/registration/patient/new");
   await page.getByLabel("RUN", { exact: true }).fill("12345678-5");
   await page.getByRole("button", { name: "Consultar identidad" }).click();
-  await page.getByRole("button", { name: "Confirmar documento y completar EIS" }).click();
+  await page.getByRole("button", { name: "Continuar con estos datos" }).click();
   await expect(page.getByLabel("RUN", { exact: true })).toHaveValue("12345678-5");
   await expect(page.getByRole("button", { name: "Generar RUN" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Identificador clínico OpenMRS" })).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Número de ficha del hospital" })).toBeHidden();
   await page.getByRole("button", { name: "Siguiente" }).click();
   await page.getByRole("button", { name: "Siguiente" }).click();
-  await expect(page.getByRole("heading", { name: "Identificador clínico OpenMRS" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Número de ficha del hospital" })).toBeVisible();
   await expect(page.getByLabel("Número de ficha")).toHaveValue("Se asignará automáticamente al guardar");
 });
 
@@ -79,7 +79,7 @@ test("a known OpenMRS patient is opened instead of creating a duplicate", async 
   await page.getByLabel("RUN", { exact: true }).fill("12345678-5");
   await page.getByRole("button", { name: "Consultar identidad" }).click();
   await expect(page.getByRole("button", { name: "Abrir ficha existente" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Confirmar identidad y completar EIS" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Continuar con estos datos" })).toHaveCount(0);
   await page.getByRole("button", { name: "Abrir ficha existente" }).click();
   await expect(page).toHaveURL(/\/registration\/patient\/patient-existing$/);
 });
@@ -90,7 +90,7 @@ test("stale or ambiguous MPI responses do not permit a new record", async ({ pag
   await page.getByLabel("RUN", { exact: true }).fill("12345678-5");
   await page.getByRole("button", { name: "Consultar identidad" }).click();
   await expect(page.getByText("El MPI nacional no pudo confirmar la identidad", { exact: false })).toBeVisible();
-  await expect(page.getByRole("button", { name: /completar EIS/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Continuar con estos datos/ })).toHaveCount(0);
 });
 
 test("a cached negative result is refreshed nationally before creating a ficha", async ({ page }) => {
@@ -103,7 +103,7 @@ test("a cached negative result is refreshed nationally before creating a ficha",
   await page.goto("/bahmni/registration/patient/new");
   await page.getByLabel("RUN", { exact: true }).fill("12345678-5");
   await page.getByRole("button", { name: "Consultar identidad" }).click();
-  await expect(page.getByRole("button", { name: "Confirmar documento y completar EIS" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continuar con estos datos" })).toBeVisible();
   expect(queries).toHaveLength(2);
   expect(queries[1]).toContain("_refresh=true");
 });

@@ -39,13 +39,14 @@ function occupant(value: unknown): BedOccupant {
   const source = object(value);
   const person = object(source.person);
   const preferredName = object(person.preferredName);
-  const names = Array.isArray(person.names) ? object(person.names[0]) : {};
+  const nameRows = Array.isArray(person.names) ? person.names.map(object).filter(n=>n.voided!==true) : [];
+  const names = nameRows.find(n=>n.preferred===true) ?? nameRows[0] ?? {};
   const namesDisplay = [names.givenName, names.middleName, names.familyName, names.familyName2].filter((part): part is string => typeof part === "string" && Boolean(part)).join(" ");
   const personName = text(person.display)
     ?? text(preferredName.display)
     ?? (namesDisplay || undefined);
   const identifiers = Array.isArray(source.identifiers) ? source.identifiers.map((identifier) => object(identifier)) : undefined;
-  const identifier = text(source.identifier) ?? identifiers?.map((item) => text(item.identifier)).find(Boolean);
+  const identifier = text(source.identifier) ?? text(identifiers?.find(item=>item.preferred===true)?.identifier) ?? identifiers?.map((item) => text(item.identifier)).find(Boolean);
   const sourceReference = reference(source);
   return {
     ...source,

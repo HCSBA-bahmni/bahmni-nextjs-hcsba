@@ -112,3 +112,21 @@ Acceso de pruebas: `https://10.68.174.225/bahmni/login`; entrada directa al mód
 `https://10.68.174.225/bahmni/registration`. Las credenciales permanecen en el
 archivo local ignorado ya indicado. El respaldo y el procedimiento de reversa
 están en `bahmni-docker-HCSBA/bahmni-standard/production-225/README.md`.
+
+## Perfiles MPI con separación de funciones (2026-10-19)
+
+El flujo nuevo utiliza **HCSBA-MPI-Admision** y **HCSBA-MPI-Gestor**, sin modificar `HCSBA-Registro-Demo`. El primer rol declara explícitamente los privilegios de Registro y no hereda `Edit Users`, administración de roles ni eliminación de visitas. El gestor hereda ese rol y añade **Manage MPI Identity Reviews**. No se añadió bypass de segundo factor.
+
+Next guarda la preferencia de idioma localmente cuando el usuario carece de `Edit Users`, evitando necesitar administración de cuentas para ingresar. El permiso gestor se comprueba también en el gateway y mediador, no sólo al mostrar enlaces.
+
+Cuentas sintéticas verificadas en navegador `.225`: `demo.mpi.admision` y `demo.mpi.gestor`; proveedor activo y puesto `Registration Desk`. El mismo UUID y credencial autentica por el proxy local hacia `.205`; las referencias privadas de ambos accesos se guardan en `.local/development-access.json` sin publicar contraseñas. Las definiciones de privilegio/roles quedan en los CSV correspondientes de `standard-config-HCSBA`; servir esos CSV no reemplaza su provisión en OpenMRS.
+
+Admisión guarda y envía alertas, sin resolver candidatos. El gestor utiliza `/bahmni/registration/reviews` con motivo/evidencia, manteniendo pendiente o resolviendo mediante OpenCR. Ver el [contrato vigente](mpi-admission.md).
+
+### Ensayo personal y lectura de formularios
+
+El 2026-10-19 se verificó que `Registration Details` estaba publicado pero el perfil dedicado carecía de **Get Forms**: su definición respondía 403 aunque la lista de formularios era visible. Se agregó únicamente ese permiso de lectura a `HCSBA-MPI-Admision`, heredado por el gestor, sin `Edit Users` ni acceso clínico adicional. La lectura real de la definición (incluido Weight) quedó verificada con ambas cuentas en `.225`. La definición CSV y el aprovisionador de los perfiles conservan ese permiso. Volver a iniciar sesión después del cambio.
+
+Se preparó por elección explícita del usuario una pareja nueva, sin visitas, encuentros ni revisiones: `HCSBA100009` / `HCSBA100010`, nombre sintético `ENSAYO UNIFICACIONMANUAL`. La primera tiene pasaporte; la segunda otro pasaporte y RUN de ensayo `99000228-2`, preparado sólo en MPI local. El usuario realizará las atenciones, propondrá el RUN en la primera ficha y resolverá/consolidará/separará desde la bandeja. No recrear esa segunda ficha desde Nuevo paciente ni consultar el RUN sintético al MPI nacional.
+
+Estado sin credenciales: `F:/Proyectos/HIS/analisis/2026-10-19/validacion-visual-mpi/manual-test-fixture.json`. Guía privada solicitada con las dos credenciales demo: `bahmni-docker-HCSBA/.local/manual-mpi/guia-prueba-personal-mpi.html`, excluida de Git. No copiarla a la galería compartible. Peso desde Registro permite el ensayo con los perfiles disponibles; alergias requieren un perfil clínico. La vista **Reciente** presenta el último valor por concepto y no es un visor de toda la historia.

@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 test.beforeEach(async ({ page }) => {
+  await page.route("**/openmrs/**", route => route.fulfill({status:404,contentType:"application/json",body:"{}"}));
+  await page.route("**/openmrs/ws/rest/v1/eisidentity/consolidations/redirect?**", route => route.fulfill({status:404,contentType:"application/json",body:"{}"}));
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user", display: "superman" }, sessionLocation: { uuid: "location", display: "IPD" } }) }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "user", username: "superman", display: "superman", privileges: ["app:adt", "Assign Beds", "Edit Bed Tags"].map((name) => ({ uuid: name, name })), roles: [] }] }) }));
   await page.route("**/openmrs/ws/rest/v1/provider**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ results: [{ uuid: "provider", display: "Super Man", attributes: [] }] }) }));
@@ -81,7 +83,7 @@ test("renders configured queues and the coordinate-based ward map without legacy
   expect(Math.abs(singleRoomBedWidth! - sharedRoomBedWidth!)).toBeLessThanOrEqual(1);
   const result = await new AxeBuilder({ page }).include("main").analyze();
   expect(result.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
-  expect(await page.locator("script[src*='angular'],script[src*='/ipd/']").count()).toBe(0);
+  expect(await page.locator("script[src*='angular'],script[src^='/ipd/'],script[src*='/ipd/']:not([src*='/_next/'])").count()).toBe(0);
 });
 
 test("renders the configured IPD dashboard with translated typed controls", async ({ page, context }) => {
@@ -127,7 +129,7 @@ test("renders the configured IPD dashboard with translated typed controls", asyn
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
-  expect(await page.locator("script[src*='angular'],script[src*='/ipd/']").count()).toBe(0);
+  expect(await page.locator("script[src*='angular'],script[src^='/ipd/'],script[src*='/ipd/']:not([src*='/_next/'])").count()).toBe(0);
 });
 
 test("treats an admitted patient without a current bed as pending bed assignment", async ({ page }) => {
@@ -405,7 +407,7 @@ test("renders the native Care View workflow and confirms a current-shift care-te
   await page.waitForTimeout(500);
   const accessibility = await new AxeBuilder({ page }).include("main").analyze();
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
-  expect(await page.locator("script[src*='angular'],script[src*='/ipd/']").count()).toBe(0);
+  expect(await page.locator("script[src*='angular'],script[src^='/ipd/'],script[src*='/ipd/']:not([src*='/_next/'])").count()).toBe(0);
 });
 
 test("adds a prescribed treatment to the drug chart with the legacy IPD contract", async ({ page }) => {

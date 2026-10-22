@@ -29,6 +29,7 @@ export function AppShell({ children, title, mainClassName }: { children: ReactNo
       <nav aria-label="Navegación principal">
         <Link href="/home" className={isActive("/home") ? "active" : undefined}>Inicio</Link>
         {hasPrivilege(user, "app:registration") && <Link href="/registration" className={isActive("/registration") ? "active" : undefined}>Registro</Link>}
+        {hasPrivilege(user, "Manage MPI Identity Reviews") && <Link href="/patient-management" className={isActive("/patient-management") ? "active" : undefined} aria-current={isActive("/patient-management") ? "page" : undefined}>Gestión de pacientes</Link>}
         {hasPrivilege(user, "app:clinical") && <Link href="/clinical" className={isActive("/clinical") ? "active" : undefined}>Clínico</Link>}
         {hasPrivilege(user, "app:appointments") && <Link href="/appointments" className={isActive("/appointments") ? "active" : undefined}>Citas</Link>}
         {hasPrivilege(user, "app:orders") && <Link href="/orders" className={isActive("/orders") ? "active" : undefined}>Órdenes</Link>}

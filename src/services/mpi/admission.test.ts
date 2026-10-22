@@ -83,6 +83,21 @@ describe("MPI admission contract", () => {
     await expect(syncPatientWithMpi("openmrs-1")).rejects.toThrow("pendiente");
   });
 
+  it("allows continued care on the verified current chart after consolidation", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ resultado: "consolidacion-verificada", crid: "crid-1", vinculado: true, caseId: "case-1", preferredUuid: "openmrs-1" })));
+    await expect(syncPatientWithMpi("openmrs-1")).resolves.toEqual({ crid: "crid-1" });
+  });
+
+  it.each([
+    { resultado: "consolidacion-clinica", preferredUuid: "openmrs-1", vinculado: false },
+    { resultado: "consolidacion-verificada", preferredUuid: "another-chart", vinculado: true, crid: "crid-1", caseId: "case-1" },
+    { resultado: "consolidacion-verificada", preferredUuid: "openmrs-1", vinculado: false, crid: "crid-1", caseId: "case-1" },
+    { resultado: "consolidacion-verificada", preferredUuid: "openmrs-1", vinculado: true, crid: "crid-1" },
+  ])("keeps incomplete or wrong-chart consolidation unverified: %j", async (body) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(body)));
+    await expect(syncPatientWithMpi("openmrs-1")).rejects.toThrow("pendiente");
+  });
+
   it("prefills only the identity subset and carries RUN as a typed additional identifier", () => {
     const types = [{ uuid: "local-type", name: "Patient Identifier", primary: true, identifierSources: [] }, { uuid: "run-type", name: "RUN", primary: false, identifierSources: [] }];
     const seed = mpiPatientFormSeed(runPatient as never, "12345678-5", types as never);

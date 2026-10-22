@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { toClinicalPatientContext } from "./patientContext";
 
 describe("clinical patient context", () => {
+  it("uses the current preferred name and address when older merged rows come first", () => {
+    expect(toClinicalPatientContext({patient:{person:{names:[{givenName:"Anterior",preferred:false},{givenName:"Vigente",preferred:true}],addresses:[{cityVillage:"Antigua",preferred:false},{cityVillage:"Actual",preferred:true}]}}},"p1")).toMatchObject({name:"Vigente",address:"Actual"});
+  });
   it("maps the same patient profile contract used by registration", () => {
     const context = toClinicalPatientContext({ patient: { identifiers: [
       { identifier: "12345678-5", identifierType: { name: "RUN" } },

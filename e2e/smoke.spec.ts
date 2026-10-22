@@ -94,6 +94,10 @@ test("home loads HCSBA translations and normalizes legacy routes", async ({ page
 });
 
 test("clinical dashboard uses HCSBA configuration and active visit context", async ({ page }) => {
+  await page.route("**/openmrs/**", route => route.fulfill({status:404,contentType:"application/json",body:"{}"}));
+  await page.route("**/openmrs/ws/rest/v1/provider**", route => route.fulfill({contentType:"application/json",body:JSON.stringify({results:[{uuid:"provider-1",display:"Profesional de ensayo",retired:false,attributes:[]}]})}));
+  await page.route("**/openmrs/ws/rest/v1/location**", route => route.fulfill({contentType:"application/json",body:JSON.stringify({results:[{uuid:"login-location",display:"HCSBA"}]})}));
+  await page.route("**/openmrs/ws/rest/v1/eisidentity/consolidations/redirect?**", route => route.fulfill({status:404,contentType:"application/json",body:"{}"}));
   let releaseConditions!: () => void;
   const conditionsReady = new Promise<void>((resolve) => { releaseConditions = resolve; });
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ authenticated: true, user: { uuid: "user-1", display: "superman" }, sessionLocation: { uuid: "login-location", display: "OPD-1" } }) }));
@@ -518,13 +522,13 @@ test("new patient saves the EIS identity envelope after the native HCSBA patient
   await page.goto("/bahmni/registration/patient/new");
   await expect(page.getByRole("status")).toContainText("Cargando configuración de Registro");
   await expect(page.getByRole("heading", { name: "Nuevo paciente" })).toBeVisible();
-  const mpiAdmissionGate = page.getByRole("region", { name: "Verificación de identidad MPI" });
+  const mpiAdmissionGate = page.getByRole("region", { name: "Verificar datos del paciente" });
   const formNavigation = page.getByRole("navigation", { name: "Etapas del registro del paciente" });
   await expect(formNavigation.or(mpiAdmissionGate)).toBeVisible();
   if (await mpiAdmissionGate.isVisible().catch(() => false)) {
     await mpiAdmissionGate.getByLabel("RUN", { exact: true }).fill("12345678-5");
     await mpiAdmissionGate.getByRole("button", { name: "Consultar identidad" }).click();
-    await mpiAdmissionGate.getByRole("button", { name: "Confirmar documento y completar EIS" }).click();
+    await mpiAdmissionGate.getByRole("button", { name: "Continuar con estos datos" }).click();
   }
   expect(nationalityCatalogRequests).toBe(1);
   expect(countryOfOriginCatalogRequests).toBe(1);

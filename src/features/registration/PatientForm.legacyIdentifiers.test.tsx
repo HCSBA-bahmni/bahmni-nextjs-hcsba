@@ -9,6 +9,25 @@ vi.mock("./PatientBiometricVerification", () => ({ PatientBiometricVerification:
 vi.mock("./useRegistrationTranslations", () => ({ useRegistrationTranslations: () => undefined }));
 
 describe("legacy patient identifiers", () => {
+  it("keeps repeated documents independently labelled and removes only the selected document", async () => {
+    const config=parseRegistrationConfig({config:{showEnterID:false}});
+    const onSave=vi.fn().mockResolvedValue(undefined);
+    render(<QueryClientProvider client={new QueryClient()}><PatientForm
+      initial={{uuid:"combined",givenName:"Persona",familyName:"Prueba",gender:"F",birthDate:"1990-01-01",identifier:"HCSBA9001",identifierTypeUuid:"clinical",attributes:{},relationships:[],additionalIdentifiers:[
+        {uuid:"passport-a",identifier:"PASAPORTE-A",identifierTypeUuid:"passport"},{uuid:"passport-b",identifier:"PASAPORTE-B",identifierTypeUuid:"passport"},
+      ]}} activeLocationUuid="location-1" config={config} identifierTypes={[
+        {uuid:"clinical",name:"Patient Identifier",primary:true,required:true,identifierSources:[]},
+        {uuid:"passport",name:"Pasaporte",display:"Pasaporte",primary:false,identifierSources:[]},
+      ]} onGenerateId={vi.fn()} onSave={onSave}/></QueryClientProvider>);
+    fireEvent.click(screen.getByRole("button",{name:"Siguiente"}));fireEvent.click(screen.getByRole("button",{name:"Siguiente"}));
+    const documents=screen.getAllByLabelText("Pasaporte",{exact:true});expect(documents).toHaveLength(2);expect(documents[0]!.id).not.toBe(documents[1]!.id);
+    fireEvent.change(documents[1]!,{target:{value:"PASAPORTE-B-ACTUALIZADO"}});
+    fireEvent.click(screen.getAllByRole("button",{name:/^Quitar Pasaporte$/})[0]!);
+    fireEvent.click(screen.getByRole("button",{name:"Guardar paciente"}));await waitFor(()=>expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0].additionalIdentifiers).toEqual(expect.arrayContaining([
+      expect.objectContaining({uuid:"passport-a",voided:true}),expect.objectContaining({uuid:"passport-b",identifier:"PASAPORTE-B-ACTUALIZADO"}),
+    ]));
+  });
   it("keeps a prior clinical alias, places manual RUN first, and never infers a source for existing values", async () => {
     const config = parseRegistrationConfig({ config: {
       showEnterID: false,
@@ -76,7 +95,7 @@ describe("legacy patient identifiers", () => {
 
     expect(await screen.findByText("La ficha clínica necesita una ubicación de atención antes de guardar.")).toBeVisible();
     const summaries = screen.getAllByText("Revise los campos destacados antes de guardar el paciente.");
-    expect(summaries.find((element) => element.closest(".patient-form-error-summary"))?.closest("[role=alert]")).toHaveFocus();
+    await waitFor(() => expect(summaries.find((element) => element.closest(".patient-form-error-summary"))?.closest("[role=alert]")).toHaveFocus());
     expect(await screen.findByText("Revise el formulario")).toBeVisible();
     expect(onSave).not.toHaveBeenCalled();
   });

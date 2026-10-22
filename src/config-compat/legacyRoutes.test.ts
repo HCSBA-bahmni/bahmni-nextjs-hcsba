@@ -18,6 +18,7 @@ describe("legacy bookmarks", () => {
 describe("dashboard navigation", () => {
   it.each([
     ["../registration/index.html", "/bahmni/registration", "next"],
+    ["../patient-management", "/bahmni/patient-management", "next"],
     ["../clinical/#/programs/patient/search", "/bahmni/clinical/programs", "next"],
     ["../clinical/index.html#/default/patient/search", "/bahmni/clinical", "next"],
     ["../bedmanagement/#/bedManagement", "/bahmni/bedmanagement/manage", "next"],
