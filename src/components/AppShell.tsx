@@ -25,7 +25,7 @@ export function AppShell({ children, title, mainClassName }: { children: ReactNo
 
   return <div className="app-shell">
     <header className="topbar">
-      <Link href="/home" className="brand" aria-label="Inicio HCSBA">HCSBA <span>Bahmni</span></Link>
+      <Link href="/home" className="brand" aria-label="Inicio HIS HCSBA">HIS <span>HCSBA</span></Link>
       <nav aria-label="Navegación principal">
         <Link href="/home" className={isActive("/home") ? "active" : undefined}>Inicio</Link>
         {hasPrivilege(user, "app:registration") && <Link href="/registration" className={isActive("/registration") ? "active" : undefined}>Registro</Link>}

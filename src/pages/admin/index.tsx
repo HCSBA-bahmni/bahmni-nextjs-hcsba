@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
     {allowed && <>
       <section className="panel admin-dashboard-hero">
         <span className="admin-dashboard-hero-icon"><i className="pi pi-cog" aria-hidden="true" /></span>
-        <div><p>HCSBA Bahmni</p><h2>Administración</h2><span>Herramientas administrativas configuradas para esta instalación.</span></div>
+        <div><p>HIS HCSBA</p><h2>Administración</h2><span>Herramientas administrativas configuradas para esta instalación.</span></div>
       </section>
       {(extensions.isLoading || translations.isLoading) && <p role="status">Cargando herramientas de Administración…</p>}
       <nav className="admin-dashboard-grid" aria-label="Herramientas de Administración">

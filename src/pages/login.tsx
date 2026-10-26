@@ -164,7 +164,7 @@ export default function LoginPage() {
     return <main className="centered"><section className="auth-card" aria-live="polite">
       {logo && <Image unoptimized src={logo} width={180} height={90} style={{ objectFit: "contain" }} alt="Logo HCSBA" />}
       <h1>Acceso HCSBA</h1>
-      <p>Bahmni · Identidad protegida por Keycloak</p>
+      <p>HIS HCSBA · Identidad protegida por Keycloak</p>
       {sessionError ? <div role="alert" className="error-banner">{message}</div> : <p>{message}</p>}
       <Button
         type="button"
@@ -187,7 +187,7 @@ export default function LoginPage() {
   return <main className="centered"><form className="auth-card" onSubmit={handleSubmit((values) => submit(values))}>
     {logo && <Image unoptimized src={logo} width={180} height={90} style={{ objectFit: "contain" }} alt="Logo HCSBA" />}
     <h1>Acceso HCSBA</h1>
-    <p>Bahmni · Plataforma clínica</p>
+    <p>HIS HCSBA · Plataforma clínica</p>
     {(error || sessionError || router.query.sessionExpired) && <div role="alert" className="error-banner">{error || sessionError || "Tu sesión expiró. Inicia sesión nuevamente."}</div>}
     {timezoneMismatch && <div role="alert" className="warning-banner">La zona horaria del servidor ({serverTime.data?.offset}) difiere de la estación de trabajo.</div>}
     <div className="field"><label htmlFor="locale">Idioma</label><select id="locale" className="p-inputtext p-component" value={locale} onChange={(event) => setLocale(event.target.value)}>{locales.map((item) => <option key={item.code} value={item.code}>{item.nativeName}</option>)}</select></div>

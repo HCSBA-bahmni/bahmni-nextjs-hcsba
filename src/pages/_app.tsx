@@ -1,4 +1,5 @@
 import type { AppProps } from "next/app";
+import Head from "next/head";
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PrimeReactProvider } from "primereact/api";
@@ -28,6 +29,7 @@ import "@/styles/visual-system.css";
 export default function App({ Component, pageProps }: AppProps) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } }));
   return <PrimeReactProvider value={{ ripple: true }}>
+    <Head><title>HIS HCSBA</title><meta name="application-name" content="HIS HCSBA" /></Head>
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}><AuthProvider><PatientRouteGuard><Component {...pageProps} /></PatientRouteGuard></AuthProvider></I18nextProvider>
     </QueryClientProvider>

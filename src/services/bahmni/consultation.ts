@@ -62,7 +62,7 @@ export async function resolveConsultationEncounterType(params: { programUuid?: s
     if (location) return { uuid: location.uuid, display: location.display, name: typeof location.name === "string" ? location.name : undefined };
   }
   const uuid = await getGlobalProperty("bahmni.encounterType.default");
-  if (!uuid) throw new Error("No se configuró bahmni.encounterType.default ni un mapping de tipo de encuentro.");
+  if (!uuid) throw new Error("No se configuró el tipo de encuentro clínico predeterminado ni su correspondencia.");
   return bahmniRequest(`/ws/rest/v1/encountertype/${encodeURIComponent(uuid)}`, { schema: referenceSchema }) as Promise<ClinicalConceptReference>;
 }
 
