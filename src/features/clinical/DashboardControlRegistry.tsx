@@ -36,6 +36,7 @@ import { IpdTreatmentScheduleDialog } from "@/features/ipd/ipd-dashboard/IpdTrea
 import { resolveTreatmentScheduleAction, type TreatmentScheduleAction, type TreatmentScheduleConfig } from "@/features/ipd/ipd-dashboard/treatmentSchedule";
 import { getPrnScheduledOrderUuids } from "@/services/bahmni/ipdTreatments";
 import { hasActiveAdmission, registrationVisitUrl, resolveVisitManagementAction } from "./visitManagement";
+import { PabellonHistoryControl } from "./pabellon/PabellonHistoryControl";
 
 export interface DashboardControlAdapter {
   type: string;
@@ -780,6 +781,7 @@ function UnsupportedControl(props: DashboardControlProps) {
 }
 
 const registryEntries: DashboardControlAdapter[] = [
+  { type: "pabellonHospitalario", Component: PabellonHistoryControl, supportsExpanded: true, capabilities: ["read"] },
   { type: "patientInformation", Component: PatientInformationControl, supportsExpanded: false, capabilities: ["read"] },
   { type: "visits", Component: VisitsControl, supportsExpanded: true, capabilities: ["read", "navigate"] },
   { type: "navigationLinksControl", Component: NavigationControl, supportsExpanded: false, capabilities: ["navigate"] },
