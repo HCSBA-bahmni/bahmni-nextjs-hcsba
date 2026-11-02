@@ -6,6 +6,8 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "predev": "node scripts/prepare-pdf-worker.mjs",
+    "prebuild": "node scripts/prepare-pdf-worker.mjs",
     "dev": "next dev",
     "build": "next build",
     "postbuild": "node scripts/prepare-standalone.mjs",
@@ -40,6 +42,7 @@
     "luxon": "^3.7.2",
     "next": "16.2.12",
     "pako": "^2.2.0",
+    "pdfjs-dist": "6.4.299",
     "pdfmake": "^0.2.20",
     "primeflex": "4.0.0",
     "primeicons": "7.0.0",

@@ -19,6 +19,7 @@ import { getPatientProfile } from "@/services/bahmni/patients";
 import { getPatientVisits, getVisitSummary } from "@/services/bahmni/visits";
 import { IpdTaskSection } from "./ipd-dashboard/IpdTaskSection";
 import { IpdVitalsSection } from "./ipd-dashboard/IpdVitalsSection";
+import { IpdPabellonSection } from "./ipd-dashboard/IpdPabellonSection";
 import { useIpdTranslations } from "./useIpdTranslations";
 
 interface Props { patientUuid: string; visitUuid: string }
@@ -30,6 +31,7 @@ const sectionTitles: Record<string, string> = {
   TR: "Tratamientos",
   NT: "Tareas de enfermería",
   DC: "Gráfico de medicamentos",
+  PB: "Pabellón hospitalario (QA)",
 };
 
 const sectionIcons: Record<string, string> = {
@@ -39,6 +41,7 @@ const sectionIcons: Record<string, string> = {
   TR: "pi pi-briefcase",
   NT: "pi pi-list-check",
   DC: "pi pi-calendar-clock",
+  PB: "pi pi-briefcase",
 };
 
 function clinicalSection(section: IpdDashboardSectionConfig, ipdConfig: IpdDashboardConfig): ClinicalDashboardSection | undefined {
@@ -136,7 +139,7 @@ export function IpdDashboard({ patientUuid, visitUuid }: Props) {
             const mapped = clinicalSection(section, configQuery.data);
             return <section className={`panel ipd-individual-section ipd-individual-section-${section.componentKey.toLowerCase()}`} id={id} key={section.componentKey}>
               <header><span><i className={sectionIcons[section.componentKey] ?? "pi pi-circle"} /><h2>{sectionTitles[section.componentKey] ?? section.title}</h2></span><a href={`#${firstSectionId}`} aria-label="Volver al inicio del contenido"><i className="pi pi-chevron-up" /></a></header>
-              <div>{mapped ? <ClinicalDashboardSectionCard section={mapped} context={context} /> : section.componentKey === "VT" ? <IpdVitalsSection patientUuid={patientUuid} config={configQuery.data.vitalsConfig} locale={context.locale} timeZone={context.timeZone} /> : section.componentKey === "NT" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="nursing" readOnly={dashboardReadOnly} /> : section.componentKey === "DC" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="drug-chart" readOnly={dashboardReadOnly} /> : <p className="warning-banner">El componente configurado {section.componentKey} aún no dispone de adaptador.</p>}</div>
+              <div>{section.componentKey === "PB" ? <IpdPabellonSection context={context} visitUuid={visitUuid} source={section.extensions.source} /> : mapped ? <ClinicalDashboardSectionCard section={mapped} context={context} /> : section.componentKey === "VT" ? <IpdVitalsSection patientUuid={patientUuid} config={configQuery.data.vitalsConfig} locale={context.locale} timeZone={context.timeZone} /> : section.componentKey === "NT" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="nursing" readOnly={dashboardReadOnly} /> : section.componentKey === "DC" ? <IpdTaskSection patientUuid={patientUuid} visitUuid={visitUuid} locationUuid={location?.uuid} config={configQuery.data} kind="drug-chart" readOnly={dashboardReadOnly} /> : <p className="warning-banner">El componente configurado {section.componentKey} aún no dispone de adaptador.</p>}</div>
             </section>;
           })}
         </div>
