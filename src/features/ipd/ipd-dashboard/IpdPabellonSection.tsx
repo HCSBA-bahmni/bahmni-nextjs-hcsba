@@ -5,7 +5,7 @@ import { ClinicalDashboardSectionCard } from "@/features/clinical/ClinicalDashbo
 export function ipdPabellonContextAllowed(context: ClinicalDashboardContext, visitUuid: string, source: unknown): boolean {
   // Native visit list is patient-scoped. Never infer membership from a URL,
   // name, bed, date range or a visit summary obtained independently.
-  return source === "qa-isolated" && Boolean(context.user?.uuid && context.patient.uuid && visitUuid)
+  return (source === "qa-isolated" || source === "pabellon43-dev") && Boolean(context.user?.uuid && context.patient.uuid && visitUuid)
     && context.visit?.uuid === visitUuid
     && context.visits.filter(visit => visit.uuid === visitUuid).length === 1;
 }
@@ -17,8 +17,9 @@ const section: ClinicalDashboardSection = {
 };
 export function IpdPabellonSection({ context, visitUuid, source }: { context: ClinicalDashboardContext; visitUuid: string; source: unknown }) {
   if (!ipdPabellonContextAllowed(context, visitUuid, source)) return <p role="alert" className="warning-banner">No se consulta Pabellón: falta una atención verificada de este paciente o la activación QA.</p>;
-  return <div key={`${context.user?.uuid}:${context.patient.uuid}:${visitUuid}`}>
+  const selectedSection = { ...section, title: source === "pabellon43-dev" ? "Pabellón hospitalario (DEV)" : section.title, config: { ...section.config, source } };
+  return <div key={`${String(source)}:${context.user?.uuid}:${context.patient.uuid}:${visitUuid}`}>
     <p role="note">Historial quirúrgico del paciente. Las solicitudes existentes no acreditan un vínculo con esta atención; no se asocian automáticamente por fecha.</p>
-    <ClinicalDashboardSectionCard section={section} context={context} />
+    <ClinicalDashboardSectionCard section={selectedSection} context={context} />
   </div>;
 }

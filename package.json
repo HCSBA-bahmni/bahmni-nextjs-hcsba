@@ -29,6 +29,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@formkit/tempo": "0.1.2",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.90.0",
     "@types/pdfmake": "^0.2.12",

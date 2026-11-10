@@ -1,5 +1,15 @@
 .block { margin-block: 1rem; min-width: 0; }
 .detail { min-width: 0; }
+.dialog { font-size: 14px; line-height: 1.45; }
+.dialog :global(.p-dialog-title) { font-size: 18px; }
+.dialog :global(.p-dialog-header) { padding: .8rem 1rem; }
+.dialog :global(.p-dialog-content) { font-size: 14px; }
+.dialog :global(.clinical-card-header h2) { font-size: 16px; line-height: 1.4; margin: 0; }
+.dialog :global(.clinical-card-content), .dialog :global(.p-card-body) { font-size: 14px; }
+.dialog :global(.p-button) { font-size: 14px; }
+.dialog .patient { font-size: 16px; }
+.dialog .field dt { font-size: 13px; }
+.dialog .field dd, .dialog p, .dialog li { font-size: 14px; }
 .patient { margin: 0 0 .4rem; color: var(--text-color, #23424c); font-size: 1.1rem; line-height: 1.5; overflow-wrap: anywhere; }
 .version { margin: 0 0 1rem; color: var(--text-color-secondary, #526b74); font-weight: 600; }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.5rem; margin: 0; }

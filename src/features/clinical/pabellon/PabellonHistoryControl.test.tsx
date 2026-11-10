@@ -15,6 +15,21 @@ function show(p = props()) {
 }
 describe("Pabellón history control", () => {
   beforeEach(() => vi.resetAllMocks());
+  it("labels invalidated events as historical without losing the frozen diagnosis", async () => {
+    const fixture = page();
+    fixture.items[0]!.request!.operationalAtSnapshot = {
+      updatedAt: null, revision: "a".repeat(64), urgencyCompletenessKnown: false,
+      captureVersion: 1, changeCode: "evento_editado",
+      events: [{ sourceId: "7", active: false, type: { sourceId: "13", system: "urn:test:event", code: "13", display: "Evento corregido" }, option: null,
+        occurredAt: { rawValue: "2026-10-28 08:15:00", sourceTimezone: null, normalizedInstant: null, interpretation: "unresolved" } }],
+    };
+    vi.mocked(getPabellonHistory).mockResolvedValue(fixture); show();
+    fireEvent.click(await screen.findByRole("button", { name: "Ver solicitud" }));
+    expect(await screen.findByText(/Histórico\/inactivo/)).toBeInTheDocument();
+    expect(screen.getByText(/Evento corregido/)).toBeInTheDocument();
+    expect(screen.getByText("FIXTURE DIAGNOSIS")).toBeInTheDocument();
+    expect(screen.queryByText(/No se interpreta como estado actual/)).not.toBeInTheDocument();
+  });
   it("uses frozen names in details and never the native/current name", async () => {
     vi.mocked(getPabellonHistory).mockResolvedValue(page()); show();
     await screen.findByText("261027001"); fireEvent.click(screen.getByRole("button", { name: "Ver solicitud" }));
@@ -28,6 +43,7 @@ describe("Pabellón history control", () => {
     vi.mocked(getPabellonHistory).mockRejectedValueOnce(new PabellonReadError("AUDIT_UNAVAILABLE")); show();
     await screen.findByRole("alert"); const retry = screen.getByRole("button", { name: "Reintentar" });
     expect(retry).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Solicitar pabellón" })).toBeInTheDocument();
     let resolve!: (page: PabellonPage) => void;
     vi.mocked(getPabellonHistory).mockImplementation(() => new Promise((done) => { resolve = done; }));
     fireEvent.click(retry); fireEvent.click(retry);

@@ -12,6 +12,42 @@ function source(pages = 3) {
   return { document, page, cancel, destroy };
 }
 describe("local verified PDF canvas", () => {
+  it("zooms in/out, resets to 100 percent and preserves zoom when paging", async () => {
+    const fixture = source(); render(<PabellonPDFCanvas blob={blob} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "100 %" })).toBeEnabled());
+    fireEvent.click(screen.getByRole("button", { name: "100 %" }));
+    await waitFor(() => expect(screen.getByLabelText("Zoom del PDF")).toHaveTextContent("100 %"));
+    expect(screen.getByRole("img")).toHaveStyle({ width: "612px", maxWidth: "none" });
+    fireEvent.click(screen.getByRole("button", { name: "Acercar PDF" }));
+    await waitFor(() => expect(screen.getByLabelText("Zoom del PDF")).toHaveTextContent("125 %"));
+    expect(screen.getByRole("img")).toHaveStyle({ width: "765px" });
+    fireEvent.click(screen.getByRole("button", { name: "Alejar PDF" }));
+    await waitFor(() => expect(screen.getByLabelText("Zoom del PDF")).toHaveTextContent("100 %"));
+    fireEvent.click(screen.getByRole("button", { name: "Página siguiente" }));
+    await waitFor(() => expect(screen.getByRole("img", { name: "Página 2 del PDF del protocolo" })).toHaveStyle({ width: "612px" }));
+    expect(mock.getDocument).toHaveBeenCalledTimes(1); expect(fixture.document.getPage).toHaveBeenLastCalledWith(2);
+  });
+  it("fits the whole page or available width and indicates the active mode", async () => {
+    source(); render(<PabellonPDFCanvas blob={blob} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ajustar al ancho" })).toBeEnabled());
+    const full = screen.getByRole("button", { name: "Página completa" });
+    expect(full).toHaveAttribute("aria-pressed", "true");
+    const originalWidth = parseFloat((screen.getByRole("img") as HTMLCanvasElement).style.width);
+    fireEvent.click(screen.getByRole("button", { name: "Ajustar al ancho" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ajustar al ancho" })).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(parseFloat((screen.getByRole("img") as HTMLCanvasElement).style.width)).toBeGreaterThan(originalWidth));
+    await waitFor(() => expect(full).toBeEnabled()); fireEvent.click(full);
+    await waitFor(() => expect(full).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(parseFloat((screen.getByRole("img") as HTMLCanvasElement).style.width)).toBeCloseTo(originalWidth));
+  });
+  it("ends the loader if rerendering after zoom fails", async () => {
+    const fixture = source(); render(<PabellonPDFCanvas blob={blob} />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Acercar PDF" })).toBeEnabled());
+    fixture.page.render.mockImplementation(() => ({ promise: Promise.reject(new Error("PRIVATE_ERROR")), cancel: fixture.cancel }));
+    fireEvent.click(screen.getByRole("button", { name: "Acercar PDF" }));
+    expect(await screen.findByRole("alert")).not.toHaveTextContent("PRIVATE_ERROR");
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
   beforeEach(() => { vi.resetAllMocks(); vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({} as CanvasRenderingContext2D); });
   it("renders verified bytes locally, with bounded canvas and local worker", async () => {
     const fixture = source(); const view = render(<PabellonPDFCanvas blob={blob} />);
@@ -20,7 +56,7 @@ describe("local verified PDF canvas", () => {
     expect(mock.getDocument).toHaveBeenCalledWith(expect.objectContaining({ data: expect.any(Uint8Array), useWorkerFetch: false, useWasm: false }));
     expect(mock.options.workerSrc).toContain("pdf.worker.min.mjs");
     expect(mock.getDocument.mock.calls[0]![0]).not.toHaveProperty("url");
-    expect((canvas as HTMLCanvasElement).width).toBeLessThanOrEqual(1350);
+    expect((canvas as HTMLCanvasElement).width).toBeLessThanOrEqual(4096);
     expect(screen.getByRole("button", { name: "Página anterior" })).toBeDisabled();
     expect(fixture.page.render).toHaveBeenCalledWith(expect.objectContaining({ annotationMode: 0 })); view.unmount(); expect(fixture.destroy).toHaveBeenCalledTimes(1);
   });
@@ -43,5 +79,15 @@ describe("local verified PDF canvas", () => {
   });
   it("rejects an excessive page count and releases resources", async () => {
     const fixture = source(201); const view = render(<PabellonPDFCanvas blob={blob} />); await screen.findByRole("alert"); expect(fixture.document.getPage).not.toHaveBeenCalled(); view.unmount(); expect(fixture.destroy).toHaveBeenCalledTimes(1);
+  });
+  it("opens in a dedicated tall dialog and can be reopened without fetching again", async () => {
+    source(); render(<PabellonPDFCanvas blob={blob} />);
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+    expect(screen.getByRole("dialog")).toHaveStyle({ height: "94dvh" });
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Abrir visor PDF" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(mock.getDocument).toHaveBeenCalledTimes(1);
   });
 });

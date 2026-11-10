@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { bahmniRequest, BahmniApiError } from "./http";
-import { QA_PABELLON_SOURCE } from "./pabellon";
+import { QA_PABELLON_SOURCE, isPabellonSource, type PabellonSource } from "./pabellon";
 
 const text = z.string().min(1).max(5000).refine((value) => value.trim() === value && value.toUpperCase() !== "NULL");
 const id = z.string().regex(/^[1-9][0-9]*$/).max(19).refine((value) => /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9223372036854775807n);
@@ -10,7 +10,7 @@ const names = z.object({ givenNames: text.nullable(), familyName: text.nullable(
 const version = z.object({
   snapshotId: id, protocolId: id, version: z.number().int().min(1).max(2147483647), amendment: z.boolean(), contentSource: z.literal("protocol-snapshot"),
   closedAt: date, capturedAt: date.nullable(), digitalSignature: z.literal("not-established"), sourceDataSHA256: z.string().regex(/^[a-f0-9]{64}$/),
-  clinical: z.object({ patientAtRegistration: names.nullable(), diagnosis: text.nullable(), surgicalDetail: text.nullable(), observations: text.nullable(), surgeon: text.nullable(), laterality: text.nullable(), additionalProcedure: text.nullable(), procedures: z.array(code).max(100), team: z.array(z.object({ name: text.nullable(), role: code.nullable() }).strict()).max(100) }).strict(),
+  clinical: z.object({ patientAtRegistration: names.nullable(), diagnosis: text.nullable(), surgicalDetail: text.nullable(), observations: text.nullable(), surgeon: text.nullable(), laterality: text.nullable(), additionalProcedure: text.nullable(), procedures: z.array(code).max(100), team: z.array(z.object({ name: text.nullable(), role: code.nullable() }).strict()).max(100), sections: z.array(z.object({ key: z.enum(["dates", "patient", "team", "intervention", "preoperative", "extras", "postoperative", "detail", "authorship"]), title: text, fields: z.array(z.object({ key: text, label: text, value: text.nullable() }).strict()).max(24) }).strict()).length(9).optional() }).strict(),
 }).strict();
 const family = z.object({ family: z.enum(["surgeon", "responsible"]), status: z.enum(["available", "no-published-versions", "ambiguous", "invalid"]), latestPublishedVersion: z.number().int().positive().nullable(), withheldVersions: z.number().int().min(0).max(200), versions: z.array(version).max(200), warningCodes: z.array(z.string().min(1).max(80)).max(200) }).strict();
 const history = z.object({ schemaVersion: z.literal("1"), patient: z.object({ uuid: z.uuid(), hisEnvironment: text, identityStatus: z.literal("matched"), linkVersion: z.number().int().positive() }).strict(), surgeryId: id, source: z.object({ system: text, environment: text, endpointEnvironment: text, id, observedAt: z.string().datetime({ offset: true }), revision: z.null() }).strict(), families: z.array(family).length(2), correlationId: z.uuid() }).strict();
@@ -27,12 +27,13 @@ const messages: Record<string, string> = {
 export class PabellonProtocolError extends Error {
   constructor(public readonly code: string) { super(messages[code] ?? messages.SOURCE_UNAVAILABLE); this.name = "PabellonProtocolError"; }
 }
-export function validateProtocolHistory(raw: unknown, patientUuid: string, surgeryId: string): PabellonProtocolHistory {
+export function validateProtocolHistory(raw: unknown, patientUuid: string, surgeryId: string, source: PabellonSource = QA_PABELLON_SOURCE): PabellonProtocolHistory {
+  if (!isPabellonSource(source)) throw new PabellonProtocolError("SOURCE_CONTRACT_MISMATCH");
   const parsed = history.safeParse(raw);
   const fail = () => { throw new PabellonProtocolError("SOURCE_CONTRACT_MISMATCH"); };
   if (!parsed.success) return fail();
   const value = parsed.data;
-  if (value.patient.uuid !== patientUuid || value.patient.hisEnvironment !== QA_PABELLON_SOURCE.his || value.surgeryId !== surgeryId || value.source.id !== surgeryId || value.source.system !== QA_PABELLON_SOURCE.system || value.source.environment !== QA_PABELLON_SOURCE.environment || value.source.endpointEnvironment !== QA_PABELLON_SOURCE.endpoint) return fail();
+  if (value.patient.uuid !== patientUuid || value.patient.hisEnvironment !== source.his || value.surgeryId !== surgeryId || value.source.id !== surgeryId || value.source.system !== source.system || value.source.environment !== source.environment || value.source.endpointEnvironment !== source.endpoint) return fail();
   const seenSnapshots = new Set<string>(); const seenProtocols = new Set<string>(); let total = 0;
   for (const [index, entry] of value.families.entries()) {
     if (entry.family !== ["surgeon", "responsible"][index] || entry.warningCodes.some((warning, i) => i > 0 && warning <= entry.warningCodes[i - 1]!)) return fail();
@@ -41,17 +42,17 @@ export function validateProtocolHistory(raw: unknown, patientUuid: string, surge
     for (const [i, item] of entry.versions.entries()) {
       if (seenSnapshots.has(item.snapshotId) || seenProtocols.has(item.protocolId) || i > 0 && item.version >= entry.versions[i - 1]!.version) return fail();
       seenSnapshots.add(item.snapshotId); seenProtocols.add(item.protocolId);
-      if (item.clinical.procedures.some((ref) => ref.system !== `urn:hcsba:${QA_PABELLON_SOURCE.system}:${QA_PABELLON_SOURCE.environment}:planes_quirurgicos`) || item.clinical.team.some((member) => member.role && member.role.system !== `urn:hcsba:${QA_PABELLON_SOURCE.system}:${QA_PABELLON_SOURCE.environment}:tipo_medico`)) return fail();
+      if (item.clinical.procedures.some((ref) => ref.system !== `urn:hcsba:${source.system}:${source.environment}:planes_quirurgicos`) || item.clinical.team.some((member) => member.role && member.role.system !== `urn:hcsba:${source.system}:${source.environment}:tipo_medico`)) return fail();
     }
   }
   if (total > 200) return fail();
   return value;
 }
-export async function getPabellonProtocols(patientUuid: string, surgeryId: string, signal?: AbortSignal): Promise<PabellonProtocolHistory> {
+export async function getPabellonProtocols(patientUuid: string, surgeryId: string, signal?: AbortSignal, source: PabellonSource = QA_PABELLON_SOURCE): Promise<PabellonProtocolHistory> {
   if (!z.uuid().safeParse(patientUuid).success || !id.safeParse(surgeryId).success) throw new PabellonProtocolError("INVALID_FILTER");
   try {
     const raw = await bahmniRequest<unknown>(`/pabellon-gateway/v1/patients/${encodeURIComponent(patientUuid)}/surgeries/${encodeURIComponent(surgeryId)}/protocols`, { signal, cache: "no-store", skipUnauthorizedEvent: true });
-    return validateProtocolHistory(raw, patientUuid, surgeryId);
+    return validateProtocolHistory(raw, patientUuid, surgeryId, source);
   } catch (error) {
     if (error instanceof PabellonProtocolError || signal?.aborted) throw error;
     if (error instanceof BahmniApiError) {

@@ -1850,9 +1850,20 @@ body,
 .app-shell .patient-context-identity > div > span,
 .app-shell .ipd-context-header > div > span,
 .app-shell .admin-dashboard-hero > div > span,
-.app-shell .admin-beds-hero > div > span,
-.app-shell .ipd-individual-bed :is(strong, small) {
+.app-shell .admin-beds-hero > div > span {
   color: #fff;
+}
+/* The bed summary is a light surface INSIDE the dark patient header.
+   Keep its foreground explicit instead of inheriting header white. */
+.app-shell .ipd-individual-patient-header .ipd-individual-bed {
+  background: #fff;
+  color: #087b96;
+}
+.app-shell .ipd-individual-patient-header .ipd-individual-bed small {
+  color: #526873;
+}
+.app-shell .ipd-individual-patient-header .ipd-individual-bed strong {
+  color: #17333d;
 }
 .app-shell :is(.app-page-heading, .clinical-search-header, .ipd-map-header,
   .appointments-heading, .admin-dashboard-hero, .audit-log-hero, .admin-beds-hero,

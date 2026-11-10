@@ -80,7 +80,7 @@ export async function searchPatients(params: SearchPatientsParams): Promise<{ re
   return { results, total: response.totalCount ?? inferredTotal };
 }
 
-export async function getPatientProfile(uuid: string): Promise<Record<string, unknown>> { return bahmniRequest(`/ws/rest/v1/patientprofile/${encodeURIComponent(uuid)}?v=full`); }
+export async function getPatientProfile(uuid: string, signal?: AbortSignal): Promise<Record<string, unknown>> { return bahmniRequest(`/ws/rest/v1/patientprofile/${encodeURIComponent(uuid)}?v=full`, { signal, cache: "no-store" }); }
 
 export function patientSummaryFromProfile(profile: Record<string, unknown>, fallbackUuid: string): PatientSearchResult {
   const patient = (profile.patient ?? profile) as Record<string, unknown>;
