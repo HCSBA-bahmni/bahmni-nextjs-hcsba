@@ -1,6 +1,9 @@
 export interface ClinicalPatientContext {
   uuid: string;
   name: string;
+  givenNames?: string;
+  familyName?: string;
+  secondFamilyName?: string;
   identifier: string;
   runIdentifier?: string;
   gender: string;
@@ -12,7 +15,7 @@ export interface ClinicalPatientContext {
   addressFields?: Record<string, string>;
   image: string;
   bloodGroup?: string;
-  attributes: Array<{ name: string; label: string; value: string }>;
+  attributes: Array<{ name: string; label: string; value: string; valueUuid?: string }>;
   additionalIdentifiers?: Array<{ name: string; label: string; value: string }>;
   relationships: Array<{ uuid: string; type: string; personUuid: string; personDisplay: string }>;
 }
@@ -33,7 +36,7 @@ export function toClinicalPatientContext(profile: Record<string, unknown>, uuid:
   });
   const addresses = records(person.addresses).filter(address=>address.voided!==true);
   const address = addresses.find(address=>address.preferred===true) ?? addresses[0] ?? {};
-  const attributes = records(person.attributes).flatMap((attribute) => {
+  const attributes = records(person.attributes).filter((attribute) => attribute.voided !== true).flatMap((attribute) => {
     const type = record(attribute.attributeType);
     const rawValue = attribute.value;
     const value = record(rawValue);
@@ -42,6 +45,7 @@ export function toClinicalPatientContext(profile: Record<string, unknown>, uuid:
       name: String(type.name ?? type.display ?? "Atributo"),
       label: String(type.display ?? type.name ?? "Atributo"),
       value: String(display),
+      ...(typeof value.uuid === "string" ? { valueUuid: value.uuid } : typeof rawValue === "string" && /^[a-f0-9]{8}-[a-f0-9-]{27}$/.test(rawValue) ? { valueUuid: rawValue } : {}),
     }];
   });
   const displayName = String(name.display ?? [name.givenName, name.middleName, name.familyName, name.familyName2].filter(Boolean).join(" "));
@@ -65,6 +69,9 @@ export function toClinicalPatientContext(profile: Record<string, unknown>, uuid:
   return {
     uuid,
     name: displayName,
+    givenNames: [name.givenName, name.middleName].filter(Boolean).join(" "),
+    familyName: typeof name.familyName === "string" ? name.familyName : "",
+    secondFamilyName: typeof name.familyName2 === "string" && name.familyName2.trim().toUpperCase() !== "NULL" ? name.familyName2 : "",
     identifier: String(identifier.identifier ?? ""),
     runIdentifier: typeof runIdentifier?.identifier === "string" ? runIdentifier.identifier : undefined,
     gender: String(person.gender ?? ""),

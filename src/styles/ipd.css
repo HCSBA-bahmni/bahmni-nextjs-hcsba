@@ -22,6 +22,8 @@
 .ipd-empty { padding:2rem; text-align:center; color:var(--text-color-secondary); }
 .ipd-workspace { display:grid; grid-template-columns:minmax(17rem,19rem) minmax(0,1fr); gap:1.25rem; align-items:start; }
 .ipd-context { position:sticky; top:1rem; overflow:hidden; padding:0; border-color:#bfd5dc; box-shadow:0 8px 28px #17333d12; }
+.ipd-context .ipd-pabellon-access { width:100%; margin-top:.65rem; }
+.ipd-context .ipd-return-action { width:calc(100% - 1.4rem); margin:.7rem .7rem 0; }
 .ipd-context-header { display:flex; align-items:center; gap:.8rem; padding:1rem; background:linear-gradient(120deg,#e9f8fb,#fff); border-bottom:1px solid #cfe0e5; }
 .ipd-context-header h2 { margin:.1rem 0; font-size:1.05rem; line-height:1.25; }
 .ipd-context-header small,.ipd-context-header span { color:#607680; }

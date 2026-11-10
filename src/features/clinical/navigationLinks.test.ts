@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { activeConsultationRoute, patientAdtUrl, resolveClinicalNavigationLinks } from "./navigationLinks";
+import { activeConsultationRoute, patientAdtUrl, resolveClinicalNavigationLinks, pabellonDashboardHref } from "./navigationLinks";
 
 describe("legacy dashboard navigation links", () => {
+  it("opens the configured surgical tab preserving the selected visit", () => {
+    expect(pabellonDashboardHref("patient", "visit", "pabellonHospitalario")).toBe("/clinical/patient/patient/dashboard?tab=pabellonHospitalario&visitUuid=visit");
+    expect(pabellonDashboardHref("patient", undefined, "pabellonHospitalario")).toBe("/clinical/patient/patient/dashboard?tab=pabellonHospitalario");
+  });
   it("keeps configured order, ignores unknown standard links and requires visit context", () => {
     const links = resolveClinicalNavigationLinks({ showLinks: ["home", "visit", "labEntry", "registration"] }, "patient/1");
     expect(links.map((link) => link.name)).toEqual(["home", "registration"]);

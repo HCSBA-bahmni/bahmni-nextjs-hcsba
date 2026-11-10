@@ -1,4 +1,6 @@
 node_modules/
+# Generated from the exact pinned pdfjs-dist package before dev/build.
+/public/vendor/pdfjs/
 .next/
 coverage/
 playwright-report/

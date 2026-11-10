@@ -23,7 +23,8 @@ export function buildPatientAttributeLayout(attributeTypes: PersonAttributeType[
   const localNames = localNameAttributeNames.every((name) => byName.has(name))
     ? localNameAttributeNames.map((name) => byName.get(name)!).filter((attribute) => !hidden.has(attributeName(attribute)))
     : [];
-  const reservedLocalNames = new Set<string>(localNameAttributeNames);
+  // These native fields are placed next to address/coverage, not duplicated below.
+  const reservedLocalNames = new Set<string>([...localNameAttributeNames, "addressNumber", "fonasaSegment"]);
   const assigned = new Set<string>();
   const configuredSections = (config?.patientAttributeSections ?? []).flatMap((section) => {
     const attributes = section.attributes.flatMap((name) => {

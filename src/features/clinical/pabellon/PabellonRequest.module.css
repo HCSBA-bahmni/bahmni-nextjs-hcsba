@@ -1,0 +1,46 @@
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.5rem; }
+.field { display: grid; gap: .35rem; min-width: 0; align-content: start; }
+.field > label { color: var(--text-color, #23424c); font-weight: 600; }
+.field small { color: var(--text-color-secondary, #526b74); line-height: 1.5; }
+.pickerFooter { display: grid; gap: .35rem; font-size: .9rem; }
+.pickerFooter p { margin: .25rem 0; }
+@media (max-width: 640px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.binary { border: 0; padding: 0; margin: 0; min-width: 0; }
+.patientGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0; }
+@media (max-width: 900px) { .patientGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .patientGrid { grid-template-columns: minmax(0, 1fr); } }
+.binary legend { font-weight: 600; margin-bottom: .35rem; }
+.field + .field { margin-top: .5rem; }
+.requestArea { padding: .75rem 0; margin-bottom: .75rem; border-bottom: 1px solid var(--surface-border, #d6e3e7); }
+.sidebarRequest { width: 100%; }
+.sidebarRequest > :global(.dashboard-inline-actions) { width: 100%; padding: 0; margin: 0; gap: 0; }
+.sidebarRequest > :global(.dashboard-inline-actions) > button { width: 100%; }
+.reference { width: min(100%, 30rem); font-family: monospace; }
+.catalogueSelect { width: 100%; min-width: 0; }
+.catalogueSelect :global(.p-dropdown-label), .catalogueSelect :global(.p-multiselect-label) { white-space: normal; overflow-wrap: anywhere; }
+.catalogueFilter { width: 100%; }
+.choiceGroup { border: 0; margin: 0; padding: 0; min-width: 0; }
+.choiceGroup legend { font-weight: 600; margin-bottom: .5rem; }
+.choiceOptions { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; padding: .85rem; border: 1px solid var(--surface-border, #d6e3e7); border-radius: .4rem; }
+.choiceOption { display: flex; align-items: center; gap: .5rem; }
+.choiceOption label { cursor: pointer; }
+.preoperativeGrid { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 2fr) minmax(0, 4fr); gap: .85rem; align-items: start; margin-bottom: 1rem; }
+.programmingGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start; margin-bottom: 1rem; }
+.bloodGrid { display: grid; grid-template-columns: minmax(0, 6fr) repeat(3, minmax(0, 2fr)); gap: 1rem; align-items: start; margin-top: 1rem; }
+.surgeonColumn { display: grid; gap: .5rem; min-width: 0; }
+.choiceGroup[data-catalogue="preoperative-assessments"] .choiceOptions { display: grid; grid-template-columns: repeat(7, max-content); justify-content: space-around; gap: .3rem; padding: .6rem .4rem; }
+.choiceGroup[data-catalogue="theatres"] .choiceOptions { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; }
+.choiceGroup[data-catalogue="preoperative-assessments"] .choiceOption,
+.choiceGroup[data-catalogue="theatres"] .choiceOption,
+.choiceGroup[data-catalogue="blood-samples"] .choiceOption { flex-direction: column-reverse; justify-content: space-between; text-align: center; gap: .25rem; min-width: 0; }
+.choiceGroup[data-catalogue="preoperative-assessments"] .choiceOption label { font-size: .85rem; font-weight: 600; overflow-wrap: anywhere; }
+.choiceGroup[data-catalogue="theatres"] .choiceOption label { font-size: .9rem; font-weight: 600; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 900px) { .preoperativeGrid { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); } .programmingGrid, .bloodGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .preoperativeGrid, .programmingGrid, .bloodGrid { grid-template-columns: minmax(0, 1fr); } .choiceGroup[data-catalogue="preoperative-assessments"] .choiceOptions { grid-template-columns: repeat(4, minmax(0, 1fr)); } .choiceGroup[data-catalogue="theatres"] .choiceOptions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.binary :global(.p-selectbutton .p-button), .choiceGroup :global(.p-selectbutton .p-button) { background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; }
+.choiceGroup :global(.p-selectbutton) { display: flex; flex-wrap: wrap; }
+.choiceGroup :global(.p-selectbutton .p-button.p-highlight), .binary :global(.p-selectbutton .p-button.p-highlight) { background: var(--primary-color, #08778c); border-color: var(--primary-color, #08778c); color: #fff; }
+.binary[data-answer="yes"] :global(.p-selectbutton .p-button.p-highlight) { background: #18733a; border-color: #18733a; color: #fff; }
+.binary[data-answer="no"] :global(.p-selectbutton .p-button.p-highlight) { background: #b42330; border-color: #b42330; color: #fff; }
+.binary :global(.p-button:focus-visible) { outline: 3px solid #137d98; outline-offset: 3px; }
