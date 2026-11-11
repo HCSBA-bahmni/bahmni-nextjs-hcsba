@@ -13,6 +13,7 @@ La ruta Next `/bahmni/admin/beds` reemplaza la OWA administrativa `/openmrs/owa/
 | Add/Edit Bed | Agregar/Editar cama | Número máximo de 10 caracteres, tipo obligatorio y coordenadas dentro del layout |
 | Bed Types | Tipos de cama | Listado, alta, edición y eliminación de nombre, nombre visible y descripción |
 | Bed Tags | Etiquetas de cama | Listado, alta, edición y eliminación por nombre |
+| Complejidad | Clasificación de camas | Tipos controlados de cama crítica, media y básica sobre `bedtype` |
 
 Toda la interfaz se presenta en español. Los nombres clínico-administrativos existentes se muestran tal como los entrega OpenMRS y no se traducen ni transforman.
 
@@ -30,6 +31,20 @@ La OWA permite definir o editar la distribución, pero no ofrece eliminarla envi
 | Etiquetas | `GET/POST/DELETE bedTag` |
 
 OpenMRS continúa siendo la única fuente de verdad. Las mutaciones invalidan y releen las consultas correspondientes; no se mantiene un inventario paralelo en Next. Cuando `bedmanagement.owa.enableManagingLocations` es `true`, Todas las ubicaciones ofrece crear ubicaciones, cada ubicación permite crear salas y las tarjetas exponen edición y eliminación al pasar el puntero o recibir foco. Si la propiedad falta, vale `false` o no puede consultarse, esas acciones permanecen ocultas; la distribución y las camas siguen disponibles. Una ubicación con salas debe vaciar primero su jerarquía. Después de confirmar una eliminación, Next relee todas las ubicaciones y bloquea el `DELETE` si el nodo adquirió hijos. Antes de eliminar una sala también relee su layout y bloquea el `DELETE` si existe una cama `OCCUPIED`. Cada sala conserva la definición de distribución y la administración de camas.
+
+## Clasificación de camas por complejidad
+
+La clasificación utiliza contratos existentes de OpenMRS como fuente de verdad. La complejidad se persiste en `bedtype` con cuatro opciones: crítica UTI, crítica UCI, media y básica. Rango etario, uso especial y condición operativa se persisten mediante `bedTag` y `bedTagMap`.
+
+El catálogo se provisiona de manera permanente e idempotente desde `standard-config-HCSBA`, con UUID estables y precondiciones que impiden duplicados. La aplicación no incluye una pestaña informativa separada: la clasificación se administra directamente dentro del flujo de camas.
+
+Las descripciones administrativas de etiquetas se guardan en propiedades OpenMRS con la clave `hcsba.bedTag.description.{uuid}` porque el recurso nativo `bedTag` sólo expone el nombre. El formulario combina sugerencias editables con texto manual; eliminar una etiqueta elimina también su propiedad descriptiva.
+
+En cada sala se calcula un resumen por complejidad y se permite filtrar visualmente la distribución sin modificar coordenadas. El usuario puede seleccionar una o varias camas y abrir **Categorizar**. Cada dimensión ofrece `Sin cambios`, por lo que una actualización parcial conserva las demás clasificaciones. Al cambiar una clasificación complementaria sólo se reemplazan etiquetas del mismo grupo; oxígeno, aislamiento y otras etiquetas clínicas permanecen intactas.
+
+Las camas cuyo tipo aún no corresponde a una complejidad reconocida permanecen visibles como `Sin clasificación`. La categoría crítica anterior no se convierte automáticamente a UCI o UTI porque esa distinción requiere una decisión explícita del implementador.
+
+CUDYR pertenece al paciente y a su episodio clínico, no a la cama. En esta etapa es sólo informativo: no persiste evaluaciones ni bloquea asignaciones. La combinación `C3` no se asigna a una complejidad hasta disponer de la definición normativa oficial y la regla institucional HCSBA.
 
 HCSBA requiere permanentemente la administración de ubicaciones y salas. Por eso `standard-config-HCSBA/masterdata/configuration/globalproperties/gp_bedmanagement.xml` aprovisiona `bedmanagement.owa.enableManagingLocations=true`; no debe depender de una modificación manual de la base de datos.
 
