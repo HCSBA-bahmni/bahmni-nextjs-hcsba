@@ -54,6 +54,7 @@ export type BedComplexity = "critical_uti" | "critical_uci" | "medium" | "basic"
 export interface BedComplexityDefinition {
   key: BedComplexity;
   name: string;
+  tagName: string;
   displayName: string;
   persistedDisplayName: string;
   description: string;
@@ -67,6 +68,7 @@ export const BED_COMPLEXITIES: readonly BedComplexityDefinition[] = [
   {
     key: "critical_uti",
     name: "MINSAL_CRITICA_UTI",
+    tagName: "Complejidad: Crítica UTI",
     displayName: "Cama crítica UTI",
     persistedDisplayName: "Crít. UTI",
     description: "Cama crítica de tratamiento intermedio.",
@@ -78,6 +80,7 @@ export const BED_COMPLEXITIES: readonly BedComplexityDefinition[] = [
   {
     key: "critical_uci",
     name: "MINSAL_CRITICA_UCI",
+    tagName: "Complejidad: Crítica UCI",
     displayName: "Cama crítica UCI",
     persistedDisplayName: "Crít. UCI",
     description: "Cama crítica de cuidados intensivos.",
@@ -89,6 +92,7 @@ export const BED_COMPLEXITIES: readonly BedComplexityDefinition[] = [
   {
     key: "medium",
     name: "MINSAL_MEDIA",
+    tagName: "Complejidad: Media",
     displayName: "Cama media",
     persistedDisplayName: "Media",
     description: "Cama de mediana complejidad, anteriormente denominada cama de agudos.",
@@ -100,6 +104,7 @@ export const BED_COMPLEXITIES: readonly BedComplexityDefinition[] = [
   {
     key: "basic",
     name: "MINSAL_BASICA",
+    tagName: "Complejidad: Básica",
     displayName: "Cama básica",
     persistedDisplayName: "Básica",
     description: "Cama para pacientes clínicamente estables y de bajo riesgo vital.",
@@ -131,6 +136,13 @@ export function bedComplexityDefinition(type?: { name?: string; displayName?: st
   const complexity = bedComplexityForType(type);
   return BED_COMPLEXITIES.find((item) => item.key === complexity);
 }
+export function bedComplexityForBed(bed: Pick<AdminBed, "bedType" | "bedTagMaps">): BedComplexityDefinition | undefined {
+  const tagNames = new Set(bed.bedTagMaps.map((map) => normalized(map.bedTag.name)));
+  return BED_COMPLEXITIES.find((item) => tagNames.has(normalized(item.tagName))) ?? bedComplexityDefinition(bed.bedType);
+}
+export function isLegacyComplexityType(type: { name?: string; displayName?: string }): boolean {
+  return Boolean(bedComplexityDefinition(type) || normalized(type.name) === "MINSAL_CRITICA");
+}
 export function bedTypeVisibleName(type: { name: string; displayName?: string }): string {
   const complexity = bedComplexityDefinition(type);
   if (complexity) return complexity.displayName;
@@ -140,7 +152,7 @@ export function bedTypeVisibleName(type: { name: string; displayName?: string })
 
 export function bedComplexityCounts(beds: AdminBed[]): Record<BedComplexity | "unclassified", number> {
   return beds.reduce<Record<BedComplexity | "unclassified", number>>((counts, bed) => {
-    const complexity = bedComplexityForType(bed.bedType) ?? "unclassified";
+    const complexity = bedComplexityForBed(bed)?.key ?? "unclassified";
     counts[complexity] += 1;
     return counts;
   }, { critical_uti: 0, critical_uci: 0, medium: 0, basic: 0, unclassified: 0 });
