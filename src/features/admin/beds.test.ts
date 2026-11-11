@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canDeleteLocation, layoutCellKey, locationChildren, validateBedPosition, validateLayout, type AdminLocation } from "./beds";
+import { BED_COMPLEXITIES, bedComplexityCounts, bedComplexityForType, layoutCellKey, locationChildren, validateBedPosition, validateLayout, type AdminLocation } from "./beds";
 
 const locations: AdminLocation[] = [
   { uuid: "root", name: "Urgencia", description: "", parentUuid: "hospital" },
@@ -17,9 +17,25 @@ describe("dominio administrativo de camas", () => {
     expect(locationChildren(configured, "root")[0]?.name).toBe("Emergency Ward - HCSBA");
   });
 
-  it("sólo permite eliminar nodos hoja", () => {
-    expect(canDeleteLocation(locations, "root")).toBe(false);
-    expect(canDeleteLocation(locations, "ward")).toBe(true);
+  it("reconoce las cuatro complejidades por nombre estable o visible", () => {
+    expect(bedComplexityForType({ name: "MINSAL_CRITICA_UTI", displayName: "Crítica UTI" })).toBe("critical_uti");
+    expect(bedComplexityForType({ name: "MINSAL_CRITICA_UCI", displayName: "Crítica UCI" })).toBe("critical_uci");
+    expect(bedComplexityForType({ name: "Cama de agudos" })).toBe("medium");
+    expect(bedComplexityForType({ displayName: "Cama básica" })).toBe("basic");
+    expect(bedComplexityForType({ name: "Cama estándar" })).toBeUndefined();
+  });
+
+  it("usa nombres persistentes compatibles con el límite de bed_type", () => {
+    expect(BED_COMPLEXITIES.map((type) => type.persistedDisplayName)).toEqual(["Crít. UTI", "Crít. UCI", "Media", "Básica"]);
+    expect(BED_COMPLEXITIES.every((type) => type.persistedDisplayName.length <= 10)).toBe(true);
+  });
+
+  it("resume camas clasificadas y mantiene visibles las pendientes", () => {
+    expect(bedComplexityCounts([
+      { bedId: 1, bedUuid: "1", bedNumber: "1", rowNumber: 1, columnNumber: 1, status: "AVAILABLE", bedType: { name: "MINSAL_CRITICA_UTI" }, bedTagMaps: [] },
+      { bedId: 2, bedUuid: "2", bedNumber: "2", rowNumber: 1, columnNumber: 2, status: "AVAILABLE", bedType: { displayName: "Cama media" }, bedTagMaps: [] },
+      { bedId: 3, bedUuid: "3", bedNumber: "3", rowNumber: 1, columnNumber: 3, status: "AVAILABLE", bedType: { name: "General" }, bedTagMaps: [] },
+    ])).toEqual({ critical_uti: 1, critical_uci: 0, medium: 1, basic: 0, unclassified: 1 });
   });
 
   it("conserva la clave fila:columna del layout OWA", () => expect(layoutCellKey(2, 3)).toBe("2:3"));
