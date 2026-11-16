@@ -24,7 +24,10 @@
     "certification:phase2": "node scripts/check-phase2-gate.mjs",
     "gate:phase2": "node scripts/check-phase2-gate.mjs --require-local",
     "gate:phase2:hcsba": "node scripts/check-phase2-gate.mjs --require-local --require-hcsba",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "qa:init": "node scripts/qa-release.mjs init",
+    "qa:report": "node scripts/qa-release.mjs report",
+    "qa:test": "node --test scripts/qa-release.check.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

@@ -45,3 +45,7 @@ las comprobaciones en navegador y los apartados pendientes de revision.
 ## Imagen y rollback
 
 Construir `hcsba/bahmni-next-web:0.1.0-rc.0`. Producción debe promover el mismo digest con tag semántico, nunca `latest`. El rollback consiste en quitar las reglas específicas Next del proxy; no existen migraciones de datos.
+
+## QA compartido del HIS HCSBA
+
+El paquete [his-qa-release](skills/his-qa-release/SKILL.md) incluye el flujo PRE/POST, referencias y plantillas para QA de desarrollos y entregas a `.225`. Consultar la [guía para contribuyentes](skills/his-qa-release/references/contributors.md) para instalar la skill completa y ejecutar el harness mantenido en `bahmni-nextjs-hcsba`. Conservar informes y datos de prueba en una carpeta privada fuera de Git.
