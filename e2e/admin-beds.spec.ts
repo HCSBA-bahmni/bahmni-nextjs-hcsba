@@ -99,7 +99,7 @@ test("Beds replica ubicación, sala, layout, tipos y etiquetas en español", asy
   expect(accessibility.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? ""))).toEqual([]);
 });
 
-test("guarda por separado el tipo y la categoría de complejidad en OpenMRS", async ({ page }) => {
+test("crea una cama sin categoría para clasificarla posteriormente", async ({ page }) => {
   const writes = await mockAdmin(page);
   await page.goto("/bahmni/admin/beds");
   await page.getByRole("button", { name: /Urgencia/ }).first().click();
@@ -107,11 +107,10 @@ test("guarda por separado el tipo y la categoría de complejidad en OpenMRS", as
   await page.getByRole("button", { name: /Agregar cama/ }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Número de cama").fill("U-2");
-  await dialog.locator(".p-dropdown").nth(1).click();
-  await page.getByRole("option", { name: "Cama crítica UCI" }).click();
+  await expect(dialog.getByText("Categoría de complejidad", { exact: true })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect.poll(() => writes.find((write) => new URL(write.url).pathname === "/openmrs/ws/rest/v1/bed")?.body).toMatchObject({ bedNumber: "U-2", bedType: "Cama" });
-  await expect.poll(() => writes.find((write) => new URL(write.url).pathname === "/openmrs/ws/rest/v1/bedTagMap/")?.body).toEqual({ bed: { id: 8 }, bedTag: { id: 22 } });
+  expect(writes.some((write) => new URL(write.url).pathname === "/openmrs/ws/rest/v1/bedTagMap/")).toBe(false);
   await expect(page.getByRole("tab", { name: /Clasificación/ })).toHaveCount(0);
 });
 
@@ -123,6 +122,7 @@ test("categoriza camas seleccionadas por complejidad, edad, uso y condición", a
   await page.getByRole("checkbox", { name: "Seleccionar cama U-1" }).click();
   await page.getByRole("button", { name: "Categorizar (1)" }).click();
   const dialog = page.getByRole("dialog", { name: "Categorizar 1 cama" });
+  await expect(dialog.getByText("Área asistencial o uso especial", { exact: true })).toBeVisible();
   const dropdowns = dialog.locator(".p-dropdown");
   await dropdowns.nth(0).click(); await page.getByRole("option", { name: "Cama crítica UTI" }).click();
   await dropdowns.nth(1).click(); await page.getByRole("option", { name: "Adulto", exact: true }).click();
@@ -301,14 +301,12 @@ test("envía mutaciones reales de ubicación, layout, cama, tipo y etiqueta", as
   await page.getByRole("dialog").getByRole("button", { name: "Guardar" }).click();
   await page.getByRole("button", { name: /Agregar cama/ }).click();
   await page.getByRole("dialog").getByLabel("Número de cama").fill("U-2");
-  await page.getByRole("dialog").locator(".p-dropdown").nth(1).click();
-  await page.getByRole("option", { name: "Cama básica" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Guardar" }).click();
 
   await page.getByRole("tab", { name: /Tipos de cama/ }).click();
   await page.getByRole("button", { name: "Agregar nuevo" }).click();
-  await page.getByRole("dialog").getByLabel("Nombre", { exact: true }).fill("Cuna");
-  await page.getByRole("dialog").getByLabel("Nombre para mostrar").fill("Cuna");
+  await page.getByRole("dialog").getByPlaceholder(/Cama clínica eléctrica/).fill("Cuna");
+  await page.getByRole("dialog").getByPlaceholder("Ej.: UCI/UTI").fill("Cuna");
   await page.getByRole("dialog").getByRole("button", { name: "Guardar" }).click();
 
   await page.getByRole("tab", { name: /Etiquetas de cama/ }).click();
@@ -317,13 +315,12 @@ test("envía mutaciones reales de ubicación, layout, cama, tipo y etiqueta", as
   await page.getByRole("dialog").getByLabel("Descripción").fill("Cuenta con suministro de oxígeno.");
   await page.getByRole("dialog").getByRole("button", { name: "Guardar" }).click();
 
-  await expect.poll(() => writes.length).toBe(8);
+  await expect.poll(() => writes.length).toBe(7);
   expect(writes.map((write) => new URL(write.url).pathname)).toEqual([
     "/openmrs/ws/rest/v1/admissionLocation",
     "/openmrs/ws/rest/v1/admissionLocation",
     "/openmrs/ws/rest/v1/admissionLocation/ward",
     "/openmrs/ws/rest/v1/bed",
-    "/openmrs/ws/rest/v1/bedTagMap/",
     "/openmrs/ws/rest/v1/bedtype",
     "/openmrs/ws/rest/v1/bedTag",
     "/openmrs/ws/rest/v1/systemsetting",

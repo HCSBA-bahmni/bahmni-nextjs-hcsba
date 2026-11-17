@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BED_COMPLEXITIES, bedComplexityCounts, bedComplexityForType, layoutCellKey, locationChildren, validateBedPosition, validateLayout, type AdminLocation } from "./beds";
+import { BED_COMPLEXITIES, bedComplexityCounts, bedComplexityForType, layoutCellKey, locationChildren, validateBedPosition, validateBedType, validateLayout, type AdminLocation } from "./beds";
 
 const locations: AdminLocation[] = [
   { uuid: "root", name: "Urgencia", description: "", parentUuid: "hospital" },
@@ -39,6 +39,12 @@ describe("dominio administrativo de camas", () => {
   });
 
   it("conserva la clave fila:columna del layout OWA", () => expect(layoutCellKey(2, 3)).toBe("2:3"));
+
+  it("respeta los límites reales del tipo de cama en OpenMRS", () => {
+    expect(validateBedType("Cama", "Adulto", "Descripción válida")).toEqual({});
+    expect(validateBedType("", "", "")).toMatchObject({ typeName: expect.any(String), typeDisplayName: expect.any(String) });
+    expect(validateBedType("Cama", "Más de diez", "x".repeat(256))).toMatchObject({ typeDisplayName: expect.stringContaining("10"), typeDescription: expect.stringContaining("255") });
+  });
 
   it("aplica los límites del OWA para layout y posición", () => {
     expect(validateLayout(0, 11)).toEqual({ rows: "Las filas deben ser mayores que 0.", columns: "Las columnas deben ser mayores que 0 y menores que 11." });

@@ -198,3 +198,13 @@ export function validateBedPosition(row: number, column: number, rows: number, c
   else if (column > columns) errors.column = "La columna no puede superar el tamaño de la distribución.";
   return errors;
 }
+
+export function validateBedType(name: string, displayName: string, description: string): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!name.trim()) errors.typeName = "El nombre es obligatorio.";
+  else if (name.trim().length > 255) errors.typeName = "El nombre no puede superar los 255 caracteres.";
+  if (!displayName.trim()) errors.typeDisplayName = "El nombre corto es obligatorio.";
+  else if (displayName.trim().length > 10) errors.typeDisplayName = "El nombre corto no puede superar los 10 caracteres.";
+  if (description.trim().length > 255) errors.typeDescription = "La descripción no puede superar los 255 caracteres.";
+  return errors;
+}
