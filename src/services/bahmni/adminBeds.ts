@@ -1,10 +1,11 @@
 import { z } from "zod";
-import type { AdminBed, AdminBedLayout, AdminBedTag, AdminBedType, AdminLocation } from "@/features/admin/beds";
+import { OPERATIONAL_CONDITION_PREFIX, operationalConditionLabel, type AdminBed, type AdminBedLayout, type AdminBedTag, type AdminBedType, type AdminLocation, type OperationalCondition } from "@/features/admin/beds";
 import { BahmniApiError, bahmniRequest, queryString } from "./http";
 
 const row = z.record(z.string(), z.unknown());
 const list = z.object({ results: z.array(row).default([]) }).loose();
 const BED_TAG_DESCRIPTION_PREFIX = "hcsba.bedTag.description.";
+const OPERATIONAL_CONDITION_METADATA_PREFIX = "hcsba.bedOperationalCondition.";
 
 function object(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function text(value: unknown): string { return typeof value === "string" ? value : ""; }
@@ -95,13 +96,14 @@ async function findBedTagDescriptionSetting(tagUuid: string): Promise<Record<str
   const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: property })}`, { schema: list, cache: "no-store" });
   return response.results.find((setting) => text(setting.property) === property);
 }
-export async function saveAdminBedTag(payload: { uuid?: string; name: string; description: string }): Promise<void> {
+export async function saveAdminBedTag(payload: { uuid?: string; name: string; description: string }): Promise<string> {
   const saved = await bahmniRequest(`/ws/rest/v1/bedTag${payload.uuid ? `/${encodeURIComponent(payload.uuid)}` : ""}`, { method: "POST", body: JSON.stringify({ name: payload.name }), schema: row });
   const tagUuid = payload.uuid ?? text(saved.uuid);
   if (!tagUuid) throw new Error("OpenMRS no devolvió el identificador de la etiqueta de cama.");
   const property = `${BED_TAG_DESCRIPTION_PREFIX}${tagUuid}`;
   const setting = await findBedTagDescriptionSetting(tagUuid);
   await bahmniRequest(`/ws/rest/v1/systemsetting${setting ? `/${encodeURIComponent(text(setting.uuid))}` : ""}`, { method: "POST", body: JSON.stringify({ property, value: payload.description.trim(), description: `Descripción administrativa de la etiqueta de cama ${payload.name}` }) });
+  return tagUuid;
 }
 export async function deleteAdminBedTag(uuid: string): Promise<void> {
   const setting = await findBedTagDescriptionSetting(uuid);
@@ -110,3 +112,38 @@ export async function deleteAdminBedTag(uuid: string): Promise<void> {
 }
 export async function addAdminBedTag(bedId: number, bedTagId: number): Promise<void> { await bahmniRequest("/ws/rest/v1/bedTagMap/", { method: "POST", body: JSON.stringify({ bed: { id: bedId }, bedTag: { id: bedTagId } }) }); }
 export async function deleteAdminBedTagMap(uuid: string): Promise<void> { await bahmniRequest(`/ws/rest/v1/bedTagMap/${encodeURIComponent(uuid)}`, { method: "DELETE" }); }
+
+export async function getOperationalConditions(): Promise<OperationalCondition[]> {
+  const [tags, settings] = await Promise.all([
+    getAdminBedTags(),
+    bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: OPERATIONAL_CONDITION_METADATA_PREFIX })}`, { schema: list, cache: "no-store" }),
+  ]);
+  const metadata = new Map(settings.results.map((setting) => {
+    let value: { description?: string; active?: boolean; allowsUse?: boolean } = {};
+    try { value = JSON.parse(text(setting.value)); } catch { value = {}; }
+    return [text(setting.property).slice(OPERATIONAL_CONDITION_METADATA_PREFIX.length), value] as const;
+  }));
+  return tags.filter((tag) => tag.name.startsWith(OPERATIONAL_CONDITION_PREFIX)).map((tag) => {
+    const value = metadata.get(tag.uuid);
+    return { ...tag, description: value?.description ?? tag.description, label: operationalConditionLabel(tag.name), active: value?.active ?? true, allowsUse: value?.allowsUse ?? true };
+  });
+}
+
+export async function saveOperationalCondition(payload: { uuid?: string; name: string; description: string; active: boolean; allowsUse: boolean }): Promise<void> {
+  const label = operationalConditionLabel(payload.name).trim();
+  const saved = await bahmniRequest(`/ws/rest/v1/bedTag${payload.uuid ? `/${encodeURIComponent(payload.uuid)}` : ""}`, { method: "POST", body: JSON.stringify({ name: `${OPERATIONAL_CONDITION_PREFIX}${label}` }), schema: row });
+  const uuid = payload.uuid || text(saved.uuid);
+  if (!uuid) throw new Error("OpenMRS no devolvió el identificador de la condición operativa.");
+  const property = `${OPERATIONAL_CONDITION_METADATA_PREFIX}${uuid}`;
+  const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: property })}`, { schema: list, cache: "no-store" });
+  const setting = response.results.find((item) => text(item.property) === property);
+  await bahmniRequest(`/ws/rest/v1/systemsetting${setting ? `/${encodeURIComponent(text(setting.uuid))}` : ""}`, { method: "POST", body: JSON.stringify({ property, value: JSON.stringify({ description: payload.description.trim(), active: payload.active, allowsUse: payload.allowsUse }), description: `Configuración de la condición operativa ${label}` }) });
+}
+
+export async function deleteOperationalCondition(uuid: string): Promise<void> {
+  const property = `${OPERATIONAL_CONDITION_METADATA_PREFIX}${uuid}`;
+  const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: property })}`, { schema: list, cache: "no-store" });
+  const setting = response.results.find((item) => text(item.property) === property);
+  if (setting?.uuid) await bahmniRequest(`/ws/rest/v1/systemsetting/${encodeURIComponent(text(setting.uuid))}`, { method: "DELETE" });
+  await deleteAdminBedTag(uuid);
+}

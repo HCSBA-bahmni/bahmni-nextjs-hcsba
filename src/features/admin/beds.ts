@@ -19,6 +19,15 @@ export interface AdminBedTag {
   description: string;
 }
 
+export interface OperationalCondition extends AdminBedTag {
+  label: string;
+  active: boolean;
+  allowsUse: boolean;
+}
+
+export const OPERATIONAL_CONDITION_PREFIX = "Condición: ";
+export function operationalConditionLabel(name: string): string { return name.startsWith(OPERATIONAL_CONDITION_PREFIX) ? name.slice(OPERATIONAL_CONDITION_PREFIX.length).trim() : name; }
+
 export interface AdminBedTagMap {
   uuid: string;
   bedTag: { id: number; uuid: string; name: string };

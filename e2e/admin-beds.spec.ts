@@ -122,12 +122,12 @@ test("categoriza camas seleccionadas por complejidad, edad, uso y condición", a
   await page.getByRole("checkbox", { name: "Seleccionar cama U-1" }).click();
   await page.getByRole("button", { name: "Categorizar (1)" }).click();
   const dialog = page.getByRole("dialog", { name: "Categorizar 1 cama" });
-  await expect(dialog.getByText("Área asistencial o uso especial", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("Destino clínico especial", { exact: true })).toBeVisible();
   const dropdowns = dialog.locator(".p-dropdown");
   await dropdowns.nth(0).click(); await page.getByRole("option", { name: "Cama crítica UTI" }).click();
   await dropdowns.nth(1).click(); await page.getByRole("option", { name: "Adulto", exact: true }).click();
   await dropdowns.nth(2).click(); await page.getByRole("option", { name: "Cuidados Paliativos", exact: true }).click();
-  await dropdowns.nth(3).click(); await page.getByRole("option", { name: "Habilitada / Disponible", exact: true }).click();
+  await dropdowns.nth(3).click(); await page.getByRole("option", { name: "Habilitada", exact: true }).click();
   await dialog.getByRole("button", { name: "Aplicar categorización" }).click();
   await expect.poll(() => writes.filter((write) => write.method === "POST" && new URL(write.url).pathname.includes("bedTagMap")).length).toBe(4);
   expect(writes.filter((write) => new URL(write.url).pathname === "/openmrs/ws/rest/v1/bedTagMap/").map((write) => write.body)).toEqual([
@@ -136,6 +136,21 @@ test("categoriza camas seleccionadas por complejidad, edad, uso y condición", a
     { bed: { id: 7 }, bedTag: { id: 15 } },
     { bed: { id: 7 }, bedTag: { id: 17 } },
   ]);
+});
+
+test("administra condiciones operativas persistentes en OpenMRS", async ({ page }) => {
+  const writes = await mockAdmin(page);
+  await page.goto("/bahmni/admin/beds");
+  await page.getByRole("tab", { name: "Condiciones operativas" }).click();
+  await expect(page.getByRole("cell", { name: "Habilitada", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Agregar nuevo" }).click();
+  const dialog = page.getByRole("dialog", { name: "Agregar condición operativa" });
+  await dialog.getByLabel("Nombre").fill("En mantenimiento");
+  await dialog.getByLabel("Descripción").fill("Cama temporalmente fuera de servicio por mantenimiento.");
+  await dialog.locator('input[type="checkbox"]').nth(1).uncheck({ force: true });
+  await dialog.getByRole("button", { name: "Guardar" }).click();
+  await expect.poll(() => writes.some((write) => new URL(write.url).pathname === "/openmrs/ws/rest/v1/bedTag" && (write.body as { name?: string })?.name === "Condición: En mantenimiento")).toBe(true);
+  await expect.poll(() => writes.some((write) => new URL(write.url).pathname.startsWith("/openmrs/ws/rest/v1/systemsetting") && String((write.body as { property?: string })?.property).startsWith("hcsba.bedOperationalCondition.") && String((write.body as { value?: string })?.value).includes('"allowsUse":false'))).toBe(true);
 });
 
 test("muestra literalmente los nombres configurados en OpenMRS", async ({ page }) => {
