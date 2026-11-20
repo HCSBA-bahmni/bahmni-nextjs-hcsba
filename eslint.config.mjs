@@ -5,5 +5,6 @@ import nextTypescript from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
-  globalIgnores([".next/**", "coverage/**", "playwright-report/**"]),
+  // Copied byte-for-byte from the pinned dependency by prepare-pdf-worker.mjs.
+  globalIgnores([".next/**", "coverage/**", "playwright-report/**", "public/vendor/pdfjs/**"]),
 ]);

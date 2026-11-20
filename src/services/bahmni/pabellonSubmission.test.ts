@@ -7,6 +7,15 @@ const input = (): PabellonSubmissionInput => ({ patientDetails: { telephone: "90
 function response(sendId: string, status = 201) { return { status, headers: new Headers({ "Cache-Control": "no-store" }), data: { sendId, correlationId: crypto.randomUUID(), result: { surgeryId: "7000000", requestNumber: "261103001", stateAtCreation: 1 } } }; }
 const failure = (sendId: string, code: string, recoveryRequired: boolean) => ({ code, message: "PRIVATE REMOTE ERROR MUST NOT APPEAR", correlationId: crypto.randomUUID(), retryable: false, sendId, recoveryRequired });
 describe("HIS logical submission", () => {
+  it("allows empty optional equipment and supplies without adding kit references", async () => {
+    const c=context(), session=new PabellonSubmission(c), value=input();
+    value.clinical.dispositivos_solicitados=""; value.clinical.insumos_opcionales="";
+    vi.mocked(bahmniRequestWithResponse).mockResolvedValueOnce(response(session.sendId));
+    await session.submit(c,value);
+    const sent=JSON.parse(vi.mocked(bahmniRequestWithResponse).mock.calls[0]![1]!.body as string);
+    expect(sent.clinical).toMatchObject({dispositivos_solicitados:"",insumos_opcionales:""});
+    expect(sent.clinical).not.toHaveProperty("kit_id");
+  });
   it("isolates pending QA and DEV references without sending environment metadata", async () => {
     const qa = context(); const dev = { ...qa, sourceEnvironment: "pabellon43-dev" as const };
     const first = new PabellonSubmission(qa); const second = new PabellonSubmission(dev);

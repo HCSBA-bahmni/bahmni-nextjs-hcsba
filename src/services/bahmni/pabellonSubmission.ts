@@ -28,6 +28,7 @@ export type PabellonSubmissionPhase = "editable" | "submitting" | "recovery-requ
 const publicError = z.object({ code: z.string(), message: z.string(), correlationId: uuid, retryable: z.literal(false), sendId: uuid, recoveryRequired: z.boolean() }).strict();
 const messages: Record<string, string> = {
   PENDING_SEND_EXISTS: "Ya existe un envío pendiente para este paciente y usuario. Verifique esa misma referencia.",
+  PENDING_REFERENCE_UNAVAILABLE: "No se pudo verificar la referencia guardada en este navegador. Revise el almacenamiento antes de continuar; no se envió la solicitud.",
   CREATION_INPUT_INVALID: "Revise los datos de la solicitud antes de enviarla.",
   CONTEXT_CHANGED: "Cambió el usuario, paciente o atención. No se envió la solicitud.",
   SESSION_REQUIRED: "Inicie sesión con el mismo usuario para verificar el envío pendiente.",
@@ -48,15 +49,21 @@ type PendingContext = Pick<PabellonSubmissionContext, "actorUuid" | "patientUuid
 const pendingKey = (context: PendingContext) => (context.sourceEnvironment ?? "qa-isolated") + ":" + context.actorUuid + ":" + context.patientUuid;
 const storageKey = (context: PendingContext) => "hcsba:pabellon:pending:v1:" + pendingKey(context);
 const savedReference = z.object({ context: contextSchema, sendId: uuid }).strict();
+function readStoredReference(context: PendingContext): PendingReference | undefined {
+  const raw = window.localStorage.getItem(storageKey(context));
+  if (raw === null) return undefined;
+  const parsed = savedReference.safeParse(JSON.parse(raw));
+  if (!parsed.success || pendingKey(parsed.data.context) !== pendingKey(context)) throw new Error("INVALID_PENDING_REFERENCE");
+  return parsed.data;
+}
 export function getPendingPabellonReference(context: PendingContext): PendingReference | undefined {
   let pending = pendingReferences.get(pendingKey(context));
-  if (!pending && typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
     try {
-      const raw = window.localStorage.getItem(storageKey(context));
-      const parsed = raw ? savedReference.safeParse(JSON.parse(raw)) : null;
-      if (parsed?.success && pendingKey(parsed.data.context) === pendingKey(context)) {
-        pending = parsed.data; pendingReferences.set(pendingKey(context), pending);
-      }
+      // Storage is shared between tabs; an in-memory reference may have been replaced or cleared.
+      pending = readStoredReference(context);
+      if (pending) pendingReferences.set(pendingKey(context), pending);
+      else pendingReferences.delete(pendingKey(context));
     } catch { /* Unavailable storage never exposes another patient's reference. */ }
   }
   return pending ? { context: { ...pending.context }, sendId: pending.sendId } : undefined;
@@ -123,7 +130,9 @@ export class PabellonSubmission {
   }
   private start(body: string, recovery: boolean) {
     const key = pendingKey(this.context);
-    const other = getPendingPabellonReference(this.context);
+    let other: PendingReference | undefined;
+    try { other = readStoredReference(this.context); }
+    catch { throw new PabellonSubmissionError("PENDING_REFERENCE_UNAVAILABLE", this.phaseValue !== "editable"); }
     if (other && other.sendId !== this.sendId) throw new PabellonSubmissionError("PENDING_SEND_EXISTS", true);
     try {
       window.localStorage.setItem(storageKey(this.context), JSON.stringify({ context: this.context, sendId: this.sendId }));
@@ -154,9 +163,13 @@ export class PabellonSubmission {
       throw safe;
     } finally {
       clearTimeout(timer);
-      if ((this.phaseValue === "confirmed" || this.phaseValue === "editable") && getPendingPabellonReference(this.context)?.sendId === this.sendId) {
-        pendingReferences.delete(pendingKey(this.context));
-        try { window.localStorage.removeItem(storageKey(this.context)); } catch { /* Retain a recoverable reference if browser cleanup fails. */ }
+      if (this.phaseValue === "confirmed" || this.phaseValue === "editable") {
+        try {
+          if (readStoredReference(this.context)?.sendId === this.sendId) {
+            window.localStorage.removeItem(storageKey(this.context));
+            pendingReferences.delete(pendingKey(this.context));
+          }
+        } catch { /* Keep recovery references when storage cannot be checked safely. */ }
       }
     }
   }

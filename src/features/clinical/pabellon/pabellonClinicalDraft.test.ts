@@ -24,6 +24,7 @@ describe("HIS request rules against the native Pabellón form", () => {
     expect(build(draft,[]).fields).toMatchObject({dispositivos_solicitados:"EQUIPO\nQA",insumos_opcionales:"INSUMO QA",checklist_enfermeria:true});
     expect(build(draft,[]).fields).not.toHaveProperty("kit_id");
     expect(build({...draft,medicalEquipment:""},[]).fields?.dispositivos_solicitados).toBe("");
+    expect(build({...draft,medicalEquipment:"",optionalSupplies:""},[]).fields).toMatchObject({dispositivos_solicitados:"",insumos_opcionales:""});
     expect(build({...draft,medicalEquipment:"x".repeat(5001)},[]).fields).toBeNull();
   });
   it("reports combined payload budget before review", () => {

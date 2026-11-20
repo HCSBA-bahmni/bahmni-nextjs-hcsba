@@ -5,6 +5,34 @@ vi.mock("./http", async (original) => ({ ...await original<typeof import("./http
 const context = () => ({ actorUuid:crypto.randomUUID(), patientUuid:crypto.randomUUID(), visitUuid:crypto.randomUUID(), encounterUuid:"", sourceEnvironment:"pabellon43-dev" as const });
 const key = (c: ReturnType<typeof context>) => `hcsba:pabellon:pending:v1:${c.sourceEnvironment}:${c.actorUuid}:${c.patientUuid}`;
 describe("persistent technical recovery reference", () => {
+  it("does not overwrite corrupt storage or issue a new POST", async () => {
+    const c=context(); localStorage.setItem(key(c),"invalid-json");
+    const requestCount=vi.mocked(bahmniRequestWithResponse).mock.calls.length;
+    await expect(new PabellonSubmission(c).submit(c,{patientDetails:{telephone:"900000000",address:"QA",addressNumber:"1",communeId:1,communeName:"QA",insuranceCode:0,insuranceName:"QA",insuranceSegment:""},clinical:{diagnostico:"QA"}})).rejects.toMatchObject({code:"PENDING_REFERENCE_UNAVAILABLE"});
+    expect(localStorage.getItem(key(c))).toBe("invalid-json");
+    expect(vi.mocked(bahmniRequestWithResponse).mock.calls.length).toBe(requestCount);
+  });
+  it("reads the reference replaced by another tab instead of keeping stale memory", () => {
+    const c=context(), first=crypto.randomUUID(), second=crypto.randomUUID();
+    localStorage.setItem(key(c),JSON.stringify({context:c,sendId:first}));
+    expect(getPendingPabellonReference(c)?.sendId).toBe(first);
+    localStorage.setItem(key(c),JSON.stringify({context:c,sendId:second}));
+    expect(getPendingPabellonReference(c)?.sendId).toBe(second);
+    localStorage.removeItem(key(c));
+    expect(getPendingPabellonReference(c)).toBeUndefined();
+  });
+  it("does not remove another tab's pending reference when an older recovery confirms", async () => {
+    const c=context(), first=crypto.randomUUID(), second=crypto.randomUUID();
+    localStorage.setItem(key(c),JSON.stringify({context:c,sendId:first}));
+    let finish!: (value: Awaited<ReturnType<typeof bahmniRequestWithResponse>>) => void;
+    vi.mocked(bahmniRequestWithResponse).mockImplementationOnce(() => new Promise(resolve => { finish=resolve; }));
+    const work=new PabellonSubmission(c,first).recover(c);
+    localStorage.setItem(key(c),JSON.stringify({context:c,sendId:second}));
+    finish({status:200,headers:new Headers({"Cache-Control":"no-store"}),data:{sendId:first,correlationId:crypto.randomUUID(),result:{surgeryId:"7000000",requestNumber:"261106001",stateAtCreation:1}}});
+    await work;
+    expect(getPendingPabellonReference(c)?.sendId).toBe(second);
+    expect(JSON.parse(localStorage.getItem(key(c))!).sendId).toBe(second);
+  });
   it("hydrates after reload and only verifies the original send without clinical data", async () => {
     const c=context(), sendId=crypto.randomUUID();
     localStorage.setItem(key(c),JSON.stringify({context:c,sendId}));
