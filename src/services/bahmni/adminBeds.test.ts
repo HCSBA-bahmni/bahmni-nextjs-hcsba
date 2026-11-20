@@ -62,7 +62,9 @@ describe("servicio Beds de OpenMRS", () => {
 
   it("envía exactamente los payloads de distribución y cama", async () => {
     const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
-      const body = url.includes("/systemsetting") && (options?.method ?? "GET") === "GET"
+      const body = url.includes("/admissionLocation/ward") && (options?.method ?? "GET") === "GET"
+        ? { ward: { uuid: "ward", name: "Sala" }, bedLayouts: [{ bedUuid: "bed", bedId: 7, rowNumber: 1, columnNumber: 1, bedType: { name: "Cama" } }] }
+        : url.includes("/systemsetting") && (options?.method ?? "GET") === "GET"
         ? { results: [] }
         : url.endsWith("/bedTag") && options?.method === "POST"
           ? { uuid: "new-tag" }
@@ -78,7 +80,9 @@ describe("servicio Beds de OpenMRS", () => {
 
   it("conserva contratos de creación, edición y eliminación de todos los recursos", async () => {
     const fetchMock = vi.fn().mockImplementation((url: string, options?: RequestInit) => {
-      const body = url.includes("/systemsetting") && (options?.method ?? "GET") === "GET"
+      const body = url.includes("/admissionLocation/ward") && (options?.method ?? "GET") === "GET"
+        ? { ward: { uuid: "ward", name: "Sala" }, bedLayouts: [{ bedUuid: "bed", bedId: 7, rowNumber: 1, columnNumber: 1, bedType: { name: "Cama" } }] }
+        : url.includes("/systemsetting") && (options?.method ?? "GET") === "GET"
         ? { results: [] }
         : url.endsWith("/bedTag") && options?.method === "POST"
           ? { uuid: "new-tag" }
@@ -109,6 +113,7 @@ describe("servicio Beds de OpenMRS", () => {
       { url: "/openmrs/ws/rest/v1/admissionLocation/location", method: "DELETE", body: undefined },
       { url: "/openmrs/ws/rest/v1/admissionLocation/ward?v=layout", method: "POST", body: { bedLayout: { row: 2, column: 3 } } },
       { url: "/openmrs/ws/rest/v1/bed", method: "POST", body: { bedNumber: "A-1", bedType: "Cama", row: 1, column: 1, locationUuid: "ward" } },
+      { url: "/openmrs/ws/rest/v1/admissionLocation/ward?v=full", method: "GET", body: undefined },
       { url: "/openmrs/ws/rest/v1/bed/bed", method: "POST", body: { bedNumber: "A-2", bedType: "Cuna", row: 2, column: 1, locationUuid: "ward" } },
       { url: "/openmrs/ws/rest/v1/bed/bed", method: "DELETE", body: undefined },
       { url: "/openmrs/ws/rest/v1/bedtype", method: "POST", body: { name: "Cama", displayName: "Cama", description: "Adulto" } },
@@ -130,5 +135,25 @@ describe("servicio Beds de OpenMRS", () => {
   it("traduce el rechazo al eliminar una cama ocupada", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { message: "org.openmrs.module.bedmanagement.exception.BedOccupiedException: Bed is occupied" } }), { status: 400, statusText: "Bad Request", headers: { "content-type": "application/json" } })));
     await expect(deleteAdminBed("occupied-bed")).rejects.toThrow("No se puede eliminar una cama ocupada.");
+  });
+});
+
+describe("protección de complejidad heredada al editar", () => {
+  it.each([
+    ["MINSAL_CRITICA_UCI", "MINSAL_CRITICA_UCI", false, true],
+    ["MINSAL_CRITICA_UCI", "Cama", false, false],
+    ["MINSAL_CRITICA", "Cama", false, false],
+    ["Crítica UCI", "Cama", false, false],
+    ["Cama media", "Cama", false, false],
+    ["MINSAL_CRITICA_UCI", "Cama", true, true],
+  ])("tipo %s → %s, etiqueta explícita %s", async (original, next, tagged, allowed) => {
+    const writes: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, options?: RequestInit) => {
+      if (options?.method === "POST") { writes.push(JSON.parse(String(options.body))); return new Response("{}", { headers: { "content-type": "application/json" } }); }
+      return new Response(JSON.stringify({ ward: { uuid: "ward" }, bedLayouts: [{ bedId: 7, bedUuid: "bed", rowNumber: 1, columnNumber: 1, bedType: { name: original }, bedTagMaps: tagged ? [{ uuid: "map", bedTag: { id: 22, uuid: "tag", name: "Complejidad: Crítica UCI" } }] : [] }] }), { headers: { "content-type": "application/json" } });
+    }));
+    const work = saveAdminBed({ bedUuid: "bed", bedNumber: "U-9", bedType: next, row: 1, column: 1, locationUuid: "ward" });
+    if (allowed) { await work; expect(writes).toEqual([{ bedNumber: "U-9", bedType: next, row: 1, column: 1, locationUuid: "ward" }]); }
+    else { await expect(work).rejects.toThrow("Categorice primero"); expect(writes).toEqual([]); }
   });
 });

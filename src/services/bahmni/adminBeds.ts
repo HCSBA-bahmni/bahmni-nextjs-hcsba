@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OPERATIONAL_CONDITION_PREFIX, operationalConditionLabel, type AdminBed, type AdminBedLayout, type AdminBedTag, type AdminBedType, type AdminLocation, type OperationalCondition } from "@/features/admin/beds";
+import { BED_COMPLEXITIES, bedComplexityDefinition, isLegacyComplexityType, OPERATIONAL_CONDITION_PREFIX, operationalConditionLabel, type AdminBed, type AdminBedLayout, type AdminBedTag, type AdminBedType, type AdminLocation, type OperationalCondition } from "@/features/admin/beds";
 import { BahmniApiError, bahmniRequest, queryString } from "./http";
 
 const row = z.record(z.string(), z.unknown());
@@ -62,6 +62,16 @@ export async function getAdminBedLayout(uuid: string): Promise<AdminBedLayout> {
 export async function saveAdminBedLayout(uuid: string, rows: number, columns: number): Promise<void> { await bahmniRequest(`/ws/rest/v1/admissionLocation/${encodeURIComponent(uuid)}${queryString({ v: "layout" })}`, { method: "POST", body: JSON.stringify({ bedLayout: { row: rows, column: columns } }) }); }
 
 export async function saveAdminBed(payload: { bedUuid?: string; bedNumber: string; bedType: string; row: number; column: number; locationUuid: string }): Promise<void> {
+  if (payload.bedUuid) {
+    const layout = await getAdminBedLayout(payload.locationUuid);
+    const current = layout.beds.find((bed) => bed.bedUuid === payload.bedUuid);
+    if (!current) throw new Error("La cama ya no está en esta sala. Actualice la distribución.");
+    const categorized = current.bedTagMaps.some((map) => BED_COMPLEXITIES.some((item) => item.tagName === map.bedTag.name));
+    const legacyComplexity = isLegacyComplexityType(current.bedType ?? {}) || Boolean(bedComplexityDefinition(current.bedType));
+    if (legacyComplexity && current.bedType?.name !== payload.bedType && !categorized) {
+      throw new Error("Categorice primero la complejidad de esta cama antigua antes de cambiar su tipo. Puede editar su número conservando el tipo anterior.");
+    }
+  }
   await bahmniRequest(`/ws/rest/v1/bed${payload.bedUuid ? `/${encodeURIComponent(payload.bedUuid)}` : ""}`, { method: "POST", body: JSON.stringify({ bedNumber: payload.bedNumber, bedType: payload.bedType, row: payload.row, column: payload.column, locationUuid: payload.locationUuid }) });
 }
 export async function deleteAdminBed(uuid: string): Promise<void> {
@@ -119,17 +129,17 @@ export async function getOperationalConditions(): Promise<OperationalCondition[]
     bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: OPERATIONAL_CONDITION_METADATA_PREFIX })}`, { schema: list, cache: "no-store" }),
   ]);
   const metadata = new Map(settings.results.map((setting) => {
-    let value: { description?: string; active?: boolean; allowsUse?: boolean } = {};
+    let value: { description?: string; active?: boolean } = {};
     try { value = JSON.parse(text(setting.value)); } catch { value = {}; }
     return [text(setting.property).slice(OPERATIONAL_CONDITION_METADATA_PREFIX.length), value] as const;
   }));
   return tags.filter((tag) => tag.name.startsWith(OPERATIONAL_CONDITION_PREFIX)).map((tag) => {
     const value = metadata.get(tag.uuid);
-    return { ...tag, description: value?.description ?? tag.description, label: operationalConditionLabel(tag.name), active: value?.active ?? true, allowsUse: value?.allowsUse ?? true };
+    return { ...tag, description: value?.description ?? tag.description, label: operationalConditionLabel(tag.name), active: value?.active ?? true };
   });
 }
 
-export async function saveOperationalCondition(payload: { uuid?: string; name: string; description: string; active: boolean; allowsUse: boolean }): Promise<void> {
+export async function saveOperationalCondition(payload: { uuid?: string; name: string; description: string; active: boolean }): Promise<void> {
   const label = operationalConditionLabel(payload.name).trim();
   const saved = await bahmniRequest(`/ws/rest/v1/bedTag${payload.uuid ? `/${encodeURIComponent(payload.uuid)}` : ""}`, { method: "POST", body: JSON.stringify({ name: `${OPERATIONAL_CONDITION_PREFIX}${label}` }), schema: row });
   const uuid = payload.uuid || text(saved.uuid);
@@ -137,7 +147,10 @@ export async function saveOperationalCondition(payload: { uuid?: string; name: s
   const property = `${OPERATIONAL_CONDITION_METADATA_PREFIX}${uuid}`;
   const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: property })}`, { schema: list, cache: "no-store" });
   const setting = response.results.find((item) => text(item.property) === property);
-  await bahmniRequest(`/ws/rest/v1/systemsetting${setting ? `/${encodeURIComponent(text(setting.uuid))}` : ""}`, { method: "POST", body: JSON.stringify({ property, value: JSON.stringify({ description: payload.description.trim(), active: payload.active, allowsUse: payload.allowsUse }), description: `Configuración de la condición operativa ${label}` }) });
+  // Preserve unrelated historical metadata, without exposing it as an assignment rule.
+  let previous: Record<string, unknown> = {};
+  try { const value: unknown = JSON.parse(text(setting?.value)); previous = object(value); } catch { /* No previous metadata. */ }
+  await bahmniRequest(`/ws/rest/v1/systemsetting${setting ? `/${encodeURIComponent(text(setting.uuid))}` : ""}`, { method: "POST", body: JSON.stringify({ property, value: JSON.stringify({ ...previous, description: payload.description.trim(), active: payload.active }), description: `Clasificación administrativa de cama: ${label}` }) });
 }
 
 export async function deleteOperationalCondition(uuid: string): Promise<void> {

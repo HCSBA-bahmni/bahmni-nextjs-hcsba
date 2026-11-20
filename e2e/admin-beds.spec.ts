@@ -12,6 +12,8 @@ async function confirmDeletion(page: Page) {
 async function mockAdmin(page: Page, manageLocations = true, bedStatus = "AVAILABLE", names = { location: "Urgencia", ward: "Sala de Urgencia" }) {
   const writes: Array<{ url: string; method: string; body: unknown }> = [];
   let bedExists = true;
+  const tagMaps = new Map<number, Array<{ uuid: string; bedTag: { id: number; uuid: string; name: string } }>>();
+  const tagNames: Record<number, string> = { 21: "Complejidad: Crítica UTI", 22: "Complejidad: Crítica UCI", 10: "Clasificación: Adulto", 15: "Uso: Cuidados Paliativos", 17: "Condición: Habilitada" };
   let createdBed: { bedNumber: string; bedType: string; row: number; column: number } | undefined;
   await page.route("**/openmrs/ws/rest/v1/session**", (route) => json(route, { authenticated: true, user: { uuid: "user" }, sessionLocation: { uuid: "emergency", display: "Emergency" } }));
   await page.route("**/openmrs/ws/rest/v1/user**", (route) => json(route, { results: [{ uuid: "user", username: "superman", privileges: [{ name: "app:admin" }], roles: [], userProperties: { defaultLocale: "es" } }] }));
@@ -58,12 +60,22 @@ async function mockAdmin(page: Page, manageLocations = true, bedStatus = "AVAILA
     writes.push({ url: route.request().url(), method: route.request().method(), body: route.request().postDataJSON() }); return json(route, { uuid: "new-tag" });
   });
   await page.route(/\/openmrs\/ws\/rest\/v1\/bedTagMap(?:\/[^?]+)?\/?(?:\?.*)?$/, async (route) => {
-    writes.push({ url: route.request().url(), method: route.request().method(), body: route.request().postDataJSON() }); return json(route, { uuid: "map-new" });
+    const body = route.request().postDataJSON();
+    writes.push({ url: route.request().url(), method: route.request().method(), body });
+    if (route.request().method() === "POST") {
+      const maps = tagMaps.get(body.bed.id) ?? [];
+      maps.push({ uuid: `map-${body.bed.id}-${body.bedTag.id}`, bedTag: { id: body.bedTag.id, uuid: `tag-${body.bedTag.id}`, name: tagNames[body.bedTag.id] ?? "Otra etiqueta" } });
+      tagMaps.set(body.bed.id, maps);
+    } else {
+      const uuid = new URL(route.request().url()).pathname.split("/").at(-1);
+      for (const [id, maps] of tagMaps) tagMaps.set(id, maps.filter((map) => map.uuid !== uuid));
+    }
+    return json(route, { uuid: "map-new" });
   });
   await page.route(/\/openmrs\/ws\/rest\/v1\/admissionLocation(?:\/[^?]+)?(?:\?.*)?$/, async (route) => {
     if (route.request().method() === "GET") return json(route, { ward: { uuid: "ward", name: names.ward, parentLocation: { uuid: "emergency" } }, bedLocationMappings: [
-      ...(bedExists ? [{ rowNumber: 1, columnNumber: 1, bedId: 7, bedUuid: "bed", bedNumber: "U-1", status: bedStatus, bedType: { name: "Cama", displayName: "Cama" }, bedTagMaps: [] }] : []),
-      ...(createdBed ? [{ rowNumber: createdBed.row, columnNumber: createdBed.column, bedId: 8, bedUuid: "created-bed", bedNumber: createdBed.bedNumber, status: "AVAILABLE", bedType: { name: createdBed.bedType, displayName: createdBed.bedType }, bedTagMaps: [] }] : []),
+      ...(bedExists ? [{ rowNumber: 1, columnNumber: 1, bedId: 7, bedUuid: "bed", bedNumber: "U-1", status: bedStatus, bedType: { name: "Cama", displayName: "Cama" }, bedTagMaps: tagMaps.get(7) ?? [] }] : []),
+      ...(createdBed ? [{ rowNumber: createdBed.row, columnNumber: createdBed.column, bedId: 8, bedUuid: "created-bed", bedNumber: createdBed.bedNumber, status: "AVAILABLE", bedType: { name: createdBed.bedType, displayName: createdBed.bedType }, bedTagMaps: tagMaps.get(8) ?? [] }] : []),
       { rowNumber: 1, columnNumber: 2 },
     ] });
     writes.push({ url: route.request().url(), method: route.request().method(), body: route.request().postDataJSON() }); return json(route, {});
@@ -147,10 +159,11 @@ test("administra condiciones operativas persistentes en OpenMRS", async ({ page 
   const dialog = page.getByRole("dialog", { name: "Agregar condición operativa" });
   await dialog.getByLabel("Nombre").fill("En mantenimiento");
   await dialog.getByLabel("Descripción").fill("Cama temporalmente fuera de servicio por mantenimiento.");
-  await dialog.locator('input[type="checkbox"]').nth(1).uncheck({ force: true });
+  await expect(dialog.getByLabel("Permite utilizar la cama")).toHaveCount(0);
+  await dialog.getByLabel("Condición activa", { exact: true }).uncheck();
   await dialog.getByRole("button", { name: "Guardar" }).click();
   await expect.poll(() => writes.some((write) => new URL(write.url).pathname === "/openmrs/ws/rest/v1/bedTag" && (write.body as { name?: string })?.name === "Condición: En mantenimiento")).toBe(true);
-  await expect.poll(() => writes.some((write) => new URL(write.url).pathname.startsWith("/openmrs/ws/rest/v1/systemsetting") && String((write.body as { property?: string })?.property).startsWith("hcsba.bedOperationalCondition.") && String((write.body as { value?: string })?.value).includes('"allowsUse":false'))).toBe(true);
+  await expect.poll(() => writes.some((write) => new URL(write.url).pathname.startsWith("/openmrs/ws/rest/v1/systemsetting") && String((write.body as { property?: string })?.property).startsWith("hcsba.bedOperationalCondition.") && String((write.body as { value?: string })?.value).includes('"active":false'))).toBe(true);
 });
 
 test("muestra literalmente los nombres configurados en OpenMRS", async ({ page }) => {
@@ -297,7 +310,7 @@ test("revalida la jerarquía después de confirmar y bloquea una sala con descen
   expect(writes.some((write) => write.method === "DELETE" && new URL(write.url).pathname.includes("admissionLocation"))).toBe(false);
 });
 
-test("envía mutaciones reales de ubicación, layout, cama, tipo y etiqueta", async ({ page }) => {
+test("verifica payloads simulados de ubicación, layout, cama, tipo y etiqueta", async ({ page }) => {
   const writes = await mockAdmin(page, true);
   await page.goto("/bahmni/admin/beds");
   await page.getByRole("button", { name: "Agregar ubicación", exact: true }).click();
@@ -341,4 +354,59 @@ test("envía mutaciones reales de ubicación, layout, cama, tipo y etiqueta", as
     "/openmrs/ws/rest/v1/systemsetting",
   ]);
   expect(writes[1]?.body).toEqual({ parentLocationUuid: "emergency", name: "Sala nueva", description: "" });
+});
+
+test('review: editar numero conserva la complejidad de una cama antigua', async ({page}) => {
+  const writes = await mockAdmin(page);
+  await page.route(/\/openmrs\/ws\/rest\/v1\/admissionLocation(?:\/[^?]+)?(?:\?.*)?$/, route => json(route, {
+    ward:{uuid:'ward',name:'Sala de Urgencia',parentLocation:{uuid:'emergency'}},
+    bedLayouts:[{rowNumber:1,columnNumber:1,bedId:7,bedUuid:'bed',bedNumber:'U-1',status:'AVAILABLE',bedType:{name:'MINSAL_CRITICA_UCI',displayName:'Crít. UCI'},bedTagMaps:[]}]
+  }));
+  await page.goto('/bahmni/admin/beds');
+  await page.getByRole('button',{name:/Urgencia/}).first().click();
+  await page.getByRole('button',{name:/Sala de Urgencia/}).first().click();
+  await expect(page.getByText('Cama crítica UCI',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Editar cama U-1'}).click();
+  await page.getByRole('dialog').getByLabel('Número de cama').fill('U-9');
+  await page.getByRole('dialog').getByRole('button',{name:'Guardar',exact:true}).click();
+  await expect.poll(()=>writes.filter(w=>w.method==='POST').length).toBeGreaterThan(0);
+  const bedWrites = writes.filter(w=>new URL(w.url).pathname==='/openmrs/ws/rest/v1/bed/bed');
+  expect(bedWrites.some(w=>(w.body as {bedType?:string}).bedType==='MINSAL_CRITICA_UCI') || writes.some(w=>new URL(w.url).pathname.includes('/bedTagMap') && (w.body as {bedTag?:{id:number}})?.bedTag?.id===22)).toBe(true);
+});
+
+test('review: reconciliar lote parcial antes de repetir escrituras confirmadas', async ({page}) => {
+  await mockAdmin(page);
+  let layoutReads=0;
+  let firstBedPosts=0;
+  let secondBedPosts=0;
+  const added = new Set<number>();
+  await page.route(/\/openmrs\/ws\/rest\/v1\/admissionLocation(?:\/[^?]+)?(?:\?.*)?$/, route => {
+    layoutReads++;
+    return json(route, {ward:{uuid:'ward',name:'Sala de Urgencia',parentLocation:{uuid:'emergency'}},bedLayouts:[7,8].map((id,index)=>({
+      rowNumber:1,columnNumber:index+1,bedId:id,bedUuid:'bed-'+id,bedNumber:'U-'+(index+1),status:'AVAILABLE',bedType:{name:'Cama',displayName:'Cama'},
+      bedTagMaps:added.has(id)?[{uuid:'map-'+id,bedTag:{id:21,uuid:'complexity-uti',name:'Complejidad: Crítica UTI'}}]:[]
+    }))});
+  });
+  await page.route(/\/openmrs\/ws\/rest\/v1\/bedTagMap(?:\/[^?]+)?\/?(?:\?.*)?$/, route => {
+    const body=route.request().postDataJSON();
+    if(body.bed.id===7){firstBedPosts++;added.add(7);return json(route,{uuid:'map-7'});}
+    secondBedPosts++;
+    if(secondBedPosts===1)return json(route,{error:{message:'Fallo simulado en segunda cama'}},500);
+    added.add(8);return json(route,{uuid:'map-8'});
+  });
+  await page.goto('/bahmni/admin/beds');
+  await page.getByRole('button',{name:/Urgencia/}).first().click();
+  await page.getByRole('button',{name:/Sala de Urgencia/}).first().click();
+  for(const number of [1,2])await page.getByRole('checkbox',{name:'Seleccionar cama U-'+number}).click();
+  await page.getByRole('button',{name:'Categorizar (2)'}).click();
+  const dialog=page.getByRole('dialog',{name:'Categorizar 2 camas'});
+  await dialog.locator('.p-dropdown').first().click();
+  await page.getByRole('option',{name:'Cama crítica UTI'}).click();
+  await dialog.getByRole('button',{name:/Aplicar categorización|Revisar y aplicar pendientes/}).click();
+  await expect(page.getByRole('alert').filter({hasText:'Fallo simulado'})).toBeVisible();
+  await page.getByRole('button',{name:'Entendido'}).click();
+  await dialog.getByRole('button',{name:/Aplicar categorización|Revisar y aplicar pendientes/}).click();
+  await expect.poll(()=>secondBedPosts).toBe(2);
+  expect(firstBedPosts,'No reenviar la categoría ya confirmada de la primera cama').toBe(1);
+  expect(layoutReads,'Releer el estado durable después del fallo parcial').toBeGreaterThan(1);
 });

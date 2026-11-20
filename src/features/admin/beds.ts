@@ -22,7 +22,6 @@ export interface AdminBedTag {
 export interface OperationalCondition extends AdminBedTag {
   label: string;
   active: boolean;
-  allowsUse: boolean;
 }
 
 export const OPERATIONAL_CONDITION_PREFIX = "Condición: ";
@@ -150,7 +149,8 @@ export function bedComplexityForBed(bed: Pick<AdminBed, "bedType" | "bedTagMaps"
   return BED_COMPLEXITIES.find((item) => tagNames.has(normalized(item.tagName))) ?? bedComplexityDefinition(bed.bedType);
 }
 export function isLegacyComplexityType(type: { name?: string; displayName?: string }): boolean {
-  return Boolean(bedComplexityDefinition(type) || normalized(type.name) === "MINSAL_CRITICA");
+  const name = normalized(type.name);
+  return name === "MINSAL_CRITICA" || BED_COMPLEXITIES.some((item) => item.name === name);
 }
 export function bedTypeVisibleName(type: { name: string; displayName?: string }): string {
   const complexity = bedComplexityDefinition(type);
