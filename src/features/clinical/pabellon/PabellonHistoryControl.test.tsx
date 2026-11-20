@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DashboardControlProps } from "../dashboardContext";
 import { getPabellonHistory, PabellonReadError, validatePabellonPage, type PabellonPage } from "@/services/bahmni/pabellon";
@@ -15,6 +15,52 @@ function show(p = props()) {
 }
 describe("Pabellón history control", () => {
   beforeEach(() => vi.resetAllMocks());
+  it("completes pagination so a current-visit request on a later page is not hidden", async () => {
+    const first = page(); first.nextCursor = "OPAQUE-NEXT";
+    const next = page();
+    const active = "44444444-4444-4444-8444-444444444444";
+    first.items[0] = { ...first.items[0]!, id: "2", source: { ...first.items[0]!.source, id: "2" } };
+    next.items[0]!.care = { visitUuid: active, provenance: "verified-link" };
+    const p = props(); p.context.visits = [{ uuid: active, startDatetime: "2026-11-09T10:00:00Z" }]; p.context.visit = p.context.visits[0];
+    vi.mocked(getPabellonHistory).mockResolvedValueOnce(first).mockResolvedValueOnce(next);
+    const { container } = show(p);
+    await screen.findByText("Visita actual");
+    expect(getPabellonHistory).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(getPabellonHistory).mock.calls[1]![1]).toBe("OPAQUE-NEXT");
+    expect(container.querySelector("details")).toHaveTextContent("Visita actual");
+    expect(screen.queryByText(/Cargando el resto/)).not.toBeInTheDocument();
+  });
+  it("stops sequential pagination when a later page fails", async () => {
+    const first = page(); first.nextCursor = "OPAQUE-NEXT";
+    vi.mocked(getPabellonHistory).mockResolvedValueOnce(first).mockRejectedValueOnce(new PabellonReadError("SOURCE_UNAVAILABLE"));
+    show();
+    expect(await screen.findByRole("button", { name: "Reintentar" })).toBeEnabled();
+    expect(getPabellonHistory).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/Cargando el resto/)).not.toBeInTheDocument();
+  });
+  it("renders nonempty visits as collapsible groups, current first, with per-surgery actions", async () => {
+    const fixture = page();
+    const active = "44444444-4444-4444-8444-444444444444";
+    const old = "55555555-5555-4555-8555-555555555555";
+    const row = fixture.items[0]!;
+    fixture.items = [
+      { ...row, id: "3", source: { ...row.source, id: "3" }, care: { visitUuid: old, provenance: "verified-link" } },
+      { ...row, id: "2", source: { ...row.source, id: "2" }, care: { visitUuid: active, provenance: "his-origin" } }, row,
+    ];
+    const p = props();
+    p.context.visits = [{ uuid: old, startDatetime: "2026-10-01T10:00:00Z", stopDatetime: "2026-10-02T10:00:00Z", visitType: { uuid: "opd", display: "OPD" } }, { uuid: active, startDatetime: "2026-11-09T10:00:00Z", visitType: { uuid: "ipd", display: "IPD" } }];
+    p.context.visit = p.context.visits[1];
+    vi.mocked(getPabellonHistory).mockResolvedValue(fixture);
+    const { container } = show(p);
+    await screen.findByText("Visita actual");
+    const groups = container.querySelectorAll("details");
+    expect(groups).toHaveLength(3);
+    expect(groups[0]).toHaveAttribute("open");
+    expect(groups[1]).not.toHaveAttribute("open");
+    expect(groups[2]).toHaveTextContent("Sin visita vinculada");
+    expect(within(groups[0] as HTMLElement).getByRole("button", { name: "Ver solicitud" })).toBeEnabled();
+    expect(within(groups[0] as HTMLElement).getByRole("button", { name: "Protocolos" })).toBeEnabled();
+  });
   it("labels invalidated events as historical without losing the frozen diagnosis", async () => {
     const fixture = page();
     fixture.items[0]!.request!.operationalAtSnapshot = {

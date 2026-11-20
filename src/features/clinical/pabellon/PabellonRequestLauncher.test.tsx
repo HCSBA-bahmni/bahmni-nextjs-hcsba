@@ -56,6 +56,21 @@ describe("HIS complete request dialog", () => {
     vi.mocked(getPabellonCatalogue).mockImplementation(async (group) => ({ catalogue: group, version: "a".repeat(64), items: group === "approach-types" ? [] : [option(group)], nextCursor: null, observedAt: "2026-11-03T10:00:00Z", correlationId: crypto.randomUUID() }));
   });
   afterEach(() => vi.restoreAllMocks());
+  it("focuses and scrolls the validation summary when review finds missing fields", async () => {
+    const scroll = vi.fn();
+    const previous = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    try {
+      show(context(), false, true);
+      const review = await screen.findByRole("button", { name: "Revisar solicitud" });
+      await waitFor(() => expect(review).toBeEnabled());
+      fireEvent.click(review);
+      const summary = await screen.findByRole("alert", { name: "Revise los datos de la solicitud" });
+      await waitFor(() => expect(summary).toHaveFocus());
+      expect(scroll).toHaveBeenCalledWith({ block: "start", behavior: "smooth" });
+      expect(bahmniRequestWithResponse).not.toHaveBeenCalled();
+    } finally { HTMLElement.prototype.scrollIntoView = previous; }
+  });
   it("can open the new-request form directly without submitting anything", async () => {
     show(context(), false, true);
     await screen.findByRole("dialog");
@@ -120,6 +135,25 @@ describe("HIS complete request dialog", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Enviar solicitud a Pabellón" }));
     await screen.findByText("Solicitud registrada: 261103001");
     expect(JSON.parse(vi.mocked(bahmniRequestWithResponse).mock.calls[1]![1]!.body as string).sendId).toBe(first.sendId);
+  });
+  it("requires support confirmation and exact reference before closing an unconfirmed send", async () => {
+    const { onCreated } = show(); await prepare(); await complete();
+    vi.mocked(bahmniRequestWithResponse).mockRejectedValueOnce(new Error("NETWORK"));
+    fireEvent.click(await screen.findByRole("button", { name: "Enviar solicitud a Pabellón" }));
+    await screen.findByRole("button", { name: "Verificar mismo envío" });
+    const reference = (screen.getByLabelText("Referencia técnica del envío") as HTMLInputElement).value;
+    vi.mocked(bahmniRequestWithResponse).mockRejectedValueOnce(new BahmniApiError(404, "PRIVATE", { code:"SEND_NOT_CONFIRMED",message:"PRIVATE",correlationId:crypto.randomUUID(),retryable:false,sendId:reference,recoveryRequired:true }));
+    fireEvent.click(screen.getByRole("button", { name: "Verificar mismo envío" }));
+    const close = await screen.findByRole("button", { name: "Cerrar referencia revisada" });
+    expect(close).toBeDisabled();
+    fireEvent.click(screen.getByLabelText("Soporte confirmó que este envío no creó una solicitud"));
+    expect(close).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Escriba la referencia para confirmar el cierre"), { target:{value:reference} });
+    expect(close).toBeEnabled(); fireEvent.click(close);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(onCreated).toHaveBeenCalledTimes(1);
+    expect(bahmniRequestWithResponse).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("button", { name: "Verificar envío pendiente" })).not.toBeInTheDocument();
   });
   it("recovers from the original closed visit without enabling a new create", async () => {
     const ctx = context(); ctx.visit = ctx.visits[1]; show(ctx);

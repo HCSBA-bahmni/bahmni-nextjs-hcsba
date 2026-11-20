@@ -9,7 +9,7 @@ const code = z.object({ sourceId: id, system: text, code: text, display: text.nu
 const names = z.object({ givenNames: text.nullable(), familyName: text.nullable(), secondFamilyName: text.nullable() }).strict();
 const version = z.object({
   snapshotId: id, protocolId: id, version: z.number().int().min(1).max(2147483647), amendment: z.boolean(), contentSource: z.literal("protocol-snapshot"),
-  closedAt: date, capturedAt: date.nullable(), digitalSignature: z.literal("not-established"), sourceDataSHA256: z.string().regex(/^[a-f0-9]{64}$/),
+  closedAt: date.nullable(), familyClosedAt: date.optional(), capturedAt: date.nullable(), digitalSignature: z.literal("not-established"), sourceDataSHA256: z.string().regex(/^[a-f0-9]{64}$/),
   clinical: z.object({ patientAtRegistration: names.nullable(), diagnosis: text.nullable(), surgicalDetail: text.nullable(), observations: text.nullable(), surgeon: text.nullable(), laterality: text.nullable(), additionalProcedure: text.nullable(), procedures: z.array(code).max(100), team: z.array(z.object({ name: text.nullable(), role: code.nullable() }).strict()).max(100), sections: z.array(z.object({ key: z.enum(["dates", "patient", "team", "intervention", "preoperative", "extras", "postoperative", "detail", "authorship"]), title: text, fields: z.array(z.object({ key: text, label: text, value: text.nullable() }).strict()).max(24) }).strict()).length(9).optional() }).strict(),
 }).strict();
 const family = z.object({ family: z.enum(["surgeon", "responsible"]), status: z.enum(["available", "no-published-versions", "ambiguous", "invalid"]), latestPublishedVersion: z.number().int().positive().nullable(), withheldVersions: z.number().int().min(0).max(200), versions: z.array(version).max(200), warningCodes: z.array(z.string().min(1).max(80)).max(200) }).strict();
@@ -40,7 +40,8 @@ export function validateProtocolHistory(raw: unknown, patientUuid: string, surge
     if (entry.status === "available" ? !entry.versions.length || entry.latestPublishedVersion !== entry.versions[0]!.version : entry.versions.length !== 0 || entry.latestPublishedVersion !== null) return fail();
     total += entry.withheldVersions + entry.versions.length;
     for (const [i, item] of entry.versions.entries()) {
-      if (seenSnapshots.has(item.snapshotId) || seenProtocols.has(item.protocolId) || i > 0 && item.version >= entry.versions[i - 1]!.version) return fail();
+      const previous = entry.versions[i - 1];
+      if (seenSnapshots.has(item.snapshotId) || seenProtocols.has(item.protocolId) || !item.closedAt && (!item.amendment || !item.familyClosedAt) || previous && (!previous.amendment && item.amendment || previous.amendment === item.amendment && item.version >= previous.version)) return fail();
       seenSnapshots.add(item.snapshotId); seenProtocols.add(item.protocolId);
       if (item.clinical.procedures.some((ref) => ref.system !== `urn:hcsba:${source.system}:${source.environment}:planes_quirurgicos`) || item.clinical.team.some((member) => member.role && member.role.system !== `urn:hcsba:${source.system}:${source.environment}:tipo_medico`)) return fail();
     }

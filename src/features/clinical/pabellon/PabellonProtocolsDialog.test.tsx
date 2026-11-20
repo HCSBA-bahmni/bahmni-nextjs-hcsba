@@ -12,7 +12,7 @@ describe("Pabellón protocol dialog", () => {
   it("lists families and only public versions, then opens frozen detail", async () => {
     vi.mocked(getPabellonProtocols).mockResolvedValue(fixture()); show();
     await screen.findByRole("button", { name: "Ver versión" });
-    expect(screen.getByText(/requieren revisión clínica/)).toBeInTheDocument();
+    expect(screen.getByText(/falta verificar su snapshot o el cierre de la familia/)).toBeInTheDocument();
     expect(screen.getByText(/Sin versiones publicables/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ver versión" }));
     expect(screen.getByText("FROZEN NAME FROZEN FAMILY")).toBeInTheDocument();

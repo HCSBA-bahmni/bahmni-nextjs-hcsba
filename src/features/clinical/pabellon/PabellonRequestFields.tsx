@@ -61,7 +61,11 @@ export function PabellonRequestFields({ scopeKey, value, onChange, disabled = fa
       <div className={styles.programmingGrid}>
         <div className={styles.surgeonColumn}>{surgeonFields}</div>
         {select("specialties", "Especialidad", true)}
-        <div className={styles.field}><label htmlFor="pabellon-duration">Duración estimada (HH:mm) *</label><InputText id="pabellon-duration" placeholder="00:00" maxLength={5} autoComplete="off" disabled={disabled} value={value.duration} aria-describedby="pabellon-duration-help" onFocus={(event) => event.target.select()} onChange={(event) => patch({ duration: event.target.value })} /><small id="pabellon-duration-help">Horas y minutos de duración. Ejemplo: 01:30 = 1 hora y 30 minutos.</small></div>
+        <div className={styles.field}><label htmlFor="pabellon-duration">Duración estimada (HH:mm) *</label><InputText id="pabellon-duration" placeholder="00:00" maxLength={5} autoComplete="off" disabled={disabled} value={value.duration} aria-describedby="pabellon-duration-help" onFocus={(event) => event.target.select()} onBlur={() => { if (!value.duration.trim()) patch({ duration: "00:00" }); }} onChange={(event) => {
+          const raw = event.target.value;
+          const duration = /^\d{3,4}$/.test(raw) ? raw.slice(0, 2) + ":" + raw.slice(2) : raw;
+          patch({ duration });
+        }} /><small id="pabellon-duration-help">Horas y minutos de duración. Ejemplo: 01:30 = 1 hora y 30 minutos.</small></div>
       </div>
       <div className={styles.programmingGrid}>
         {select("surgical-approaches", "Vía de abordaje", true)}

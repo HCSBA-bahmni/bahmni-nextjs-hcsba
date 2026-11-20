@@ -17,6 +17,7 @@ const request = z.object({
   operationalAtSnapshot: z.object({ updatedAt: sourceDate.nullable(), revision: z.string().regex(/^[a-f0-9]{64}$/), urgencyCompletenessKnown: z.boolean(), captureVersion: z.literal(1), changeCode: text, events: z.array(event) }).nullable().optional(),
 });
 export const pabellonItemSchema = z.object({
+  care: z.object({ visitUuid: z.uuid(), provenance: z.enum(["his-origin", "verified-link"]) }).strict().optional(),
   newborns: z.object({ contentSource: z.literal("native-newborn-module"), eligible: z.boolean(), observedAt: z.iso.datetime(), records: z.array(z.object({ id: z.string().regex(/^[1-9][0-9]*$/), bornAt: text, alive: z.boolean(), sex: text, weightGrams: z.number().int(), heightCM: z.number().int(), apgar1: z.number().int(), apgar5: z.number().int(), apgar10: z.number().int().nullable(), placentaStudy: z.boolean(), placentaWeight: z.number().int().nullable(), observation: text.nullable() }).strict()).max(50) }).strict().optional(),
   id: z.string().regex(/^[1-9][0-9]*$/),
   source: z.object({ system: text, environment: text, endpointEnvironment: text, id: text, observedAt: text, revision: text.nullable() }),

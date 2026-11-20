@@ -5,6 +5,25 @@ vi.mock("./http", async (original) => ({ ...await original<typeof import("./http
 const patient = "11111111-1111-4111-8111-111111111111";
 const raw = () => ({ schemaVersion: "1", patient: { uuid: patient, hisEnvironment: "bahmni225-dev", identityStatus: "matched", linkVersion: 1 }, surgeryId: "110", source: { system: "pabellon-hcsba-qa", environment: "qa-isolated", endpointEnvironment: "qa-isolated227", id: "110", observedAt: "2026-10-28T12:00:00Z", revision: null }, families: [{ family: "surgeon", status: "available", latestPublishedVersion: 1, withheldVersions: 1, warningCodes: ["AMENDMENT_CLINICAL_REVIEW_REQUIRED"], versions: [{ snapshotId: "201", protocolId: "101", version: 1, amendment: false, contentSource: "protocol-snapshot", closedAt: { rawValue: "2026-10-28 08:00:00", sourceTimezone: null, normalizedInstant: null, interpretation: "unresolved" }, capturedAt: null, digitalSignature: "not-established", sourceDataSHA256: "a".repeat(64), clinical: { patientAtRegistration: { givenNames: "FROZEN NAME", familyName: "FROZEN FAMILY", secondFamilyName: null }, diagnosis: null, surgicalDetail: "FROZEN DETAIL", observations: null, surgeon: null, laterality: null, additionalProcedure: null, procedures: [], team: [] } }] }, { family: "responsible", status: "no-published-versions", latestPublishedVersion: null, withheldVersions: 0, warningCodes: [], versions: [] }], correlationId: "22222222-2222-4222-8222-222222222222" });
 describe("Pabellón protocols contract", () => {
+  it("accepts a native complete amendment without inventing its own closure", () => {
+    const value = raw(); const original = value.families[0]!.versions[0]!;
+    const amendment = { ...structuredClone(original), snapshotId: "202", protocolId: "102", amendment: true, closedAt: null, familyClosedAt: original.closedAt };
+    const input = { ...value, families: [{ ...value.families[0], versions: [amendment, original] }, value.families[1]] };
+    const result = validateProtocolHistory(input, patient, "110");
+    expect(result.families[0]!.versions[0]!.closedAt).toBeNull();
+    expect(result.families[0]!.versions[0]!.clinical.surgicalDetail).toBe("FROZEN DETAIL");
+    expect(() => validateProtocolHistory({ ...input, families: [{ ...input.families[0], versions: [{ ...amendment, familyClosedAt: undefined }] }, input.families[1]] }, patient, "110")).toThrow();
+  });
+  it("accepts independent original/amendment version numbers but rejects duplicates within either kind", () => {
+    const value = raw(); const original = value.families[0]!.versions[0]!;
+    const amendment = { ...structuredClone(original), snapshotId: "202", protocolId: "102", amendment: true };
+    value.families[0]!.versions = [amendment, original];
+    expect(validateProtocolHistory(value, patient, "110").families[0]!.versions).toHaveLength(2);
+    value.families[0]!.versions = [original, amendment];
+    expect(() => validateProtocolHistory(value, patient, "110")).toThrow(PabellonProtocolError);
+    value.families[0]!.versions = [amendment, { ...amendment, snapshotId: "203", protocolId: "103" }];
+    expect(() => validateProtocolHistory(value, patient, "110")).toThrow(PabellonProtocolError);
+  });
   beforeEach(() => vi.resetAllMocks());
   it("preserves publication boundaries, absence and unresolved closure", () => {
     const out = validateProtocolHistory(raw(), patient, "110");

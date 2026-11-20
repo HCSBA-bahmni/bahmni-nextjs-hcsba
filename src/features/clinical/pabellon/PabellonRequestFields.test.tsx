@@ -22,6 +22,10 @@ describe("Pabellón clinical fields", () => {
     expect(input).toHaveValue("00:45");
     fireEvent.change(input, { target: { value: "" } });
     expect(input).toHaveValue("");
+    fireEvent.blur(input);
+    expect(input).toHaveValue("00:00");
+    fireEvent.change(input, { target: { value: "0130" } });
+    expect(input).toHaveValue("01:30");
     expect(input.closest(".p-calendar")).toBeNull();
   });
   it("shows the complete supplies section but never enables kits or Sofya writes", () => {

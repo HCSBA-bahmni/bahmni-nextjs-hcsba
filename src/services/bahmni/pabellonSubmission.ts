@@ -6,6 +6,7 @@ const contextSchema = z.object({ actorUuid: uuid, patientUuid: uuid, visitUuid: 
 export type PabellonSubmissionContext = z.infer<typeof contextSchema>;
 const text = (max: number, required = true) => z.string().refine((value) => [...value].length <= max && value === value.trim() && !/[\u0000-\u001f\u007f-\u009f]/u.test(value) && value.toUpperCase() !== "NULL" && (!required || value.length > 0));
 const detailsSchema = z.object({
+  identificationKind: z.enum(["run", "passport", "foreign-id", "ficha"]).optional(),
   personasDigest: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   telephone: text(20), address: text(255), addressNumber: text(20), communeId: z.number().int().positive().max(2147483647),
   communeName: text(100), insuranceCode: z.number().int().min(0).max(2147483647), insuranceName: text(50), insuranceSegment: text(1, false),
@@ -80,7 +81,7 @@ function safeFailure(error: unknown, sendId: string, recovery: boolean): Pabello
       const value = parsed.data;
       if (!recovery && (error.status === 400 || error.status === 422) && value.code === "CREATION_INPUT_INVALID" && value.recoveryRequired === false) return new PabellonSubmissionError(value.code, false);
       const expected: Record<string, number> = { SESSION_REQUIRED: 401, REQUEST_CREATE_FORBIDDEN: 403, PATIENT_CONTEXT_MISMATCH: 409, IDENTITY_UNRESOLVED: 409, IDENTITY_AMBIGUOUS: 409, IDENTITY_CONFLICT: 409, SEND_CONTENT_CONFLICT: 409, SEND_NOT_CONFIRMED: 404, SUBMISSION_OUTCOME_UNKNOWN: 503 };
-      if (expected[value.code] === error.status) return new PabellonSubmissionError(value.code, true);
+      if (expected[value.code] === error.status) return new PabellonSubmissionError(value.code, recovery || value.recoveryRequired || value.code === "SEND_CONTENT_CONFLICT" || value.code === "SEND_NOT_CONFIRMED" || value.code === "SUBMISSION_OUTCOME_UNKNOWN");
     }
   }
   return new PabellonSubmissionError("SUBMISSION_OUTCOME_UNKNOWN", true);
@@ -103,6 +104,17 @@ export class PabellonSubmission {
   get phase() { return this.phaseValue; }
   get receipt() { return this.confirmed; }
   get error() { return this.errorValue; }
+  /** Operator-reviewed reconciliation, never an automatic reaction to a 404.
+   * Retains the technical reference locally; does not submit or unlink anything.
+   */
+  closeAfterReviewedAbsence(confirmedReference: string) {
+    if (this.inFlight || this.phaseValue !== "recovery-required" || this.errorValue?.code !== "SEND_NOT_CONFIRMED" || confirmedReference !== this.sendId || readStoredReference(this.context)?.sendId !== this.sendId) throw new Error("La referencia aún no puede cerrarse tras revisión.");
+    const archiveKey = "hcsba:pabellon:reviewed:v1:" + pendingKey(this.context) + ":" + this.sendId;
+    window.localStorage.setItem(archiveKey, JSON.stringify({ context: this.context, sendId: this.sendId, reviewedAt: new Date().toISOString(), reason: "operator-confirmed-no-creation" }));
+    window.localStorage.removeItem(storageKey(this.context));
+    pendingReferences.delete(pendingKey(this.context));
+    this.phaseValue = "editable"; this.errorValue = null;
+  }
   private assertContext(current: PabellonSubmissionContext) {
     if (!contextSchema.safeParse(current).success || (this.context.sourceEnvironment ?? "qa-isolated") !== (current.sourceEnvironment ?? "qa-isolated") || ["actorUuid", "patientUuid", "visitUuid", "encounterUuid"].some((key) => this.context[key as keyof PabellonSubmissionContext] !== current[key as keyof PabellonSubmissionContext])) throw new PabellonSubmissionError("CONTEXT_CHANGED", this.phaseValue !== "editable");
   }

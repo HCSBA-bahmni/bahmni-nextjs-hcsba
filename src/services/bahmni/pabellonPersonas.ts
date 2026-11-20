@@ -7,12 +7,14 @@ const record = z.object({
   birthDate: z.iso.date(), sexCode: text(10), telephone: text(20), address: text(255), addressNumber: text(20),
   communeCode: text(10), insuranceCode: text(10), insuranceSegment: text(1),
   comgesMatch: z.boolean().optional(),
+  identificationKinds: z.array(z.enum(["run", "passport", "foreign-id", "ficha"])).max(4).refine(values => new Set(values).size === values.length).optional(),
+  identification: z.object({ kind: z.enum(["run", "passport", "foreign-id", "ficha"]), system: text(256).refine(v => !!v), value: text(64).refine(v => !!v), issuer: z.string().regex(/^(?:[0-9]{3})?$/) }).strict().optional(),
 }).strict();
 const response = z.object({ record, digest: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export type PabellonPersonasPrefill = z.infer<typeof response>;
 export class PabellonPersonasError extends Error {
   constructor(public readonly code: string) {
-    super(({ PERSONAS_NOT_FOUND: "No se encontró el paciente en Personas. No se registró ni modificó ninguna persona.", PERSONAS_IDENTITY_CONFLICT: "El RUT y el registro de Personas no coinciden. Se requiere revisar la identidad antes de continuar.", PATIENT_CONTEXT_MISMATCH: "La identidad del paciente requiere revisión.", REQUEST_CREATE_FORBIDDEN: "La sesión no tiene permiso para consultar esta precarga.", SESSION_REQUIRED: "Inicie sesión para consultar Personas." } as Record<string, string>)[code] ?? "No fue posible consultar Personas. No se utilizarán datos de otro paciente ni valores de relleno.");
+    super(({ PERSONAS_NOT_FOUND: "No se encontró el paciente en Personas. No se registró ni modificó ninguna persona.", PERSONAS_IDENTITY_CONFLICT: "La identificación y el registro de Personas no coinciden. Se requiere revisar la identidad antes de continuar.", PATIENT_CONTEXT_MISMATCH: "La identidad del paciente requiere revisión.", REQUEST_CREATE_FORBIDDEN: "La sesión no tiene permiso para consultar esta precarga.", SESSION_REQUIRED: "Inicie sesión para consultar Personas." } as Record<string, string>)[code] ?? "No fue posible consultar Personas. No se utilizarán datos de otro paciente ni valores de relleno.");
   }
 }
 export function validatePersonasPrefill(raw: unknown): PabellonPersonasPrefill {
@@ -20,10 +22,11 @@ export function validatePersonasPrefill(raw: unknown): PabellonPersonasPrefill {
   if (!parsed.success) throw new PabellonPersonasError("SOURCE_CONTRACT_MISMATCH");
   return parsed.data;
 }
-export async function getPabellonPersonasPrefill(patientUuid: string, signal?: AbortSignal) {
+export async function getPabellonPersonasPrefill(patientUuid: string, signal?: AbortSignal, identificationKind: "" | "run" | "passport" | "foreign-id" | "ficha" = "") {
   if (!z.uuid().safeParse(patientUuid).success) throw new PabellonPersonasError("PATIENT_CONTEXT_MISMATCH");
   try {
-    return validatePersonasPrefill(await bahmniRequest<unknown>("/pabellon-gateway/v1/patients/" + patientUuid + "/request-prefill", { signal, cache: "no-store", skipUnauthorizedEvent: true }));
+    const query = identificationKind ? "?identification=" + encodeURIComponent(identificationKind) : "";
+    return validatePersonasPrefill(await bahmniRequest<unknown>("/pabellon-gateway/v1/patients/" + patientUuid + "/request-prefill" + query, { signal, cache: "no-store", skipUnauthorizedEvent: true }));
   } catch (error) {
     if (error instanceof PabellonPersonasError || signal?.aborted) throw error;
     if (error instanceof BahmniApiError) {

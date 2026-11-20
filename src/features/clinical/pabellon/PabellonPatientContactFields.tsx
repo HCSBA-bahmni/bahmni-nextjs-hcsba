@@ -10,13 +10,14 @@ import type { PabellonContactDraft } from "./pabellonContactDraft";
 import styles from "./PabellonRequest.module.css";
 import { formatPabellonDate } from "./pabellonDates";
 interface Props {
+  verifiedIdentification?: { kind: "run" | "passport" | "foreign-id" | "ficha"; value: string };
   sourceLabel?: string;
   scopeKey: string; patient: ClinicalPatientContext; value: PabellonContactDraft; issues: string[];
   overrides: PabellonContactOverrides; onChange(patch: Partial<PabellonContactDraft>): void;
   loading?: boolean; error?: boolean; disabled?: boolean; onRefresh(): void;
 }
 /** Native identity is read-only; contact corrections belong only to this request. */
-export function PabellonPatientContactFields({ scopeKey, patient, value, issues, overrides, onChange, loading = false, error = false, disabled = false, onRefresh, sourceLabel = "Registro HIS" }: Props) {
+export function PabellonPatientContactFields({ scopeKey, patient, value, issues, overrides, onChange, loading = false, error = false, disabled = false, onRefresh, sourceLabel = "Registro HIS", verifiedIdentification }: Props) {
   const birthLabel = formatPabellonDate(patient.birthDate);
   const blocked = disabled || loading || error;
   const origin = (key: keyof PabellonContactDraft) => <small>{Object.hasOwn(overrides, key) ? "Completado o corregido para esta solicitud." : value[key] ? "Precargado de " + sourceLabel + "." : "Complete para esta solicitud."}</small>;
@@ -35,7 +36,7 @@ export function PabellonPatientContactFields({ scopeKey, patient, value, issues,
     {error && <p role="alert">No fue posible cargar los datos del Registro. No se utilizarán datos de otro paciente ni valores de relleno.</p>}
     {!loading && !error && issues.length > 0 && <details className="warning-banner"><summary>Datos que no pudieron precargarse del Registro</summary><p>Puede completarlos en los campos de esta solicitud. Esta lista describe la precarga, no los datos ya corregidos.</p><ul>{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul></details>}
     <dl className={styles.patientGrid}>
-      <ClinicalField title="Identificación">{patient.runIdentifier || patient.identifier}</ClinicalField>
+      <ClinicalField title={verifiedIdentification ? ({ run: "RUT", passport: "Pasaporte", "foreign-id": "Cédula extranjera", ficha: "Número de ficha" } as const)[verifiedIdentification.kind] : "Identificación"}>{verifiedIdentification?.value ?? (patient.runIdentifier || patient.identifier)}</ClinicalField>
       <ClinicalField title="Nombres">{patient.givenNames}</ClinicalField>
       <ClinicalField title="Apellido paterno">{patient.familyName}</ClinicalField>
       <ClinicalField title="Apellido materno">{patient.secondFamilyName}</ClinicalField>

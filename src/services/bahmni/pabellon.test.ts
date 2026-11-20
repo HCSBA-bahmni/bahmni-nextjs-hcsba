@@ -8,6 +8,16 @@ const raw = () => ({ schemaVersion: "2", patient: { uuid: patient, hisEnvironmen
 
 describe("Pabellón snapshot contract", () => {
   beforeEach(() => vi.resetAllMocks());
+  it("accepts only explicit valid visit associations", () => {
+    const value = raw();
+    const row = value.items[0] as unknown as Record<string, unknown>;
+    row.care = { visitUuid: "44444444-4444-4444-8444-444444444444", provenance: "verified-link" };
+    expect(validatePabellonPage(value, patient).items[0]?.care?.provenance).toBe("verified-link");
+    row.care = { visitUuid: "44444444-4444-4444-8444-444444444444", provenance: "date-guess" };
+    expect(() => validatePabellonPage(value, patient)).toThrow(PabellonReadError);
+    row.care = { visitUuid: "wrong", provenance: "his-origin" };
+    expect(() => validatePabellonPage(value, patient)).toThrow(PabellonReadError);
+  });
   it("preserves a missing snapshot without clinical fallback", () => {
     expect(validatePabellonPage(raw(), patient).items[0]?.request).toBeNull();
   });

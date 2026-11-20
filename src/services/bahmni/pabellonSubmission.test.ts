@@ -100,6 +100,42 @@ describe("HIS logical submission", () => {
     vi.mocked(bahmniRequestWithResponse).mockResolvedValueOnce(response(id));
     await session.submit(c, input()); expect(session.sendId).toBe(id);
   });
+  it("respects a verified pre-dispatch context rejection instead of trapping the send", async () => {
+    const c = context(); const session = new PabellonSubmission(c);
+    vi.mocked(bahmniRequestWithResponse).mockRejectedValueOnce(new BahmniApiError(409, "PRIVATE", failure(session.sendId, "PATIENT_CONTEXT_MISMATCH", false)));
+    await expect(session.submit(c, input())).rejects.toMatchObject({ recoveryRequired: false });
+    expect(session.phase).toBe("editable"); expect(getPendingPabellonReference(c)).toBeUndefined();
+  });
+  it("keeps a context failure after dispatch locked when the server requires recovery", async () => {
+    const c = context(); const session = new PabellonSubmission(c);
+    vi.mocked(bahmniRequestWithResponse).mockRejectedValueOnce(new BahmniApiError(409, "PRIVATE", failure(session.sendId, "PATIENT_CONTEXT_MISMATCH", true)));
+    await expect(session.submit(c, input())).rejects.toMatchObject({ recoveryRequired: true });
+    expect(session.phase).toBe("recovery-required");
+  });
+  it("only closes a missing receipt after explicit matching-reference reconciliation and archives it", async () => {
+    const c = context(); const session = new PabellonSubmission(c, crypto.randomUUID());
+    expect(() => session.closeAfterReviewedAbsence(session.sendId)).toThrow();
+    vi.mocked(bahmniRequestWithResponse).mockRejectedValueOnce(new BahmniApiError(404, "PRIVATE", failure(session.sendId, "SEND_NOT_CONFIRMED", true)));
+    await expect(session.recover(c)).rejects.toBeInstanceOf(PabellonSubmissionError);
+    expect(() => session.closeAfterReviewedAbsence(crypto.randomUUID())).toThrow();
+    expect(getPendingPabellonReference(c)?.sendId).toBe(session.sendId);
+    session.closeAfterReviewedAbsence(session.sendId);
+    expect(getPendingPabellonReference(c)).toBeUndefined();
+    expect(Object.keys(window.localStorage).some(key => key.includes(":reviewed:") && key.endsWith(session.sendId))).toBe(true);
+    expect(bahmniRequestWithResponse).toHaveBeenCalledTimes(1);
+  });
+  it.each(["newer-tab", "corrupt-storage"] as const)("reviewed closure preserves %s instead of trusting stale memory", async (mode) => {
+    const c = context(); const session = new PabellonSubmission(c, crypto.randomUUID());
+    vi.mocked(bahmniRequestWithResponse).mockRejectedValueOnce(new BahmniApiError(404, "PRIVATE", failure(session.sendId, "SEND_NOT_CONFIRMED", true)));
+    await expect(session.recover(c)).rejects.toBeInstanceOf(PabellonSubmissionError);
+    const key = `hcsba:pabellon:pending:v1:${c.sourceEnvironment ?? "qa-isolated"}:${c.actorUuid}:${c.patientUuid}`;
+    const replacement = mode === "newer-tab" ? JSON.stringify({ context: c, sendId: crypto.randomUUID() }) : "INVALID_JSON";
+    window.localStorage.setItem(key, replacement);
+    expect(() => session.closeAfterReviewedAbsence(session.sendId)).toThrow();
+    expect(window.localStorage.getItem(key)).toBe(replacement);
+    expect(session.phase).toBe("recovery-required");
+    expect(bahmniRequestWithResponse).toHaveBeenCalledTimes(1);
+  });
   it.each(["wrong-id", "wrong-state", "extra", "status", "cache"] as const)("treats invalid %s success as unknown, not editable", async (mode) => {
     const c = context(); const session = new PabellonSubmission(c); const reply = response(session.sendId);
     if (mode === "wrong-id") reply.data.sendId = crypto.randomUUID();

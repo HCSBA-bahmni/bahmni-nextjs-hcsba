@@ -14,6 +14,12 @@ function show(extra: Partial<Props> = {}) {
   return { props, ...view, change: (p: Partial<Props>) => view.rerender(node({ ...props, ...p })) };
 }
 describe("Patient information from native HIS registration", () => {
+  it("shows the server-verified ficha instead of the technical HIS identifier", () => {
+    show({ verifiedIdentification: { kind: "ficha", value: "000123" } });
+    expect(screen.getByText("Número de ficha")).toBeInTheDocument();
+    expect(screen.getByText("000123")).toBeInTheDocument();
+    expect(screen.queryByText("QA-1")).not.toBeInTheDocument();
+  });
   it("keeps native identity read-only and offers request-local contact corrections", () => {
     const { props } = show({ issues: ["Falta un dato en Registro."] });
     expect(screen.getByText("QA")).toBeInTheDocument();

@@ -13,6 +13,8 @@ import { ClinicalBlock, ClinicalField } from "./PabellonClinicalBlock";
 import styles from "./PabellonProtocols.module.css";
 import { formatPabellonSourceDate as dateLabel } from "./pabellonDates";
 import { PabellonSnapshotNotices } from "./PabellonSnapshotNotices";
+import { groupPabellonVisits } from "./pabellonVisitGroups";
+import { formatPabellonVisit } from "./pabellonDates";
 
 const labels: Record<string, string> = { normal: "Normal", regularization: "Regularizada", urgency: "Urgencia", unknown: "Origen no determinado" };
 const label = (code: { display: string | null; code: string } | null | undefined) => code?.display || code?.code || "—";
@@ -65,7 +67,14 @@ export function PabellonHistoryControl({ context, section, reportState, autoRequ
   let items: PabellonItem[] = []; let contractError: unknown;
   try { items = mergePabellonPages(query.data?.pages ?? [], source); } catch (error) { contractError = error; }
   const error = query.error ?? contractError;
-  useEffect(() => reportState({ settled: enabled && !query.isPending && !error, empty: enabled && !query.isPending && !error && items.length === 0 }), [enabled, query.isPending, error, items.length, reportState]);
+  const groups = groupPabellonVisits(items, context.visits ?? [], context.visit);
+  const { hasNextPage, isFetching, fetchNextPage } = query;
+  // Complete the paginated read in sequence: an older request may have been
+  // explicitly linked to today's visit. Never leave that visit hidden on page 2.
+  useEffect(() => {
+    if (enabled && hasNextPage && !isFetching && !error) void fetchNextPage({ cancelRefetch: false });
+  }, [enabled, hasNextPage, isFetching, fetchNextPage, error]);
+  useEffect(() => reportState({ settled: enabled && !query.isPending && !query.hasNextPage && !error, empty: enabled && !query.isPending && !query.hasNextPage && !error && items.length === 0 }), [enabled, query.isPending, query.hasNextPage, error, items.length, reportState]);
   const detail = items.find((item) => selected === viewKey + ":" + item.id);
   const protocolItem = items.find((item) => protocolSelection === viewKey + ":" + item.id);
   const newbornItem = items.find((item) => newbornSelection === viewKey + ":" + item.id);
@@ -78,12 +87,15 @@ export function PabellonHistoryControl({ context, section, reportState, autoRequ
     <p>Datos de la solicitud desde su snapshot. Las capturas sin seguimiento operativo no acreditan el estado actual.</p>
     <PabellonRequestLauncher autoOpen={autoRequest} key={viewKey} context={context} source={source} onCreated={() => { void query.refetch({ cancelRefetch: false }); }} />
     <Button label="Actualizar" icon="pi pi-refresh" loading={query.isFetching} disabled={query.isFetching} onClick={refresh} />
-    {!items.length ? <p>Sin solicitudes registradas para el paciente vinculado.</p> : <div className="dashboard-matrix-scroll"><table className="dashboard-matrix"><thead><tr><th>N° solicitud</th><th>Origen</th><th>Especialidad</th><th>Estado según snapshot</th><th>Snapshot</th><th>Detalle</th></tr></thead><tbody>{items.map((item) => <tr key={item.source.system + ":" + item.source.environment + ":" + item.id}>
+    {query.hasNextPage && <p role="status"><i className="pi pi-spin pi-spinner" aria-hidden="true" /> Cargando el resto del historial para completar los grupos de visitas…</p>}
+    {!items.length ? <p>Sin solicitudes registradas para el paciente vinculado.</p> : <div className={styles.visitGroups}>{groups.map(group => <details key={viewKey + ":" + group.key} className={styles.visitGroup} open={group.current || groups.length === 1}>
+      <summary><span className={styles.visitHeading}>{group.current && <strong className={styles.currentVisit}>Visita actual</strong>}{group.key === "unlinked" ? "Sin visita vinculada" : group.visit ? `${group.visit.visitType?.display ?? "Visita"} · ${formatPabellonVisit(group.visit.startDatetime, context.timeZone)}${group.visit.stopDatetime ? " · Cerrada" : " · Activa"}` : "Visita vinculada · detalle no disponible"}</span><span className={styles.visitCount}>{group.items.length} {group.items.length === 1 ? "solicitud" : "solicitudes"}</span></summary>
+      {group.key === "unlinked" && <p className={styles.visitNote}>Estos registros no tienen una visita asociada. No se asignan automáticamente por fecha.</p>}
+      <div className="dashboard-matrix-scroll"><table className="dashboard-matrix"><thead><tr><th>N° solicitud</th><th>Origen</th><th>Especialidad</th><th>Estado según snapshot</th><th>Snapshot</th><th>Detalle</th></tr></thead><tbody>{group.items.map((item) => <tr key={item.source.system + ":" + item.source.environment + ":" + item.id}>
       <td>{item.request?.requestNumber ?? "No disponible"}</td><td>{item.request ? labels[item.request.origin] : "—"}</td><td>{label(item.request?.specialty)}</td><td>{label(item.request?.stateAtSnapshot)}</td>
       <td>{item.requestSnapshot.status === "available" ? "Versión " + item.requestSnapshot.version : item.requestSnapshot.status === "unavailable" ? "No disponible" : "Requiere revisión"}<PabellonSnapshotNotices item={item} /></td>
       <td><span className="dashboard-inline-actions"><Button text icon="pi pi-eye" label="Ver solicitud" disabled={!item.request || query.isFetching} onClick={() => setSelected(viewKey + ":" + item.id)} /><Button text icon="pi pi-file" label="Protocolos" disabled={query.isFetching} onClick={() => setProtocolSelection(viewKey + ":" + item.id)} />{item.newborns && (item.newborns.eligible || item.newborns.records.length > 0) && <Button text icon="pi pi-users" label="Recién nacidos" disabled={query.isFetching} onClick={() => setNewbornSelection(viewKey + ":" + item.id)} />}</span></td>
-    </tr>)}</tbody></table></div>}
-    {query.hasNextPage && <Button label="Cargar más" loading={query.isFetchingNextPage} disabled={query.isFetching} onClick={() => { void query.fetchNextPage({ cancelRefetch: false }); }} />}
+    </tr>)}</tbody></table></div></details>)}</div>}
     <Dialog draggable={false} modal blockScroll maximizable className={styles.dialog} visible={Boolean(detail && !query.isFetching)} header={"Solicitud " + (detail?.request?.requestNumber ?? "")} onHide={() => setSelected(null)} style={{ width: "min(1500px, 96vw)", maxHeight: "94dvh" }}>{detail && <RequestDetail item={detail} />}</Dialog>
     {newbornItem && !query.isFetching && <PabellonNewbornsDialog key={viewKey + ":" + newbornItem.id} item={newbornItem} onHide={() => setNewbornSelection(null)} />}
     {protocolItem && <PabellonProtocolsDialog key={viewKey + ":" + protocolItem.id} source={source} actorUuid={actorUuid} patientUuid={patientUuid} surgeryId={protocolItem.id} onHide={() => setProtocolSelection(null)} />}

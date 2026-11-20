@@ -1,5 +1,13 @@
 .block { margin-block: 1rem; min-width: 0; }
 .detail { min-width: 0; }
+.visitGroups { display: grid; gap: .75rem; margin-top: .8rem; }
+.visitGroup { border: 1px solid var(--surface-border, #c8dfe5); border-radius: .55rem; overflow: hidden; background: var(--surface-card, #fff); }
+.visitGroup > summary { cursor: pointer; padding: .85rem 1rem; background: var(--surface-ground, #f3f8fa); color: var(--text-color, #23424c); font-weight: 600; }
+.visitGroup > summary:focus-visible { outline: 2px solid var(--primary-color, #087b96); outline-offset: -3px; }
+.visitHeading { display: inline-flex; align-items: center; flex-wrap: wrap; gap: .6rem; }
+.currentVisit { color: #fff; background: var(--primary-color, #087b96); border-radius: 1rem; padding: .15rem .6rem; font-size: .85rem; }
+.visitCount { display: inline-block; margin-left: .75rem; font-size: .85rem; color: var(--text-color-secondary, #526b74); }
+.visitNote { margin: .75rem 1rem; font-size: .9rem; }
 .dialog { font-size: 14px; line-height: 1.45; }
 .dialog :global(.p-dialog-title) { font-size: 18px; }
 .dialog :global(.p-dialog-header) { padding: .8rem 1rem; }

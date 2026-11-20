@@ -60,18 +60,28 @@ function Launcher({ context, onCreated, source = QA_PABELLON_SOURCE, compact = f
   const [surgeon, setSurgeon] = useState(emptyPabellonSurgeonDraft);
   const [contactOverrides, setContactOverrides] = useState<PabellonContactOverrides>({});
   const [patientSource, setPatientSource] = useState<string | null>(null);
+  const [identificationKind, setIdentificationKind] = useState<"" | "run" | "passport" | "foreign-id" | "ficha">("");
   const [checkingSelections, setCheckingSelections] = useState(false);
   const [review, setReview] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
-  const [submissionState, setSubmissionState] = useState<{ phase?: PabellonSubmissionPhase; sendId?: string; receipt?: PabellonSubmissionReceipt }>({});
+  const [reviewedReference, setReviewedReference] = useState("");
+  const [absenceReviewed, setAbsenceReviewed] = useState(false);
+  const errorSummary = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (errors.length) {
+      errorSummary.current?.focus({ preventScroll: true });
+      errorSummary.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+    }
+  }, [errors]);
+  const [submissionState, setSubmissionState] = useState<{ phase?: PabellonSubmissionPhase; sendId?: string; receipt?: PabellonSubmissionReceipt; errorCode?: string }>({});
   const session = useRef<PabellonSubmission | null>(null);
   const actionInFlight = useRef(false);
   const reviewInFlight = useRef(false);
   const reviewAbort = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; reviewAbort.current?.abort(); }; }, []);
-  const syncSession = () => setSubmissionState(session.current ? { phase: session.current.phase, sendId: session.current.sendId, receipt: session.current.receipt } : {});
+  const syncSession = () => setSubmissionState(session.current ? { phase: session.current.phase, sendId: session.current.sendId, receipt: session.current.receipt, errorCode: session.current.error?.code } : {});
   const phase = submissionState.phase;
   const busy = phase === "submitting" || phase === "recovering" || checkingSelections;
   const uncertain = phase === "recovery-required";
@@ -103,10 +113,10 @@ function Launcher({ context, onCreated, source = QA_PABELLON_SOURCE, compact = f
     retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false,
   });
   const personas = useQuery({
-    queryKey: ["pabellon-personas-prefill", sourceEnvironment, actorUuid, patientUuid],
+    queryKey: ["pabellon-personas-prefill", sourceEnvironment, actorUuid, patientUuid, identificationKind],
     enabled: sourceEnvironment === "pabellon43-dev" && allowed && visible && !restore && !review && !locked,
     queryFn: async ({ signal }) => {
-      const [data, communes, insurances, sexes, priorities] = await Promise.all([getPabellonPersonasPrefill(patientUuid, signal), loadPabellonSmallCatalogue("communes", signal), loadPabellonSmallCatalogue("insurances", signal), loadPabellonSmallCatalogue("sexes", signal), loadPabellonSmallCatalogue("patient-priorities", signal)]);
+      const [data, communes, insurances, sexes, priorities] = await Promise.all([identificationKind ? getPabellonPersonasPrefill(patientUuid, signal, identificationKind) : getPabellonPersonasPrefill(patientUuid, signal), loadPabellonSmallCatalogue("communes", signal), loadPabellonSmallCatalogue("insurances", signal), loadPabellonSmallCatalogue("sexes", signal), loadPabellonSmallCatalogue("patient-priorities", signal)]);
       return { data, masters: { communes, insurances, sexes, priorities } };
     },
     retry: false, staleTime: 0, gcTime: 0, refetchOnWindowFocus: false, refetchOnReconnect: false,
@@ -182,7 +192,7 @@ function Launcher({ context, onCreated, source = QA_PABELLON_SOURCE, compact = f
     const fields = { ...f.fields };
     if (typeof s.fields.cirujano === "number") fields.cirujano = s.fields.cirujano;
     else fields.nombre_cirujano = s.fields.nombre_cirujano!;
-    return { patientDetails: { ...c.details, ...(selectedPersonas ? { personasDigest: personas.data!.data.digest } : {}) }, clinical: fields };
+    return { patientDetails: { ...c.details, ...(identificationKind ? { identificationKind } : {}), ...(selectedPersonas ? { personasDigest: personas.data!.data.digest } : {}) }, clinical: fields };
   };
   const prepareReview = async () => {
     if (reviewInFlight.current || locked || restore || !formContext) return;
@@ -260,7 +270,7 @@ function Launcher({ context, onCreated, source = QA_PABELLON_SOURCE, compact = f
           <Button type="button" label="Revisar solicitud" icon="pi pi-check" loading={approachTypes.isFetching || patientContact.isFetching || dependencies.isFetching} disabled={approachTypes.isFetching || patientContact.isFetching || !dependencies.isSuccess} onClick={() => { void prepareReview(); }} />}
       </div>}>
       <p role="note" className="warning-banner">{sourceEnvironment === "pabellon43-dev" ? "Pabellón DEV: entorno de desarrollo, no utilizar para atención clínica." : "QA: solo pacientes y datos sintéticos."} La programación se realiza en Pabellón.</p>
-      {errors.length > 0 && <div role="alert" className="error-banner"><ul>{errors.map((error, index) => <li key={index}>{error}</li>)}</ul></div>}
+      {errors.length > 0 && <div ref={errorSummary} tabIndex={-1} role="alert" aria-label="Revise los datos de la solicitud" className="error-banner"><ul>{errors.map((error, index) => <li key={index}>{error}</li>)}</ul></div>}
       {restore ? <div className={styles.grid}>
         <div className={styles.field}><label htmlFor="pabellon-restore-reference">Referencia del envío *</label><InputText id="pabellon-restore-reference" value={reference} onChange={(event) => setReference(event.target.value.trim())} maxLength={36} /></div>
         <div className={styles.field}><label htmlFor="pabellon-restore-visit">Atención original *</label><Dropdown inputId="pabellon-restore-visit" options={visits.map((item) => ({ label: visitLabel(item, context), value: item.uuid }))} value={visitId} onChange={(event) => setVisitId(event.value)} placeholder="Seleccione" /></div>
@@ -269,17 +279,39 @@ function Launcher({ context, onCreated, source = QA_PABELLON_SOURCE, compact = f
         <ClinicalBlock title="Contexto de la nueva solicitud" icon="pi-id-card"><dl className={styles.grid}>
           <ClinicalField title="Paciente actual del HIS">{context.patient.name}</ClinicalField>
           <ClinicalField title="Atención original">{visit ? visitLabel(visit, context) : formContext?.visitUuid}</ClinicalField>
-        </dl><p>El servidor verifica la identidad por RUT y conserva la atención del HIS. La fuente confirmada se guarda solo en la fotografía de esta nueva solicitud.</p></ClinicalBlock>
+        </dl><p>El servidor verifica la identificación del paciente y conserva la atención del HIS. La fuente confirmada se guarda solo en la fotografía de esta nueva solicitud.</p></ClinicalBlock>
         {submissionState.sendId && <ClinicalBlock title="Referencia del envío" icon="pi-link">
           <p>La referencia se conserva automáticamente en este navegador. Si el resultado queda pendiente, vuelva a este paciente con el mismo usuario y pulse «Verificar envío pendiente». No es un número de solicitud.</p>
           <InputText aria-label="Referencia técnica del envío" readOnly value={submissionState.sendId} className={styles.reference} />
           {uncertain && <p role="status">Resultado pendiente de confirmar. No se habilita otro envío. Si no hay recibo todavía, conserve la referencia y solicite revisión antes de crear otra solicitud.</p>}
+          {uncertain && submissionState.errorCode === "SEND_NOT_CONFIRMED" && <div className="warning-banner">
+            <p><strong>Cierre tras revisión de soporte</strong></p>
+            <p>Un recibo ausente no demuestra que no exista una cirugía. Use esta opción únicamente si soporte verificó el envío original y confirmó que no se registró. Se conservará la referencia técnica; no se reenviará ni modificará ninguna solicitud.</p>
+            <label><input type="checkbox" checked={absenceReviewed} onChange={event => setAbsenceReviewed(event.target.checked)} /> Soporte confirmó que este envío no creó una solicitud</label>
+            <div className={styles.field}><label htmlFor="pabellon-reviewed-reference">Escriba la referencia para confirmar el cierre</label><InputText id="pabellon-reviewed-reference" value={reviewedReference} onChange={event => setReviewedReference(event.target.value)} /></div>
+            <Button type="button" outlined label="Cerrar referencia revisada" disabled={busy || !absenceReviewed || reviewedReference !== submissionState.sendId} onClick={() => {
+              try {
+                if (!session.current) throw new Error("No active reference");
+                session.current.closeAfterReviewedAbsence(reviewedReference);
+                session.current = null; syncSession(); setFormContext(null); setVisible(false); setErrors([]); setReview(false); setDirty(false); setAbsenceReviewed(false); setReviewedReference(""); onCreated();
+                void queryClient.invalidateQueries({ queryKey: ["clinical-visits", patientUuid] });
+              } catch { setErrors(["No fue posible cerrar la referencia. Se conserva pendiente para revisión."]); }
+            }} />
+          </div>}
         </ClinicalBlock>}
         {receipt ? <div role="status" className="success-banner"><h3>Solicitud registrada: {receipt.result.requestNumber}</h3><p>Estado inicial: Solicitud ingresada. El resultado fue confirmado por Pabellón.</p></div> :
         uncertain || phase === "recovering" ? null : <>
           {review && <p role="status" className="info-banner">Revise los datos. Todavía no se ha enviado la solicitud.</p>}
           {sourceEnvironment === "pabellon43-dev" && <ClinicalBlock title="Confirmar datos del paciente" icon="pi-id-card">
-            <p>Consultamos Personas por el RUT verificado. Esta operación no modifica Personas ni la ficha del HIS.</p>
+            <p>Consultamos Personas por la identificación verificada. Esta operación no modifica Personas ni la ficha del HIS.</p>
+            {(personas.data?.data.record.identificationKinds?.length ?? 0) > 1 && <div className={styles.field}>
+              <label htmlFor="pabellon-identification-kind">Tipo de identificación para esta solicitud</label>
+              <Dropdown inputId="pabellon-identification-kind" value={identificationKind || personas.data?.data.record.identification?.kind} options={(personas.data?.data.record.identificationKinds ?? []).map(kind => ({ value: kind, label: ({ run: "RUT", passport: "Pasaporte", "foreign-id": "Cédula extranjera", ficha: "Número de ficha" } as const)[kind] }))} disabled={snapshotReadOnly || personas.isFetching} onChange={event => {
+                if (snapshotReadOnly || personas.isFetching || !personas.data?.data.record.identificationKinds?.includes(event.value)) return;
+                setIdentificationKind(event.value); setPatientSource(null); setErrors([]); setDirty(true);
+              }} />
+              <small>Solo identificaciones verificadas del mismo paciente. Cambiar el tipo exige confirmar nuevamente sus datos.</small>
+            </div>}
             {personas.isFetching && <p role="status">Consultando Personas y verificando sus datos…</p>}
             {personas.isError && <p role="alert">{personas.error.message}</p>}
             {personas.data && <>
@@ -310,7 +342,7 @@ function Launcher({ context, onCreated, source = QA_PABELLON_SOURCE, compact = f
           }}
             approachTypes={approachTypes.data} approachError={approachTypes.isError ? "No fue posible verificar los tipos de vía de abordaje." : undefined}
             onRetryApproaches={() => { void approachTypes.refetch({ cancelRefetch: false }); }}
-            patientFields={<PabellonPatientContactFields scopeKey={scope} sourceLabel={selectedPersonas ? "Personas" : "Registro HIS"} patient={selectedContact?.patient ?? context.patient} value={contact} issues={selectedContact?.issues ?? []} overrides={contactOverrides}
+            patientFields={<PabellonPatientContactFields scopeKey={scope} verifiedIdentification={personas.data?.data.record.identification} sourceLabel={selectedPersonas ? "Personas" : "Registro HIS"} patient={selectedContact?.patient ?? context.patient} value={contact} issues={selectedContact?.issues ?? []} overrides={contactOverrides}
               onChange={(patch) => { if (!snapshotReadOnly && patientContact.isSuccess && !patientContact.isFetching) { setContactOverrides((previous) => patchPabellonContact(contactBase, previous, patch)); setDirty(true); } }}
               loading={patientContact.isFetching} error={patientContact.isError} disabled={snapshotReadOnly}
               onRefresh={() => { if (!snapshotReadOnly) { void patientContact.refetch({ cancelRefetch: false }); } }} />}

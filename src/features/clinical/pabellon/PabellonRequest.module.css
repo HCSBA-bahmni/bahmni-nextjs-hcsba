@@ -11,6 +11,7 @@
 @media (max-width: 640px) { .patientGrid { grid-template-columns: minmax(0, 1fr); } }
 .binary legend { font-weight: 600; margin-bottom: .35rem; }
 .field + .field { margin-top: .5rem; }
+.grid > .field + .field, .patientGrid > .field + .field, .preoperativeGrid > .field + .field, .programmingGrid > .field + .field, .bloodGrid > .field + .field { margin-top: 0; }
 .requestArea { padding: .75rem 0; margin-bottom: .75rem; border-bottom: 1px solid var(--surface-border, #d6e3e7); }
 .sidebarRequest { width: 100%; }
 .sidebarRequest > :global(.dashboard-inline-actions) { width: 100%; padding: 0; margin: 0; gap: 0; }
