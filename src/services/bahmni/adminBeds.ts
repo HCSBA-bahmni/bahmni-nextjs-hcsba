@@ -1,9 +1,11 @@
 import { z } from "zod";
-import type { AdminBed, AdminBedLayout, AdminBedTag, AdminBedType, AdminLocation } from "@/features/admin/beds";
+import { BED_COMPLEXITIES, bedComplexityDefinition, isLegacyComplexityType, OPERATIONAL_CONDITION_PREFIX, operationalConditionLabel, type AdminBed, type AdminBedLayout, type AdminBedTag, type AdminBedType, type AdminLocation, type OperationalCondition } from "@/features/admin/beds";
 import { BahmniApiError, bahmniRequest, queryString } from "./http";
 
 const row = z.record(z.string(), z.unknown());
 const list = z.object({ results: z.array(row).default([]) }).loose();
+const BED_TAG_DESCRIPTION_PREFIX = "hcsba.bedTag.description.";
+const OPERATIONAL_CONDITION_METADATA_PREFIX = "hcsba.bedOperationalCondition.";
 
 function object(value: unknown): Record<string, unknown> { return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
 function text(value: unknown): string { return typeof value === "string" ? value : ""; }
@@ -19,7 +21,8 @@ export function normalizeAdminBed(value: unknown): AdminBed | null {
   const uuid = text(bed.bedUuid) || text(bed.uuid);
   if (!uuid) return null;
   const bedType = object(bed.bedType);
-  return { bedUuid: uuid, bedNumber: text(bed.bedNumber) || text(bed.display), rowNumber: Math.max(1, number(source.rowNumber ?? bed.rowNumber, 1)), columnNumber: Math.max(1, number(source.columnNumber ?? bed.columnNumber, 1)), status: text(bed.status), bedType: Object.keys(bedType).length ? { name: text(bedType.name), displayName: text(bedType.displayName) } : undefined };
+  const maps = Array.isArray(bed.bedTagMaps) ? bed.bedTagMaps : Array.isArray(source.bedTagMaps) ? source.bedTagMaps : [];
+  return { bedId: number(bed.bedId ?? bed.id), bedUuid: uuid, bedNumber: text(bed.bedNumber) || text(bed.display), rowNumber: Math.max(1, number(source.rowNumber ?? bed.rowNumber, 1)), columnNumber: Math.max(1, number(source.columnNumber ?? bed.columnNumber, 1)), status: text(bed.status), bedType: Object.keys(bedType).length ? { name: text(bedType.name), displayName: text(bedType.displayName) } : undefined, bedTagMaps: maps.map((value) => { const map = object(value); const tag = object(map.bedTag); return { uuid: text(map.uuid), bedTag: { id: number(tag.id), uuid: text(tag.uuid), name: text(tag.name) } }; }).filter((map) => map.uuid && map.bedTag.id) };
 }
 
 export async function getAdminLocations(): Promise<AdminLocation[]> {
@@ -49,8 +52,8 @@ export async function saveAdminLocation(payload: { uuid?: string; parentLocation
 export async function deleteAdminLocation(uuid: string): Promise<void> { await bahmniRequest(`/ws/rest/v1/admissionLocation/${encodeURIComponent(uuid)}`, { method: "DELETE" }); }
 
 export async function getAdminBedLayout(uuid: string): Promise<AdminBedLayout> {
-  const response = await bahmniRequest(`/ws/rest/v1/admissionLocation/${encodeURIComponent(uuid)}${queryString({ v: "layout" })}`, { schema: row, cache: "no-store" });
-  const mappings = Array.isArray(response.bedLocationMappings) ? response.bedLocationMappings : [];
+  const response = await bahmniRequest(`/ws/rest/v1/admissionLocation/${encodeURIComponent(uuid)}${queryString({ v: "full" })}`, { schema: row, cache: "no-store" });
+  const mappings = Array.isArray(response.bedLayouts) ? response.bedLayouts : Array.isArray(response.bedLocationMappings) ? response.bedLocationMappings : [];
   const beds = mappings.map(normalizeAdminBed).filter((bed): bed is AdminBed => Boolean(bed));
   const ward = normalizeAdminLocation(response.ward);
   return { ward, beds, rows: Math.max(0, ...mappings.map((item) => number(object(item).rowNumber))), columns: Math.max(0, ...mappings.map((item) => number(object(item).columnNumber))) };
@@ -59,6 +62,16 @@ export async function getAdminBedLayout(uuid: string): Promise<AdminBedLayout> {
 export async function saveAdminBedLayout(uuid: string, rows: number, columns: number): Promise<void> { await bahmniRequest(`/ws/rest/v1/admissionLocation/${encodeURIComponent(uuid)}${queryString({ v: "layout" })}`, { method: "POST", body: JSON.stringify({ bedLayout: { row: rows, column: columns } }) }); }
 
 export async function saveAdminBed(payload: { bedUuid?: string; bedNumber: string; bedType: string; row: number; column: number; locationUuid: string }): Promise<void> {
+  if (payload.bedUuid) {
+    const layout = await getAdminBedLayout(payload.locationUuid);
+    const current = layout.beds.find((bed) => bed.bedUuid === payload.bedUuid);
+    if (!current) throw new Error("La cama ya no está en esta sala. Actualice la distribución.");
+    const categorized = current.bedTagMaps.some((map) => BED_COMPLEXITIES.some((item) => item.tagName === map.bedTag.name));
+    const legacyComplexity = isLegacyComplexityType(current.bedType ?? {}) || Boolean(bedComplexityDefinition(current.bedType));
+    if (legacyComplexity && current.bedType?.name !== payload.bedType && !categorized) {
+      throw new Error("Categorice primero la complejidad de esta cama antigua antes de cambiar su tipo. Puede editar su número conservando el tipo anterior.");
+    }
+  }
   await bahmniRequest(`/ws/rest/v1/bed${payload.bedUuid ? `/${encodeURIComponent(payload.bedUuid)}` : ""}`, { method: "POST", body: JSON.stringify({ bedNumber: payload.bedNumber, bedType: payload.bedType, row: payload.row, column: payload.column, locationUuid: payload.locationUuid }) });
 }
 export async function deleteAdminBed(uuid: string): Promise<void> {
@@ -81,8 +94,69 @@ export async function saveAdminBedType(payload: Omit<AdminBedType, "uuid"> & { u
 export async function deleteAdminBedType(uuid: string): Promise<void> { await bahmniRequest(`/ws/rest/v1/bedtype/${encodeURIComponent(uuid)}`, { method: "DELETE" }); }
 
 export async function getAdminBedTags(): Promise<AdminBedTag[]> {
-  const response = await bahmniRequest(`/ws/rest/v1/bedTag${queryString({ v: "full" })}`, { schema: list, cache: "no-store" });
-  return response.results.map((value) => ({ uuid: text(value.uuid), name: text(value.name) })).filter((item) => item.uuid);
+  const [response, settings] = await Promise.all([
+    bahmniRequest(`/ws/rest/v1/bedTag${queryString({ v: "full" })}`, { schema: list, cache: "no-store" }),
+    bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: BED_TAG_DESCRIPTION_PREFIX })}`, { schema: list, cache: "no-store" }),
+  ]);
+  const descriptions = new Map(settings.results.map((setting) => [text(setting.property).slice(BED_TAG_DESCRIPTION_PREFIX.length), text(setting.value)]));
+  return response.results.map((value) => ({ id: number(value.id), uuid: text(value.uuid), name: text(value.name), description: descriptions.get(text(value.uuid)) ?? "" })).filter((item) => item.uuid);
 }
-export async function saveAdminBedTag(payload: { uuid?: string; name: string }): Promise<void> { await bahmniRequest(`/ws/rest/v1/bedTag${payload.uuid ? `/${encodeURIComponent(payload.uuid)}` : ""}`, { method: "POST", body: JSON.stringify({ name: payload.name }) }); }
-export async function deleteAdminBedTag(uuid: string): Promise<void> { await bahmniRequest(`/ws/rest/v1/bedTag/${encodeURIComponent(uuid)}`, { method: "DELETE" }); }
+async function findBedTagDescriptionSetting(tagUuid: string): Promise<Record<string, unknown> | undefined> {
+  const property = `${BED_TAG_DESCRIPTION_PREFIX}${tagUuid}`;
+  const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: property })}`, { schema: list, cache: "no-store" });
+  return response.results.find((setting) => text(setting.property) === property);
+}
+export async function saveAdminBedTag(payload: { uuid?: string; name: string; description: string }): Promise<string> {
+  const saved = await bahmniRequest(`/ws/rest/v1/bedTag${payload.uuid ? `/${encodeURIComponent(payload.uuid)}` : ""}`, { method: "POST", body: JSON.stringify({ name: payload.name }), schema: row });
+  const tagUuid = payload.uuid ?? text(saved.uuid);
+  if (!tagUuid) throw new Error("OpenMRS no devolvió el identificador de la etiqueta de cama.");
+  const property = `${BED_TAG_DESCRIPTION_PREFIX}${tagUuid}`;
+  const setting = await findBedTagDescriptionSetting(tagUuid);
+  await bahmniRequest(`/ws/rest/v1/systemsetting${setting ? `/${encodeURIComponent(text(setting.uuid))}` : ""}`, { method: "POST", body: JSON.stringify({ property, value: payload.description.trim(), description: `Descripción administrativa de la etiqueta de cama ${payload.name}` }) });
+  return tagUuid;
+}
+export async function deleteAdminBedTag(uuid: string): Promise<void> {
+  const setting = await findBedTagDescriptionSetting(uuid);
+  if (setting?.uuid) await bahmniRequest(`/ws/rest/v1/systemsetting/${encodeURIComponent(text(setting.uuid))}`, { method: "DELETE" });
+  await bahmniRequest(`/ws/rest/v1/bedTag/${encodeURIComponent(uuid)}`, { method: "DELETE" });
+}
+export async function addAdminBedTag(bedId: number, bedTagId: number): Promise<void> { await bahmniRequest("/ws/rest/v1/bedTagMap/", { method: "POST", body: JSON.stringify({ bed: { id: bedId }, bedTag: { id: bedTagId } }) }); }
+export async function deleteAdminBedTagMap(uuid: string): Promise<void> { await bahmniRequest(`/ws/rest/v1/bedTagMap/${encodeURIComponent(uuid)}`, { method: "DELETE" }); }
+
+export async function getOperationalConditions(): Promise<OperationalCondition[]> {
+  const [tags, settings] = await Promise.all([
+    getAdminBedTags(),
+    bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: OPERATIONAL_CONDITION_METADATA_PREFIX })}`, { schema: list, cache: "no-store" }),
+  ]);
+  const metadata = new Map(settings.results.map((setting) => {
+    let value: { description?: string; active?: boolean } = {};
+    try { value = JSON.parse(text(setting.value)); } catch { value = {}; }
+    return [text(setting.property).slice(OPERATIONAL_CONDITION_METADATA_PREFIX.length), value] as const;
+  }));
+  return tags.filter((tag) => tag.name.startsWith(OPERATIONAL_CONDITION_PREFIX)).map((tag) => {
+    const value = metadata.get(tag.uuid);
+    return { ...tag, description: value?.description ?? tag.description, label: operationalConditionLabel(tag.name), active: value?.active ?? true };
+  });
+}
+
+export async function saveOperationalCondition(payload: { uuid?: string; name: string; description: string; active: boolean }): Promise<void> {
+  const label = operationalConditionLabel(payload.name).trim();
+  const saved = await bahmniRequest(`/ws/rest/v1/bedTag${payload.uuid ? `/${encodeURIComponent(payload.uuid)}` : ""}`, { method: "POST", body: JSON.stringify({ name: `${OPERATIONAL_CONDITION_PREFIX}${label}` }), schema: row });
+  const uuid = payload.uuid || text(saved.uuid);
+  if (!uuid) throw new Error("OpenMRS no devolvió el identificador de la condición operativa.");
+  const property = `${OPERATIONAL_CONDITION_METADATA_PREFIX}${uuid}`;
+  const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: property })}`, { schema: list, cache: "no-store" });
+  const setting = response.results.find((item) => text(item.property) === property);
+  // Preserve unrelated historical metadata, without exposing it as an assignment rule.
+  let previous: Record<string, unknown> = {};
+  try { const value: unknown = JSON.parse(text(setting?.value)); previous = object(value); } catch { /* No previous metadata. */ }
+  await bahmniRequest(`/ws/rest/v1/systemsetting${setting ? `/${encodeURIComponent(text(setting.uuid))}` : ""}`, { method: "POST", body: JSON.stringify({ property, value: JSON.stringify({ ...previous, description: payload.description.trim(), active: payload.active }), description: `Clasificación administrativa de cama: ${label}` }) });
+}
+
+export async function deleteOperationalCondition(uuid: string): Promise<void> {
+  const property = `${OPERATIONAL_CONDITION_METADATA_PREFIX}${uuid}`;
+  const response = await bahmniRequest(`/ws/rest/v1/systemsetting${queryString({ v: "custom:(uuid,property,value)", q: property })}`, { schema: list, cache: "no-store" });
+  const setting = response.results.find((item) => text(item.property) === property);
+  if (setting?.uuid) await bahmniRequest(`/ws/rest/v1/systemsetting/${encodeURIComponent(text(setting.uuid))}`, { method: "DELETE" });
+  await deleteAdminBedTag(uuid);
+}
