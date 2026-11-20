@@ -19,3 +19,4 @@
 .admin-bed-status{display:inline-flex;width:max-content;align-items:center;gap:.3rem;padding:.2rem .45rem;border-radius:1rem;background:#e7f6ed;color:#176b36;font-size:.68rem!important;font-weight:750}.admin-bed-status.is-occupied{background:#fff0ef;color:#a0271e}.admin-bed-status.is-blocked{background:#fff5df;color:#7a4c00}.admin-bed-status .pi{color:inherit!important;font-size:.68rem!important}.admin-bed-cell.is-occupied{border-color:#e6b4b0;background:#fff8f7}.admin-bed-cell footer .p-button:disabled{opacity:.45;cursor:not-allowed}
 .admin-beds-hero h1{margin:0;font-size:1.5rem}
 .app-shell .admin-beds-hero>div>div>span,.app-shell .admin-beds-hero>a{color:#fff}
+.app-shell .admin-bed-cell>div>span,.app-shell .admin-complexity-badge.is-unclassified{color:#36575b}
