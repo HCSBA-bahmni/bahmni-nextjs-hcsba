@@ -91,7 +91,7 @@ async function mockAdmin(page: Page, manageLocations = true, bedStatus = "AVAILA
 test("Beds replica ubicación, sala, layout, tipos y etiquetas en español", async ({ page }) => {
   await mockAdmin(page);
   await page.goto("/bahmni/admin/beds");
-  await expect(page.getByRole("heading", { name: "Camas", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Administración de camas", level: 1 })).toBeVisible();
   await expect(page.getByRole("tab", { name: /Ubicaciones de admisión/ })).toBeVisible();
   await page.getByRole("button", { name: /Urgencia/ }).first().click();
   await expect(page.getByRole("button", { name: "Eliminar", exact: true })).toHaveCount(0);
