@@ -23,7 +23,8 @@ import { normalizeConditionHistories } from "./conditions";
 import { groupLabAccessions, isAbnormalLabResult, labResultFor, labTabularModel, normalRange, type LabRecord } from "./labResults";
 import { differenceInMonths, parseObservationGraphReference, type GraphReferenceLine } from "./observationGraph";
 import { mapRadiologyDocuments } from "./radiologyDocuments";
-import { resolveClinicalNavigationLinks } from "./navigationLinks";
+import { resolveClinicalNavigationLinks, pabellonDashboardHref } from "./navigationLinks";
+import { hasPrivilege } from "@/services/bahmni/auth";
 import { AllergyHeaderAction } from "./allergies/AllergyHeaderAction";
 import { AllergyDashboardControl } from "./allergies/AllergyDashboardControl";
 import { normalizeDashboardDiagnoses } from "./diagnosisRecords";
@@ -36,6 +37,7 @@ import { IpdTreatmentScheduleDialog } from "@/features/ipd/ipd-dashboard/IpdTrea
 import { resolveTreatmentScheduleAction, type TreatmentScheduleAction, type TreatmentScheduleConfig } from "@/features/ipd/ipd-dashboard/treatmentSchedule";
 import { getPrnScheduledOrderUuids } from "@/services/bahmni/ipdTreatments";
 import { hasActiveAdmission, registrationVisitUrl, resolveVisitManagementAction } from "./visitManagement";
+import { PabellonHistoryControl } from "./pabellon/PabellonHistoryControl";
 
 export interface DashboardControlAdapter {
   type: string;
@@ -198,6 +200,8 @@ function NavigationControl(props: DashboardControlProps) {
   const { t } = useTranslation();
   const { patient, visit } = props.context;
   const links = resolveClinicalNavigationLinks(props.section.raw, patient.uuid, visit?.uuid);
+  const pabellonTab = props.context.tabs.find(tab => tab.sections.some(section => section.type === "pabellonHospitalario" && hasPrivilege(props.context.user, section.requiredPrivilege)));
+  if (pabellonTab) links.push({ name: "pabellon", label: "Pabellón hospitalario", href: pabellonDashboardHref(patient.uuid, visit?.uuid, pabellonTab.id), internal: true });
   useReport(props, false, null, links.length);
   const label = (link: (typeof links)[number]) => String(t(link.label, { defaultValue: link.name === "bedManagement" ? "Gestión de cama" : link.label }));
   return <nav className="clinical-links" aria-label="Acciones del paciente">{links.map((link) => link.internal ? <Link key={`${link.name}-${link.href}`} href={link.href}>{label(link)}</Link> : <a key={`${link.name}-${link.href}`} href={link.href} target="_blank" rel="noreferrer">{label(link)}</a>)}</nav>;
@@ -780,6 +784,7 @@ function UnsupportedControl(props: DashboardControlProps) {
 }
 
 const registryEntries: DashboardControlAdapter[] = [
+  { type: "pabellonHospitalario", Component: PabellonHistoryControl, supportsExpanded: true, capabilities: ["read"] },
   { type: "patientInformation", Component: PatientInformationControl, supportsExpanded: false, capabilities: ["read"] },
   { type: "visits", Component: VisitsControl, supportsExpanded: true, capabilities: ["read", "navigate"] },
   { type: "navigationLinksControl", Component: NavigationControl, supportsExpanded: false, capabilities: ["navigate"] },

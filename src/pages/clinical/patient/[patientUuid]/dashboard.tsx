@@ -12,7 +12,7 @@ import { useAuth } from "@/features/auth/AuthContext";
 import { ClinicalDashboardSections } from "@/features/clinical/ClinicalDashboardSections";
 import { dashboardControlTypes } from "@/features/clinical/DashboardControlRegistry";
 import { isDashboardControlVisible } from "@/features/clinical/dashboardVisibility";
-import { activeConsultationRoute, patientAdtUrl } from "@/features/clinical/navigationLinks";
+import { activeConsultationRoute, patientBedsHref } from "@/features/clinical/navigationLinks";
 import { getUnopenedDashboardTabs, getVisibleDashboardTabs } from "@/features/clinical/clinicalDashboardTabs";
 import { toClinicalPatientContext } from "@/features/clinical/patientContext";
 import { useClinicalTranslations } from "@/features/clinical/useClinicalTranslations";
@@ -23,6 +23,8 @@ import { getVisitLocation } from "@/services/bahmni/metadata";
 import { getPatientProfile } from "@/services/bahmni/patients";
 import { getPatientVisits, getVisitSummary } from "@/services/bahmni/visits";
 import { getRuntimeConfig } from "@/services/runtimeConfig";
+import { PabellonRequestLauncher } from "@/features/clinical/pabellon/PabellonRequestLauncher";
+import { DEV_PABELLON_SOURCE, QA_PABELLON_SOURCE } from "@/services/bahmni/pabellon";
 
 export default function ClinicalDashboardPage() {
   useClinicalTranslations();
@@ -59,6 +61,8 @@ export default function ClinicalDashboardPage() {
   const loading = profile.isLoading || dashboard.isLoading || visits.isLoading || visitLocation.isLoading || visitSummary.isLoading;
   const consultationEnabled = runtimeConfig.data?.features.clinicalConsultationEnabled === true;
   const canAccessAdt = hasPrivilege(user, "app:adt");
+  const pabellonSection = tabs.flatMap(tab => tab.sections).find(section => section.type === "pabellonHospitalario" && hasPrivilege(user, section.requiredPrivilege));
+  const pabellonSource = pabellonSection?.config.source === "pabellon43-dev" ? DEV_PABELLON_SOURCE : pabellonSection?.config.source === "qa-isolated" ? QA_PABELLON_SOURCE : undefined;
   const dashboardScrollRef = useRef<HTMLDivElement>(null);
   const dashboardMenuRef = useRef<Menu>(null);
   const [openedTabIds, setOpenedTabIds] = useState<string[]>([]);
@@ -143,7 +147,7 @@ export default function ClinicalDashboardPage() {
           <div><dt>Visita</dt><dd>{selectedVisit?.visitType?.display ?? selectedVisit?.visitType?.name ?? "Sin visita activa"}</dd></div>
           <div><dt>Estado</dt><dd>{selectedVisit ? selectedVisit.stopDatetime ? "Visita cerrada" : "Visita activa" : "Sin visita abierta"}</dd></div>
         </dl>
-        <div className="toolbar patient-context-actions"><Button outlined label="Volver a búsqueda" icon="pi pi-users" onClick={() => void router.push("/clinical")} />{canAccessAdt && selectedVisit && <Button outlined label="Camas" icon="pi pi-building" aria-label="Ir al módulo de camas del paciente" onClick={() => void router.push(patientAdtUrl(patientUuid, selectedVisit.uuid))} />}<Button label="Consulta" icon="pi pi-file-edit" disabled={!consultationEnabled} tooltip={!consultationEnabled ? "Consulta permanece protegida hasta completar su certificación." : undefined} onClick={() => void router.push(activeConsultationRoute(patientUuid, activeVisit?.uuid, enrollmentUuid))} /></div>
+        <div className="toolbar patient-context-actions"><Button outlined label="Volver a búsqueda" icon="pi pi-users" onClick={() => void router.push("/clinical")} />{canAccessAdt && selectedVisit && <Button outlined label="Camas" icon="pi pi-building" aria-label="Ir al módulo de camas del paciente" onClick={() => void router.push(patientBedsHref(patientUuid, selectedVisit.uuid, currentTab.id))} />}{pabellonSource && <PabellonRequestLauncher compact context={dashboardContext} source={pabellonSource} onCreated={() => {}} />}<Button label="Consulta" icon="pi pi-file-edit" disabled={!consultationEnabled} tooltip={!consultationEnabled ? "Consulta permanece protegida hasta completar su certificación." : undefined} onClick={() => void router.push(activeConsultationRoute(patientUuid, activeVisit?.uuid, enrollmentUuid))} /></div>
       </section>
       {pendingConsultation && !consultationEnabled && <p role="status" className="warning-banner">Se conservó el paciente y la visita. Consulta permanece protegida hasta terminar su certificación funcional.</p>}
       <nav className="clinical-tabs" aria-label="Dashboards clínicos">

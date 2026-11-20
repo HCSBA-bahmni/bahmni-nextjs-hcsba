@@ -8,6 +8,12 @@ export interface ClinicalNavigationLink {
   title?: string;
 }
 
+export function pabellonDashboardHref(patientUuid: string, visitUuid: string | undefined, tabId: string) {
+  const query = new URLSearchParams({ tab: tabId });
+  if (visitUuid) query.set("visitUuid", visitUuid);
+  return `/clinical/patient/${encodeURIComponent(patientUuid)}/dashboard?${query}`;
+}
+
 const standardLinks = [
   { name: "home", label: "Inicio", url: "/home", internal: true },
   { name: "visit", label: "Visita", url: "/clinical/patient/{{patientUuid}}/visit/{{visitUuid}}", internal: true },
@@ -19,6 +25,20 @@ const standardLinks = [
 
 export function patientAdtUrl(patientUuid: string, visitUuid: string) {
   return `/adt/patient/${encodeURIComponent(patientUuid)}/visit/${encodeURIComponent(visitUuid)}`;
+}
+
+export function patientBedsHref(patientUuid: string, visitUuid?: string, tab?: string) {
+  const query = new URLSearchParams({ source: "clinical" });
+  if (visitUuid) query.set("visitUuid", visitUuid);
+  if (tab) query.set("clinicalTab", tab);
+  return `/bedmanagement/patient/${encodeURIComponent(patientUuid)}?${query}`;
+}
+export function bedsBackHref(patientUuid: string | undefined, source: unknown, visitUuid?: string, tab?: string) {
+  if (source !== "clinical" || !patientUuid) return "/bedmanagement";
+  const query = new URLSearchParams();
+  if (visitUuid) query.set("visitUuid", visitUuid);
+  if (tab) query.set("tab", tab);
+  return `/clinical/patient/${encodeURIComponent(patientUuid)}/dashboard${query.size ? "?" + query : ""}`;
 }
 
 export interface ProgramConsultationContext {

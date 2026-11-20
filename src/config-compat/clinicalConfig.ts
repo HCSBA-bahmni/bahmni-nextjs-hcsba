@@ -63,6 +63,7 @@ export function parseClinicalDashboardConfig(source: JsonObject): ClinicalDashbo
 }
 
 export const supportedClinicalSectionTypes = new Set([
+  "pabellonHospitalario",
   "patientInformation", "visits", "observation", "vitals", "flowSheet", "observationGraph",
   "obsToObsFlowSheet", "historyAndExamination", "diagnosis", "allergies", "conditionsList",
   "programs", "navigationLinksControl", "forms", "formsV2React", "disposition", "treatment",
