@@ -59,15 +59,15 @@ HCSBA requiere permanentemente la administración de ubicaciones y salas. Por es
 El destino de la tarjeta Beds se controla exclusivamente desde `openmrs/apps/admin/extension.json` en `standard-config-HCSBA`:
 
 - `/bahmni/admin/beds` activa la implementación Next.
-- `/openmrs/owa/bedmanagement/admissionLocations.html` abre literalmente la OWA legacy. Los query string y fragmentos configurados también se conservan.
+- La compatibilidad vigente también normaliza `/openmrs/owa/bedmanagement/admissionLocations.html` a `/bahmni/admin/beds`. La configuración servida en `.225` conserva esa URL histórica; se verificó que la tarjeta Beds conduce a Next.
 
-Rollback independiente de Beds:
+Reversión de una entrega de Beds:
 
-1. Restaurar `/openmrs/owa/bedmanagement/admissionLocations.html` como URL de Beds en `openmrs/apps/admin/extension.json` de `standard-config-HCSBA`.
-2. Desplegar únicamente el cambio de configuración; no se modifica ni se redespliega Next y no es necesario desactivar Audit Log.
-3. Verificar desde `/bahmni/admin` que la tarjeta Beds abre literalmente la OWA.
+1. Conservar las imágenes anteriores de frontend/configuración, los overlays efectivos y sus hashes antes del corte.
+2. Restaurar conjuntamente los servicios del alcance mediante el script y el manifest de la entrega. Conservar catálogo, asociaciones e historial Liquibase; no ejecutar un DOWN destructivo.
+3. Verificar salud, configuración servida y acceso desde Administración después de restaurar.
 
-Para reactivar Beds Next, volver a configurar la URL explícita `/bahmni/admin/beds` y desplegar la configuración.
+Volver a escribir la URL histórica en la configuración no activa por sí solo la OWA: el adaptador actual la normaliza a Next. Un retorno a la OWA requiere un corte explícito del adaptador o del proxy y su propia validación. No afirmar ese retorno a partir de un cambio de JSON solamente.
 
 ## Verificación
 
