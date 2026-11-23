@@ -26,6 +26,7 @@ import {
 } from "@/features/ipd/care-view/domain";
 import type { CareTask, CareTaskFilter, CareTimeWindow, CareViewPatient, CareViewPatientPage } from "@/features/ipd/care-view/types";
 import { IpdModuleNavigation } from "@/features/ipd/IpdModuleNavigation";
+import { BedPabellonDialog } from "./BedPabellonDialog";
 import { useIpdTranslations } from "@/features/ipd/useIpdTranslations";
 import { audit } from "@/services/bahmni/audit";
 import { hasPrivilege } from "@/services/bahmni/auth";
@@ -69,6 +70,7 @@ function TaskCard({ task, use24Hour }: { task: CareTask; use24Hour: boolean }) {
 }
 
 export function CareView() {
+  const [pabellonPatient, setPabellonPatient] = useState<CareViewPatient>();
   useIpdTranslations();
   const { t } = useTranslation();
   const { user, provider } = useAuth();
@@ -310,6 +312,7 @@ export function CareView() {
                     <th scope="row"><div className="care-patient">
                       <div className="care-patient-bed"><i className="pi pi-building" /><strong>{patient.bedNumber ?? "Sin cama"}</strong></div>
                       <Link href={careViewPatientDashboardHref(patient)}>{patient.name}</Link>
+                      <Button text size="small" icon="pi pi-briefcase" label="Pabellón" tooltip="Solicitudes, protocolos y recién nacidos" onClick={() => setPabellonPatient(patient)} />
                       <small>{[patient.identifier, patient.gender, patient.age !== undefined ? `${patient.age} años` : undefined].filter(Boolean).join(" · ")}</small>
                       {patient.hasNewTreatments && <Link className="care-alert-link" href={careViewPatientDashboardHref(patient)}><i className="pi pi-bell" /> Tratamientos nuevos</Link>}
                       {patientPrevious.length > 0 && <Link className="care-alert-link warning" href={careViewPatientDashboardHref(patient)}><i className="pi pi-exclamation-triangle" /> {patientPrevious.length} pendiente{patientPrevious.length === 1 ? "" : "s"} anterior{patientPrevious.length === 1 ? "" : "es"}</Link>}
@@ -330,5 +333,6 @@ export function CareView() {
         </>}
       </section>
     </>}
+    {pabellonPatient && <BedPabellonDialog key={pabellonPatient.uuid + ":" + (pabellonPatient.visitUuid ?? "")} patientUuid={pabellonPatient.uuid} visitUuid={pabellonPatient.visitUuid} onHide={() => setPabellonPatient(undefined)} />}
   </AppShell></AuthGuard>;
 }

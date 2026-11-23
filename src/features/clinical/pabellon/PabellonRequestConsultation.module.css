@@ -1,0 +1,29 @@
+.consultation { font-size:14px; }
+.groups { display:grid; gap:1rem; }
+.row { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:1rem; align-items:start; }
+.cell { min-width:0; }
+.consultation .cell > div { margin:0; }
+.consultation label, .consultation legend { line-height:1.35; min-height:1.2rem; padding:0; margin:0 0 .4rem; font-size:13px; font-weight:600; }
+.consultation :global(.p-inputtext) { min-height:44px; }
+.consultation .cell :global(.p-inputtextarea) { resize:none; }
+.consultation .cell :global(.p-selectbutton) { display:inline-flex; min-height:44px; }
+.consultation .cell small { margin-top:.35rem; }
+@media(max-width:900px) { .row { grid-template-columns:repeat(2,minmax(0,1fr)); } .row > .cell { grid-column:span 1!important; } .row > .cell:has(textarea) { grid-column:1/-1!important; } }
+@media(max-width:640px) { .row { grid-template-columns:minmax(0,1fr); } .row > .cell { grid-column:1/-1!important; } }
+.consultation :global(.p-disabled), .consultation :global(.p-component:disabled) { opacity:1; }
+.consultation :global(.p-inputtext), .consultation :global(.p-inputtextarea) { width:100%; background:var(--surface-0,#fff); color:var(--text-color,#23424c); }
+.consultation label { display:block; font-weight:600; font-size:13px; margin-bottom:.3rem; }
+.grid, .programming { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; align-items:start; }
+.assessment { display:grid; grid-template-columns:minmax(0,3fr) minmax(120px,1fr); gap:1rem; margin-bottom:1rem; }
+.full { grid-column:1/-1; min-width:0; }
+.consultation fieldset small { display:block; margin-top:.35rem; color:var(--text-color-secondary,#526b74); }
+/* Override the editable form's sibling margins only inside the read-only grid. */
+.row { align-items:start; }
+.cell > div { display:grid; gap:.35rem; }
+.consultation .cell label { margin:0; }
+.consultation .cell legend { margin:0 0 .35rem; }
+.cell :global(input.p-inputtext), .cell :global(textarea.p-inputtextarea) { box-sizing:border-box; min-height:44px; line-height:22px; padding:10px 12px; }
+.cell :global(input.p-inputtext) { height:44px; }
+.cell :global(textarea.p-inputtextarea) { height:auto; }
+@media(max-width:900px) { .grid,.programming { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .grid,.programming,.assessment { grid-template-columns:minmax(0,1fr); } }

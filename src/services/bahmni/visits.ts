@@ -16,11 +16,11 @@ export async function getActiveVisits(patientUuid: string): Promise<Visit[]> {
 }
 
 export async function getPatientVisits(patientUuid: string, includeInactive = true): Promise<Visit[]> {
-  return (await bahmniRequest(`/ws/rest/v1/visit${queryString({ patient: patientUuid, includeInactive, v: "custom:(uuid,visitType,startDatetime,stopDatetime,location,encounters:(uuid))" })}`, { schema: list })).results as Visit[];
+  return (await bahmniRequest(`/ws/rest/v1/visit${queryString({ patient: patientUuid, includeInactive, v: "custom:(uuid,visitType,startDatetime,stopDatetime,location,encounters:(uuid))" })}`, { schema: list, cache: "no-store" })).results as Visit[];
 }
 
-export async function getVisitDetails(visitUuid: string): Promise<Visit> {
-  return await bahmniRequest(`/ws/rest/v1/visit/${encodeURIComponent(visitUuid)}${queryString({ v: "custom:(uuid,visitType,startDatetime,stopDatetime,location,encounters:(uuid,encounterDatetime,provider:(uuid,display),encounterType:(uuid,display)))" })}`, { schema: visit }) as Visit;
+export async function getVisitDetails(visitUuid: string, signal?: AbortSignal): Promise<Visit> {
+  return await bahmniRequest(`/ws/rest/v1/visit/${encodeURIComponent(visitUuid)}${queryString({ v: "custom:(uuid,voided,patient:(uuid),visitType,startDatetime,stopDatetime,location,encounters:(uuid,encounterDatetime,provider:(uuid,display),encounterType:(uuid,display)))" })}`, { schema: visit, cache: "no-store", signal }) as Visit;
 }
 
 export async function startVisit(patientUuid: string, visitTypeUuid: string, locationUuid: string): Promise<Visit> {

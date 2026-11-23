@@ -11,6 +11,9 @@ import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { useAuth } from "@/features/auth/AuthContext";
 import { BedIcon } from "./BedIcon";
+import { BedPabellonDialog } from "./BedPabellonDialog";
+import { BedPabellonAccess } from "./BedPabellonAccess";
+import { bedsBackHref } from "@/features/clinical/navigationLinks";
 import { IpdModuleNavigation } from "./IpdModuleNavigation";
 import { BED_STATUSES, bedContainsPatient, bedHasOccupant, bedOccupantLabel, bedStatusLabel, canAssignBed, canChangeBedStatus, wardGridColumnCount } from "./domain";
 import { buildWardBedListRows, compareWardListValues, configuredWardListHeadings, wardListValue } from "./wardList";
@@ -84,6 +87,8 @@ const coreWardListColumns = [
 
 export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
   const router = useRouter();
+  const [pabellonPatient, setPabellonPatient] = useState<string>();
+  const [pabellonRequestOnly, setPabellonRequestOnly] = useState(false);
   const { user, provider, location } = useAuth();
   const client = useQueryClient();
   const allowed = hasPrivilege(user, "app:adt");
@@ -151,7 +156,9 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
   const visitResolution = visits.data && config.data?.defaultVisitType
     ? resolveIpdVisit(visits.data, config.data.defaultVisitType, Boolean(assigned.data))
     : { orphanedBed: false };
+  const requestedVisitUuid = typeof router.query.visitUuid === "string" ? router.query.visitUuid : undefined;
   const activeVisit = visitResolution.visit;
+  const navigationVisit = requestedVisitUuid ? visits.data?.find(visit => visit.uuid === requestedVisitUuid && visit.voided !== true) : activeVisit;
   const assignedHere = Boolean(assigned.data?.bedId && assigned.data.bedId === selectedBed?.bedId);
   const possibleActions = useMemo<AdtAction[]>(() => {
     if (!patientUuid || visitResolution.issue) return [];
@@ -316,18 +323,21 @@ export function BedManagementWorkspace({ patientUuid, bedId }: Props) {
     {allowed && <><IpdModuleNavigation activeMode={administrativeMode ? "beds" : "patients"} /><div className="ipd-workspace">
       <aside className="panel ipd-context">
         <header className="ipd-context-header"><span className="ipd-context-avatar" aria-hidden="true">{patientUuid ? patient.name.charAt(0).toLocaleUpperCase() : <BedIcon />}</span><div><small>{patientUuid ? "Paciente seleccionado" : "Modo administrativo"}</small><h2>{patientUuid ? patient.name : "Gestión de cama"}</h2>{patientUuid && <span>{patient.identifier}</span>}</div></header>
+        <Button outlined className="ipd-return-action" label={router.query.source === "clinical" && patientUuid ? "Volver a Clínico" : "Volver a pacientes de Camas"} icon="pi pi-arrow-left" onClick={() => void router.push(bedsBackHref(patientUuid, router.query.source, requestedVisitUuid ?? activeVisit?.uuid, typeof router.query.clinicalTab === "string" ? router.query.clinicalTab : undefined))} />
         {patientUuid ? <><dl className="ipd-context-details"><dt>Edad / sexo</dt><dd>{patient.age} / {patient.gender}</dd><dt>Cama actual</dt><dd><span className={assigned.data ? "ipd-current-bed" : "ipd-no-bed"}>{assigned.data?.bedNumber ?? "Sin cama"}</span></dd></dl>
           {visitResolution.issue && <div className="warning-banner" role="alert"><p>{visitResolution.issue}</p>{visitResolution.orphanedBed && canAssign && <Button outlined severity="danger" icon="pi pi-wrench" label="Liberar cama inconsistente" onClick={() => setRepairOpen(true)} />}</div>}
           <div className="ipd-actions">{possibleActions.map((item) => <Button key={item} disabled={!canAssign || execute.isPending || (item !== "discharge" && (!selectedBed || (item === "transfer" && assignedHere)))} label={item === "admit" ? "Admitir" : item === "transfer" ? "Transferir" : "Dar de alta"} severity={item === "discharge" ? "danger" : undefined} onClick={() => { setConvertVisit(true); setAction(item); }} />)}
           {config.data?.oirsApiBaseUrl && activeVisit && assigned.data && <Button outlined icon="pi pi-users" label="Paciente acostado / visitas" disabled={!patient.runIdentifier} title={patient.runIdentifier ? undefined : "OIRS requiere que el paciente tenga RUN"} onClick={() => setOirsOpen(true)} />}</div>
-          {activeVisit && <Link className="ipd-dashboard-link" href={`/bedmanagement/patient/${patientUuid}/visit/${activeVisit.uuid}/dashboard`}><i className="pi pi-chart-bar" aria-hidden="true" /> Abrir dashboard IPD <i className="pi pi-arrow-right" aria-hidden="true" /></Link>}
+          {navigationVisit && <Link className="ipd-dashboard-link" href={`/bedmanagement/patient/${patientUuid}/visit/${navigationVisit.uuid}/dashboard`}><i className="pi pi-chart-bar" aria-hidden="true" /> Abrir dashboard IPD <i className="pi pi-arrow-right" aria-hidden="true" /></Link>}
         </> : <p className="ipd-context-empty">Seleccione una cama para consultar sus datos, cambiar su estado o administrar sus tags.</p>}
         <section className={`ipd-selected-bed ${selectedBed ? `ipd-selected-bed-${selectedBed.status.toLowerCase()}` : "is-empty"}`}><header><span className="ipd-selected-bed-icon"><BedIcon /></span><div><small>Cama seleccionada</small><h3>{selectedBed?.bedNumber ?? "Ninguna"}</h3></div></header><dl><dt>Sala</dt><dd>{ward.data?.name ?? "—"}</dd><dt>Habitación</dt><dd>{room?.name ?? "—"}</dd><dt>Estado</dt><dd>{selectedBed ? <span className={`ipd-status-pill ipd-status-${selectedBed.status.toLowerCase()}`}>{bedStatusLabel(selectedBed.status)}</span> : "—"}</dd><dt>Tags</dt><dd>{selectedBed?.bedTagMaps.map((map) => map.bedTag.name).join(", ") || "—"}</dd></dl>
           {canEdit && selectedBed && canChangeBedStatus(selectedBed) && <Dropdown aria-label="Estado de cama" value={selectedBed.status === "OCCUPIED" ? undefined : selectedBed.status} options={editableBedStatusOptions} optionLabel="label" optionValue="value" disabled={statusMutation.isPending} onChange={(event) => statusMutation.mutate(event.value as "AVAILABLE" | "RESERVED" | "BLOCKED")} placeholder="Cambiar estado" />}
           {canEdit && selectedBed && <Button outlined icon="pi pi-tags" label="Editar tags" onClick={() => setTagsOpen(true)} />}
+          {(patientUuid || selectedBed?.patient?.uuid) && <BedPabellonAccess key={patientUuid ?? selectedBed?.patient?.uuid} patientUuid={(patientUuid ?? selectedBed?.patient?.uuid)!} onOpen={requestOnly => { setPabellonRequestOnly(requestOnly); setPabellonPatient(patientUuid ?? selectedBed?.patient?.uuid); }} />}
         </section>
       </aside>
       <section className="panel ipd-bed-map">
+        {pabellonPatient && <BedPabellonDialog key={pabellonPatient} patientUuid={pabellonPatient} requestOnly={pabellonRequestOnly} visitUuid={pabellonPatient === patientUuid ? requestedVisitUuid ?? activeVisit?.uuid : undefined} onHide={() => setPabellonPatient(undefined)} />}
         <header className="ipd-map-header"><div className="ipd-map-heading"><span><BedIcon /></span><div><small>Gestión de camas</small><h2>Mapa operativo</h2><p>Seleccione una sala, habitación y cama para continuar.</p></div></div><div className="ipd-map-toolbar"><Button outlined icon={viewMode === "grid" ? "pi pi-list" : "pi pi-th-large"} label={viewMode === "grid" ? "Vista lista" : "Vista grilla"} onClick={() => setViewMode((current) => current === "grid" ? "list" : "grid")} />{viewMode === "list" && config.data?.wardListPrintEnabled && <Button outlined icon="pi pi-print" label="Imprimir" onClick={() => window.print()} />}</div></header>
         {wards.isError && <p className="error-banner">No fue posible cargar las salas.</p>}
         <div className="ipd-ward-tabs" role="tablist" aria-label="Salas de hospitalización">{wards.data?.map((item) => <button type="button" role="tab" aria-selected={inferredWardUuid === item.ward.uuid} key={item.ward.uuid} className={inferredWardUuid === item.ward.uuid ? "selected" : ""} onClick={() => { setWardUuid(item.ward.uuid); setRoomName(undefined); setSelectedBedId(undefined); }}>{item.ward.name ?? item.ward.display}</button>)}</div>

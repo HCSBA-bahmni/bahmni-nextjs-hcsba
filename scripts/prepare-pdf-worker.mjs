@@ -1,0 +1,13 @@
+import { createRequire } from "node:module";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { dirname, join } from "node:path";
+const require = createRequire(import.meta.url);
+const version = require("pdfjs-dist/package.json").version;
+if (version !== "6.4.299") throw new Error("PDFJS_WORKER_VERSION_MISMATCH");
+const source = require.resolve("pdfjs-dist/build/pdf.worker.min.mjs");
+const bytes = await readFile(source);
+const target = join(process.cwd(), "public", "vendor", "pdfjs", version, "pdf.worker.min.mjs");
+await mkdir(dirname(target), { recursive: true });
+await writeFile(target, bytes);
+console.log(`PDF.js local worker ${version}: ${createHash("sha256").update(bytes).digest("hex")}`);

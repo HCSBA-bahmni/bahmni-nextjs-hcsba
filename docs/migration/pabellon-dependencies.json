@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "reviewDate": "2026-11-23",
+  "purpose": "Fuentes revisadas para PR18; no es un manifest de despliegue ni certificación de esquema.",
+  "frontendBaseline": "85929920ca422ed3c93c15612249befda424928d",
+  "mainIntegrated": "4237064bae73843f1d3310fac6edaff9b74b4914",
+  "dependencies": [
+    {
+      "repository": "HCSBA-bahmni/standard-config-HCSBA",
+      "pullRequest": 5,
+      "revision": "a7180a411f1656961d519af46dd28afc3af33f6b",
+      "source": "pabellon43-dev"
+    },
+    {
+      "repository": "HCSBA-bahmni/bahmni-docker-HCSBA",
+      "pullRequest": 3,
+      "revision": "89068c2b85014fae1b0391d10133e04683dfa4a5"
+    },
+    {
+      "repository": "HCSBA-bahmni/integracion-pabellon-his",
+      "pullRequest": 1,
+      "revision": "2d399e80106a8639797f41709350bc08ffc8f545",
+      "migrationTarget": "Base privada nueva de integración; no aplicar sobre bases existentes.",
+      "migrations": [
+        {
+          "path": "migrations/001_patient_link.sql",
+          "sha256": "9b7eb30d89bbbf5d5e5c737fcb751354216226034de56d0399a8f20aaac8c635"
+        },
+        {
+          "path": "migrations/002_actor_nonce.sql",
+          "sha256": "801c08f7367f2f4b5be4cf4d9b115148526f49333f220c6af84f0099ef3ccb43"
+        },
+        {
+          "path": "migrations/003_clinical_read_audit.sql",
+          "sha256": "caf9c2b3b8fa279442118c233e2948aa74efc3b0e773fb86fc378f3acfaa8437"
+        },
+        {
+          "path": "migrations/004_professional_link.sql",
+          "sha256": "807c384e1501cdf96cab9aae1f618ad29bd6126a1990f8067235deba3a34e754"
+        },
+        {
+          "path": "migrations/004_protocol_read_audit.sql",
+          "sha256": "9e515dbb187ba23299a9f3bd66e1df410d3bfce198765f1f3326d2f551766ead"
+        },
+        {
+          "path": "migrations/005_request_create_audit.sql",
+          "sha256": "7370331de4bfbf8ae561f7d0f62ce7ab6b8451c8c2235c5f9d42de41bb298272"
+        },
+        {
+          "path": "migrations/006_patient_prefill_audit.sql",
+          "sha256": "e6f34cca49a1ff330096e0a7635b7653cd5a87ad27ba5f8cc6afc6f9c6217a9a"
+        },
+        {
+          "path": "migrations/007_request_care_link.sql",
+          "sha256": "c26ccf1a887070f4c40f7783a7bc202074e441a0c77645e5c8457b33214d4f47"
+        }
+      ]
+    },
+    {
+      "repository": "pabellon/back/microservicio-cirugia",
+      "revision": "a28030abbd6f2d31f6c75f35b42de868b89e5e40",
+      "nativeSchemaPrerequisites": [
+        {
+          "path": "migrations/20260928_add_paciente_hospitalizado_to_cirugia.sql",
+          "sha256": "0a883aaddebb126cea7cd3ae14e17d660804ec5941955a44f33282e582b2d94a"
+        }
+      ]
+    },
+    {
+      "repository": "pabellon/front/pabellon-codigo-fuente",
+      "revision": "e50b47cafd40819d6bfb8d9fd46a1d5d7c30da5b"
+    }
+  ]
+}
