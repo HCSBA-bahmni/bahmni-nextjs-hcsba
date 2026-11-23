@@ -67,6 +67,19 @@ Un recibo ausente no prueba que no se creó una cirugía: el cierre local requie
 revisión de soporte y confirmación explícita de la misma referencia; conserva
 la referencia archivada y no vuelve a enviar el contenido clínico.
 
+El gateway de creación exige un `Origin` exacto y `Sec-Fetch-Site: same-origin`.
+Para una entrega en `.225`, comprobar que `CreationGateway.PublicOrigin` sea
+`https://10.68.174.225`; una configuración histórica para `https://localhost`
+permite lecturas pero rechaza las escrituras del navegador de `.225` antes de
+leer el envío. Conservar la comprobación estricta, sin comodines ni cambios de
+roles. Versionar y respaldar sólo ese ajuste de configuración del gateway.
+
+Al recrear servicios, iniciar Next antes del proxy y activar la configuración
+de Pabellón al final. Apache puede conservar la dirección del contenedor previo
+en un worker de proxy: comprobar por HTTPS el worker PDF.js de la versión fijada,
+además del healthcheck. Si Next cambió de dirección, recrear sólo el proxy con
+su imagen, entorno y montajes originales antes de repetir PDF y navegación.
+
 La referencia técnica pendiente se guarda sin narrativa clínica y se separa por
 fuente, usuario y paciente. Se relee el almacenamiento compartido antes de usar
 la referencia; al terminar sólo se elimina la referencia del mismo envío.

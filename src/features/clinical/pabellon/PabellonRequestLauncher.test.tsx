@@ -74,6 +74,7 @@ describe("HIS complete request dialog", () => {
   it("can open the new-request form directly without submitting anything", async () => {
     show(context(), false, true);
     await screen.findByRole("dialog");
+    expect(screen.getByRole("button", { name: "Ampliar o restaurar ventana de Pabellón" })).toBeInTheDocument();
     expect(bahmniRequestWithResponse).not.toHaveBeenCalled();
   });
   it("shows only the direct request action in the valid sidebar context", async () => {

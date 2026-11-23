@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Dialog } from "primereact/dialog";
+import { PabellonDialog as Dialog } from "@/features/clinical/pabellon/PabellonDialog";
 import { Button } from "primereact/button";
 import { useAuth } from "@/features/auth/AuthContext";
 import { hasPrivilege } from "@/services/bahmni/auth";

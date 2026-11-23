@@ -1,4 +1,4 @@
-import { Dialog } from "primereact/dialog";
+import { PabellonDialog as Dialog } from "./PabellonDialog";
 import type { PabellonItem } from "@/services/bahmni/pabellon";
 import { ClinicalBlock, ClinicalField } from "./PabellonClinicalBlock";
 import styles from "./PabellonProtocols.module.css";

@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "primereact/button";
-import { Dialog } from "primereact/dialog";
+import { PabellonDialog as Dialog } from "./PabellonDialog";
 import { Dropdown } from "primereact/dropdown";
 import { InputText } from "primereact/inputtext";
 import { useEffect, useRef, useState } from "react";
@@ -232,6 +232,7 @@ function Launcher({ context, onCreated, source = QA_PABELLON_SOURCE, compact = f
     void work.then(() => {
       if (!mounted.current) return;
       setDirty(false); setErrors([]); onCreated();
+      void queryClient.invalidateQueries({ queryKey: ["pabellon-history-qa", sourceEnvironment, actorUuid, patientUuid] }, { cancelRefetch: false });
     }).catch((error: unknown) => {
       if (!mounted.current) return;
       if (error instanceof PabellonSubmissionError && error.code === "PENDING_SEND_EXISTS") { restorePending(); return; }

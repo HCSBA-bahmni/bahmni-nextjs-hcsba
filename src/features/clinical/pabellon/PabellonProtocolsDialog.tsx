@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "primereact/button";
-import { Dialog } from "primereact/dialog";
+import { PabellonDialog as Dialog } from "./PabellonDialog";
 import { useState } from "react";
 import { QA_PABELLON_SOURCE, type PabellonSource } from "@/services/bahmni/pabellon";
 import { ClinicalBlock, ClinicalField } from "./PabellonClinicalBlock";

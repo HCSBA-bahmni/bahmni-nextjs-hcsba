@@ -1,5 +1,5 @@
 import { Button } from "primereact/button";
-import { Dialog } from "primereact/dialog";
+import { PabellonDialog as Dialog } from "./PabellonDialog";
 import styles from "./PabellonProtocols.module.css";
 import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";

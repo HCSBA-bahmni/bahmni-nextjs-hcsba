@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Button } from "primereact/button";
-import { Dialog } from "primereact/dialog";
+import { PabellonDialog as Dialog } from "./PabellonDialog";
 import { useEffect, useState } from "react";
 import type { DashboardControlProps } from "../dashboardContext";
 import { getPabellonHistory, mergePabellonPages, PabellonReadError, QA_PABELLON_SOURCE, DEV_PABELLON_SOURCE, type PabellonItem } from "@/services/bahmni/pabellon";
