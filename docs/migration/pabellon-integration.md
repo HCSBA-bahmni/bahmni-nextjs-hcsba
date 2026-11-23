@@ -23,7 +23,7 @@ revisadas; no acreditan que esas revisiones estén desplegadas.
 | --- | --- |
 | Configuración | [standard-config #5](https://github.com/HCSBA-bahmni/standard-config-HCSBA/pull/5): fuente `pabellon43-dev`, pestaña clínica opcional, panel IPD y traducciones. No usar la antigua descripción QA como definición del destino. |
 | Proxy/DEV | [bahmni-docker #3](https://github.com/HCSBA-bahmni/bahmni-docker-HCSBA/pull/3): rutas protegidas del gateway, worker PDF.js local, CA pública y preservación del checkout de configuración al iniciar DEV. |
-| Gateway | [integracion-pabellon-his](https://github.com/HCSBA-bahmni/integracion-pabellon-his): sesión, autorización, auditoría, identidad, transporte OpenHIM y persistencia técnica. |
+| Gateway | [integracion-pabellon-his #1](https://github.com/HCSBA-bahmni/integracion-pabellon-his/pull/1), revisión `2d399e80106a8639797f41709350bc08ffc8f545`: documentos verificados, protocolos/enmiendas, agrupación por visita y distinción de rechazos previos al despacho frente a resultados que requieren recuperación. |
 | Pabellón nativo | API de cirugía y frontend `dev`: contratos de creación, recibos, snapshots y plantilla PDF canónica. |
 
 No fusionar PR #19 ni su catálogo de camas como dependencia de Pabellón.
@@ -53,6 +53,20 @@ recuperación. No vincular por nombre ni crear pacientes en Personas durante QA.
 
 ## Recuperación y contratos
 
+El frontend requiere el contrato del gateway fijado en el manifest. La versión
+anterior `35fc3cf` no admite `patientDetails.identificationKind` ni la selección
+`?identification=` de la precarga. Además, no señala de forma conservadora todos
+los fallos posteriores al despacho: no combinarla con el cliente nuevo que
+respeta `recoveryRequired=false` para rechazos previos verificables.
+
+Publicar y verificar primero el gateway/origen compatible por sus procedimientos,
+conservando OpenHIM, base técnica y correspondencias existentes. Después publicar
+el frontend y su configuración coordinada. Comprobar identificación, versiones
+de protocolos y recuperación del mismo envío antes de habilitar el flujo.
+Un recibo ausente no prueba que no se creó una cirugía: el cierre local requiere
+revisión de soporte y confirmación explícita de la misma referencia; conserva
+la referencia archivada y no vuelve a enviar el contenido clínico.
+
 La referencia técnica pendiente se guarda sin narrativa clínica y se separa por
 fuente, usuario y paciente. Se relee el almacenamiento compartido antes de usar
 la referencia; al terminar sólo se elimina la referencia del mismo envío.
@@ -75,10 +89,12 @@ de nuevo la solicitud; no repetir automáticamente una escritura clínica.
 - Completar PRE e informe POST real según `docs/qa/pauta-qa.md`. Conservar
   evidencias privadas, sin datos clínicos ni credenciales en Git.
 
-La inspección de `.225` del 20-11-2026 encontró la imagen
-`2026.11.19-mpi-ensayo.1` y fuentes MPI con diferencias locales. No reemplazarla
+La entrega de Camas PR19 del 20-11-2026 conserva las fuentes MPI de
+`2026.11.19-mpi-ensayo.1` en la imagen `2026.11.20-camas-pr19.4`.
+Antes de entregar, releer el inventario efectivo de `.225`. No reemplazarlo
 por una imagen construida únicamente desde este PR: preparar primero un manifest
-que preserve esa entrega y comprobar los consumidores compartidos.
+que preserve MPI, Camas y las diferencias vigentes, y comprobar los consumidores
+compartidos. El merge a main no identifica por sí solo todas las fuentes servidas.
 
 La publicación de este PR no despliega servicios ni aplica SQL. Antes de una
 entrega, registrar imagen inmutable candidata, configuración efectiva y rollback

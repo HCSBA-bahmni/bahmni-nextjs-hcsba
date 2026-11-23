@@ -180,7 +180,9 @@ describe("HIS complete request dialog", () => {
     });
     show(); await prepare(); await complete();
     expect(await screen.findByRole("alert")).toHaveTextContent(/Cambió un catálogo/);
-    expect(screen.getByRole("button", { name: "Revisar solicitud" })).toBeEnabled();
+    // Leaving catalogue verification re-enables the stale patient query and
+    // starts a fresh read. The alert may render before that read settles.
+    await waitFor(() => expect(screen.getByRole("button", { name: "Revisar solicitud" })).toBeEnabled());
     expect(screen.getByLabelText("Teléfono de contacto *")).toHaveValue("900000000");
     expect(screen.queryByRole("button", { name: "Enviar solicitud a Pabellón" })).not.toBeInTheDocument();
     expect(bahmniRequestWithResponse).not.toHaveBeenCalled();

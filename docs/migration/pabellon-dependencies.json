@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "reviewDate": "2026-11-20",
+  "reviewDate": "2026-11-23",
   "purpose": "Fuentes revisadas para PR18; no es un manifest de despliegue ni certificación de esquema.",
   "frontendBaseline": "85929920ca422ed3c93c15612249befda424928d",
-  "mainIntegrated": "d866652b938a2130d10c52f175cd476063eaab7b",
+  "mainIntegrated": "4237064bae73843f1d3310fac6edaff9b74b4914",
   "dependencies": [
     {
       "repository": "HCSBA-bahmni/standard-config-HCSBA",
@@ -18,7 +18,8 @@
     },
     {
       "repository": "HCSBA-bahmni/integracion-pabellon-his",
-      "revision": "35fc3cfaef9fcb8d3d6296e576d3d53ba134b22c",
+      "pullRequest": 1,
+      "revision": "2d399e80106a8639797f41709350bc08ffc8f545",
       "migrationTarget": "Base privada nueva de integración; no aplicar sobre bases existentes.",
       "migrations": [
         {
